@@ -1,0 +1,11 @@
+﻿<MudBreadcrumbs Items="Items">
+    @foreach (var item in Items)
+    {
+        <MudBreadcrumbItem Href="@item.Href" Disabled="@item.Disabled">@item.Text</MudBreadcrumbItem>
+    }
+</MudBreadcrumbs>
+
+@code {
+    [Parameter]
+    public List<BreadcrumbItem> Items { get; set; } = new List<BreadcrumbItem>();
+}

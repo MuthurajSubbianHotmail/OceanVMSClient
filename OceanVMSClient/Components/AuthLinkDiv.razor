@@ -1,20 +1,26 @@
 ﻿@using System.Security.Claims
 @using System.Linq
 @using System.Text.Json
+@using System.Globalization
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
-
+@using MudBlazor
 <AuthorizeView>
     <Authorized>
         @* Clickable full name that toggles details panel *@
-        <span class="auth-name" role="button" @onclick="TogglePanel" style="cursor:pointer; font-weight:500;">
-            @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatStringType(fullNameValue) : context.User.Identity?.Name)
-        </span>
+        <MudText onclick="@TogglePanel" style="cursor:pointer;">
+            @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(context.User.Identity?.Name))
+        </MudText>
 
-        
+       @*  <span class="auth-name" role="button" @onclick="TogglePanel" style="cursor:pointer; font-weight:500;">
+            @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(context.User.Identity?.Name))
+        </span> *@
+        <MudLink Href="Logout" style="margin-left:.5rem;" Color="Color.Inherit">Log Out</MudLink>
+
         @* Expanded panel rendered inline, toggled by clicking the name *@
         @if (isPanelOpen)
         {
+            
             <div class="auth-details-panel"
                  style="position:absolute; right:1rem; top:3.25rem;
                                     background:var(--mud-palette-surface, #ffffff);
@@ -24,7 +30,7 @@
                                     border-radius:.25rem;
                                     box-shadow:0 6px 18px rgba(0,0,0,.15);
                                     z-index:2000;
-                                    min-width:220px;">
+                                    min-width:250px;">
                 @* Close button (small) *@
                 <button @onclick="ClosePanel"
                         title="Close"
@@ -33,7 +39,7 @@
                     &times;
                 </button>
 
-                <div style="margin-bottom:.375rem;"><strong>@(FormatLabel("Name")):</strong> @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatStringType(fullNameValue) : context.User.Identity?.Name)</div>
+                <div style="margin-bottom:.375rem;"><strong>@(FormatLabel("Name")):</strong> @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(context.User.Identity?.Name))</div>
                 @if (!string.IsNullOrWhiteSpace(userTypeValue))
                 {
                     <div style="margin-bottom:.25rem;"><strong>@(FormatLabel("Type")):</strong> @FormatStringType(userTypeValue)</div>
@@ -50,15 +56,13 @@
                 <hr style="margin:.25rem 0; border:0; border-top:1px solid rgba(0,0,0,.08)" />
 
                 <div style="display:flex; flex-direction:column; gap:.25rem;">
-                    <button class="btn-link" @onclick="NavigateToChangePassword" style="background:transparent;border:0;padding:0;text-align:left;color:var(--mud-palette-primary,#0d6efd);cursor:pointer;">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToChangePassword" Style="padding:0; text-align:left;">
                         Change Password
-                    </button>
-                    <button class="btn-link" @onclick="NavigateToLogout" style="background:transparent;border:0;padding:0;text-align:left;color:var(--mud-palette-primary,#0d6efd);cursor:pointer;">
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToLogout" Style="padding:0; text-align:left;">
                         Log Out
-                    </button>
+                    </MudButton>
                 </div>
-
-                
             </div>
         }
     </Authorized>
@@ -74,6 +78,8 @@
     public string UserType { get; set; }
     [Parameter]
     public string FullName { get; set; }
+    [Parameter]
+    public string roleName { get; set; }
 
     private string? userTypeValue;
     private string? fullNameValue;
@@ -89,7 +95,7 @@
             var userTypeStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userType");
             var fullNameStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "fullName");
             var emailStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "email");
-            var rolesStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "roles");
+            var rolesStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userRoles");
 
             userTypeValue = !string.IsNullOrWhiteSpace(userTypeStored) ? userTypeStored : UserType;
             fullNameValue = !string.IsNullOrWhiteSpace(fullNameStored) ? fullNameStored : FullName;
@@ -101,6 +107,7 @@
             // fallback: try claims only (if JS interop fails)
             userTypeValue = UserType;
             fullNameValue = FullName;
+
             emailValue = GetClaimValue(ClaimTypes.Email);
             rolesValue = GetRolesFromClaims();
         }
@@ -160,6 +167,25 @@
         }
 
         return s;
+    }
+
+    // Format full name to Proper Case (e.g., "invoice approver1" -> "Invoice Approver1")
+    private static string FormatFullName(string? raw)
+    {
+        var cleaned = string.IsNullOrWhiteSpace(raw) ? string.Empty : FormatStringType(raw);
+        if (string.IsNullOrWhiteSpace(cleaned))
+            return string.Empty;
+
+        try
+        {
+            // Use CurrentCulture to respect locale-specific casing rules.
+            var lower = cleaned.ToLower(CultureInfo.CurrentCulture);
+            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(lower);
+        }
+        catch
+        {
+            return cleaned;
+        }
     }
 
     // Helper to get email or other single-claim values from the current user context

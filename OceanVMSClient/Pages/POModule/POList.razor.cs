@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using MudBlazor;
 using OceanVMSClient.HttpRepo.Authentication;
 using OceanVMSClient.HttpRepoInterface.PoModule;
 using Shared.DTO.POModule;
@@ -13,6 +14,7 @@ namespace OceanVMSClient.Pages.POModule
         [CascadingParameter]
         public Task<AuthenticationState> AuthState { get; set; } = default!;    
         public List<PurchaseOrderDto>? _purchaseOrders { get; set; } = new();
+        
         [Inject]
         public IPurchaseOrderRepository PurchaseOrderRepository { get; set; } = default!;
         [Inject]
@@ -20,9 +22,21 @@ namespace OceanVMSClient.Pages.POModule
         public MetaData MetaData { get; set; } = new MetaData();
         private PurchaseOrderParameters _purchaseOrderParameters = new PurchaseOrderParameters();
 
-
+        private readonly int[] _purchaseOrdersPerPage = { 2, 4, 6 };
         [Inject]
         private NavigationManager NavigationManager { get; set; } = null!;
+
+        //private async Task<TableData<PurchaseOrderDto>> GetServerData(TableState state)
+        //{
+        //    _purchaseOrderParameters.PageSize = state.PageSize;
+        //    _purchaseOrderParameters.PageNumber = state.Page + 1;
+        //    var response = await PurchaseOrderRepository.GetAllPurchaseOrders(_purchaseOrderParameters);
+        //    return new TableData<PurchaseOrderDto>
+        //    {
+        //        Items = response.Items,
+        //        TotalItems = response.MetaData.TotalCount
+        //    };
+        //}
 
         protected override async Task OnInitializedAsync()
         {

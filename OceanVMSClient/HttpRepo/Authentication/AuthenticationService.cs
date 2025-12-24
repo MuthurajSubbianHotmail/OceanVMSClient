@@ -24,7 +24,6 @@ namespace OceanVMSClient.HttpRepo.Authentication
             _jsonSerializerOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                PropertyNameCaseInsensitive = true,
                 WriteIndented = true
             };
             _authStateProvider = authenticationStateProvider;
@@ -49,65 +48,6 @@ namespace OceanVMSClient.HttpRepo.Authentication
             };
         }
 
-        //public async Task<AuthenticationResponseDto> Login(UserForAuthenticationDto userForAuthentication)
-        //{
-        //    // use configured options for consistent naming
-        //    var content = JsonSerializer.Serialize(userForAuthentication, _jsonSerializerOptions);
-        //    var bodyContent = new StringContent(content, Encoding.UTF8, "application/json");
-
-        //    var authResult = await _httpClient.PostAsync("authentication/login", bodyContent);
-        //    var authContent = await authResult.Content.ReadAsStringAsync();
-
-        //    AuthenticationResponseDto? result = null;
-        //    try
-        //    {
-        //        result = JsonSerializer.Deserialize<AuthenticationResponseDto>(authContent, _jsonSerializerOptions);
-        //    }
-        //    catch (JsonException)
-        //    {
-        //        // Fall through - result will be null and handled below
-        //    }
-
-        //    // If we couldn't deserialize, return a failure DTO instead of dereferencing null
-        //    if (result == null)
-        //    {
-        //        return new AuthenticationResponseDto
-        //        {
-        //            IsAuthSuccessful = false,
-        //            ErrorMessage = string.IsNullOrWhiteSpace(authContent) ? "Invalid authentication response." : authContent
-        //        };
-        //    }
-
-        //    // If HTTP status indicates failure, return the server-provided result (with message if present)
-        //    if (!authResult.IsSuccessStatusCode)
-        //    {
-        //        result.IsAuthSuccessful = false;
-        //        if (string.IsNullOrWhiteSpace(result.ErrorMessage))
-        //            result.ErrorMessage = string.IsNullOrWhiteSpace(authContent) ? "Authentication failed." : authContent;
-        //        return result;
-        //    }
-
-        //    // Ensure token exists
-        //    if (result.Token == null || string.IsNullOrWhiteSpace(result.Token.AccessToken))
-        //    {
-        //        return new AuthenticationResponseDto
-        //        {
-        //            IsAuthSuccessful = false,
-        //            ErrorMessage = "Authentication succeeded but server did not return a token."
-        //        };
-        //    }
-
-        //    // Persist token and update auth state
-        //    await _localStorage.SetItemAsync("authToken", result.Token);
-
-        //    var username = string.IsNullOrWhiteSpace(result.UserName) ? userForAuthentication.UserName : result.UserName;
-        //    ((AuthStateProvider)_authStateProvider).NotifyUserAuthentication(username);
-
-        //    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result.Token.AccessToken);
-
-        //    result.IsAuthSuccessful = true;
-        //    return result;
-        //}
         public async Task<AuthenticationResponseDto> Login(UserForAuthenticationDto userForAuthentication)
         {
             var content = JsonSerializer.Serialize(userForAuthentication);
@@ -124,14 +64,22 @@ namespace OceanVMSClient.HttpRepo.Authentication
             var FirstName = result.FirstName;
             var LastName = result.LastName;
             var AssignedRoles = result.Roles;
+            var EmpPK = result.EmployeeId;
+            var VendorPK = result.VendorId;
+            var VendorContactPK = result.VendorContactId;
+            var VendorName = result.VendorName;
 
             await _localStorage.SetItemAsync("authToken", result.Token.AccessToken);
-            await _localStorage.SetItemAsync("refreshToken", result.Token.RefreshToken);
+            //await _localStorage.SetItemAsync("refreshToken", result.Token.RefreshToken);
             await _localStorage.SetItemAsync("userRoles", AssignedRoles);
             await _localStorage.SetItemAsync("firstName", FirstName);
             await _localStorage.SetItemAsync("lastName", LastName);
             await _localStorage.SetItemAsync("userType", UserType);
             await _localStorage.SetItemAsync("fullName", fullName);
+            await _localStorage.SetItemAsync("empPK", EmpPK);
+            await _localStorage.SetItemAsync("vendorPK", VendorPK);
+            await _localStorage.SetItemAsync("vendorContactPK", VendorContactPK);
+            await _localStorage.SetItemAsync("vendorName", VendorName);
 
             ((AuthStateProvider)_authStateProvider).NotifyUserAuthentication(result.UserName ?? userForAuthentication.UserName, fullName, FirstName, LastName, UserType);
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", result.Token.AccessToken);
@@ -148,28 +96,37 @@ namespace OceanVMSClient.HttpRepo.Authentication
             await _localStorage.RemoveItemAsync("lastName");
             await _localStorage.RemoveItemAsync("userType");
             await _localStorage.RemoveItemAsync("fullName");
+            await _localStorage.RemoveItemAsync("empPK");
+            await _localStorage.RemoveItemAsync("vendorPK");
+            await _localStorage.RemoveItemAsync("vendorContactPK");
+            await _localStorage.RemoveItemAsync("vendorName");
+
             ((AuthStateProvider)_authStateProvider).NotifyUserLogout();
             _httpClient.DefaultRequestHeaders.Authorization = null;
+            Console.WriteLine("User logged out successfully.");
         }
 
         public async Task<string> RefreshToken()
         {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
             var refreshToken = await _localStorage.GetItemAsync<string>("refreshToken");
-            var tokenDto = new TokenDto { RefreshToken = refreshToken };
-            var content = JsonSerializer.Serialize(tokenDto, _jsonSerializerOptions);
-            var bodyContent = new StringContent(content, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("authentication/refresh-token", bodyContent);
-            response.EnsureSuccessStatusCode();
-            var responseContent = await response.Content.ReadAsStringAsync();
-            var result = JsonSerializer.Deserialize<AuthenticationResponseDto>(responseContent, _jsonSerializerOptions);
-            if (result == null || result.Token == null || string.IsNullOrWhiteSpace(result.Token.AccessToken))
-                throw new Exception("Failed to refresh token.");
-            await _localStorage.SetItemAsync("authToken", result.Token.AccessToken);
-            await _localStorage.SetItemAsync("refreshToken", result.Token.RefreshToken);
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", result.Token.AccessToken);
-            return result.Token.AccessToken;
+
+            var tokenDto = JsonSerializer.Serialize(new TokenDto { AccessToken = token ?? string.Empty, RefreshToken = refreshToken ?? string.Empty });
+            var bodyContent = new StringContent(tokenDto, Encoding.UTF8, "application/json");
+
+            var refreshResult = await _httpClient.PostAsync("token/refresh", bodyContent);
+            var refreshContent = await refreshResult.Content.ReadAsStringAsync();
+            var result = JsonSerializer.Deserialize<TokenDto>(refreshContent, _jsonSerializerOptions);
+
+            if (!refreshResult.IsSuccessStatusCode || result == null || string.IsNullOrEmpty(result.AccessToken))
+                throw new ApplicationException("Something went wrong during the refresh token action");
+
+            await _localStorage.SetItemAsync("authToken", result.AccessToken);
+            await _localStorage.SetItemAsync("refreshToken", result.RefreshToken);
+
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", result.AccessToken);
+
+            return result.AccessToken;
         }
-
-
     }
 }

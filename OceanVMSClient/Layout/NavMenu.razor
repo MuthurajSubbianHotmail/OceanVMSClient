@@ -9,10 +9,11 @@
         <MudNavGroup Title="Purchase Order" Icon="@Icons.Material.Filled.DashboardCustomize" Expanded="false">
             <AuthorizeView Roles="EMPLOYEE">
                 <Authorized>
-                    <MudNavLink Href="List PO" Icon="@Icons.Material.Filled.ShoppingCart">Company</MudNavLink>
+                    <MudNavLink Href="po-list" Icon="@Icons.Material.Filled.ShoppingCart">Company</MudNavLink>
                 </Authorized>
                 </AuthorizeView>
-            <MudNavLink Href="List PO" Icon="@Icons.Material.Filled.ShoppingCart">PO List</MudNavLink>
+            <MudNavLink Href="po-list" Icon="@Icons.Material.Filled.ShoppingCart">PO List</MudNavLink>
+            <MudNavLink Href="polistpaging" Icon="@Icons.Material.Filled.ShoppingCart">PO List Paging</MudNavLink>
         </MudNavGroup>
 
         <MudNavGroup Title="Invoices" Icon="@Icons.Material.Filled.AccountBalance" Expanded="false">

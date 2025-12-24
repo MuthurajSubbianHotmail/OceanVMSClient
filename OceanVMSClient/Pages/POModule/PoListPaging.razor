@@ -1,0 +1,25 @@
+﻿@page "/polistpaging"
+@using Entities.Models
+@using Entities.Models.POModule
+@using Shared.DTO.POModule
+
+<MudTable T="PurchaseOrderDto"
+          ServerData="GetServerData"
+          Hover="true" Breakpoint="Breakpoint.Sm" RightAlignSmall="true"
+          @ref="_table" RowsPerPage="4">
+    <HeaderContent>
+        <MudTh>PONo</MudTh>
+        <MudTh>PODate</MudTh>
+        <MudTh>Supplier</MudTh>
+        <MudTh>Vendor</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        
+        <MudTd DataLabel="PONo">@context.SAPPONumber</MudTd>
+        <MudTd DataLabel="PODate">@context.SAPPODate.ToString("d")</MudTd>
+        <MudTd DataLabel="Vendor">$@context.VendorName</MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="@_pageSizeOption" RowsPerPageString="Products per page" />
+    </PagerContent>
+</MudTable>
