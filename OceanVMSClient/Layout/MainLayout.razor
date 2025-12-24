@@ -1,0 +1,55 @@
+﻿@inherits LayoutComponentBase
+@using OceanVMSClient.Components
+<MudLayout>
+    <MudAppBar Elevation="3">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleSidebar"/> 
+        <MudSpacer />
+        <AuthLinkDiv />
+        @if (_isDarkMode)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Brightness5" Color="Color.Inherit" OnClick="@ToggleTheme" />
+        }
+        else
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Brightness4" Color="Color.Inherit" OnClick="@ToggleTheme" />
+        }
+
+    </MudAppBar>
+    <NavMenu SideBarOpen="_sidebarOpen"/>
+    <MudMainContent Class="pt-16 px-16">
+        <MudContainer Class="mt-6">
+            <MudPopoverProvider />
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode"/>
+<MudSnackbarProvider />
+<MudDialogProvider Position="DialogPosition.BottomCenter" CloseButton="true" BackdropClick="false" />
+@code {
+    MudTheme MyCustomTheme = new MudTheme()
+    {
+        
+    };
+
+    private bool _sidebarOpen = false;
+    private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
+    
+    private bool _isDarkMode;
+    private void ToggleTheme()
+    {
+        _isDarkMode = !_isDarkMode;
+        if (!_isDarkMode)
+        {
+            _isDarkMode = false;
+        }
+        else
+        {
+            _isDarkMode = true;
+        }
+    }
+    bool _drawerOpen = true;
+
+    
+}

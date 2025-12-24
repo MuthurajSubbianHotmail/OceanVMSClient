@@ -1,0 +1,31 @@
+# Visual Studio / .NET
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# Blazor / web artifacts
+wwwroot/service-worker-assets.js
+wwwroot/service-worker.published.js
+node_modules/
+
+# Local settings
+appsettings.*.json
+local.settings.json
+
+# NuGet
+*.nupkg
+.nuget/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store

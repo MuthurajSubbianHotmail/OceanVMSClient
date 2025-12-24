@@ -1,0 +1,93 @@
+﻿@using System.Security.Claims
+@using System.Linq
+@using System.Text.Json
+@inject IJSRuntime JSRuntime
+
+<AuthorizeView>
+    <Authorized>
+       @*  @{
+            var name = context.User.Identity?.Name;
+        } *@
+
+        @if (!string.IsNullOrWhiteSpace(fullNameValue))
+        {
+            <span>@FormatStringType(fullNameValue)</span>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(userTypeValue))
+        {
+            <span>&nbsp;|&nbsp;@FormatStringType(userTypeValue)</span>
+        }
+
+        @* Only render separator before logout when we showed either name or user type *@
+        @if (!string.IsNullOrWhiteSpace(fullNameValue) || !string.IsNullOrWhiteSpace(userTypeValue))
+        {
+            <span>&nbsp;|&nbsp;</span>
+        }
+
+        <a href="Logout">Log Out</a>
+    </Authorized>
+    <NotAuthorized>
+        <a href="Login">Log In</a>
+        <a href="Registration">Register</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public string UserType { get; set; }
+    [Parameter]
+    public string FullName { get; set; }
+
+    private string? userTypeValue;
+    private string? fullNameValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var userTypeStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userType");
+            var fullNameStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "fullName");
+            userTypeValue = !string.IsNullOrWhiteSpace(userTypeStored) ? userTypeStored : UserType;
+            fullNameValue = !string.IsNullOrWhiteSpace(fullNameStored) ? fullNameStored : FullName;
+        }
+        catch
+        {
+            // If JS interop fails for any reason, fall back to the provided parameter
+            userTypeValue = UserType;
+        }
+    }
+
+    private static string FormatStringType(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        var s = raw.Trim();
+
+        // Remove surrounding quotes if present
+        if ((s.StartsWith("\"") && s.EndsWith("\"")) || (s.StartsWith("'") && s.EndsWith("'")))
+        {
+            s = s.Substring(1, s.Length - 2).Trim();
+        }
+
+        // If it's a JSON array like ["EMPLOYEE"], try to deserialize to a string list
+        var trimmed = s.Trim();
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                var arr = JsonSerializer.Deserialize<string[]>(trimmed);
+                if (arr != null && arr.Length > 0)
+                    return string.Join(", ", arr.Select(x => x?.Trim('"', '\'').Trim()));
+            }
+            catch
+            {
+                // fall through to a best-effort cleanup
+                s = trimmed.Trim('[', ']', ' ', '"', '\'');
+            }
+        }
+
+        return s;
+    }
+}

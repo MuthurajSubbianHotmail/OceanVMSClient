@@ -1,0 +1,31 @@
+﻿<MudDrawer @bind-Open="SideBarOpen" ClipMode="DrawerClipMode.Never" Elevation="1" Variant="DrawerVariant.Temporary">
+    <MudDrawerHeader>
+        <MudAvatar Color="Color.Transparent" Size="Size.Medium" Image="assets/RPALogo.png" />
+        <MudText Typo="Typo.h5" Color=Color.Primary Style="margin-top:10px; margin-left:15px">Ocean</MudText>
+    </MudDrawerHeader>
+    <MudNavMenu>
+        <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+
+        <MudNavGroup Title="Purchase Order" Icon="@Icons.Material.Filled.DashboardCustomize" Expanded="false">
+            <AuthorizeView Roles="EMPLOYEE">
+                <Authorized>
+                    <MudNavLink Href="List PO" Icon="@Icons.Material.Filled.ShoppingCart">Company</MudNavLink>
+                </Authorized>
+                </AuthorizeView>
+            <MudNavLink Href="List PO" Icon="@Icons.Material.Filled.ShoppingCart">PO List</MudNavLink>
+        </MudNavGroup>
+
+        <MudNavGroup Title="Invoices" Icon="@Icons.Material.Filled.AccountBalance" Expanded="false">
+            <AuthorizeView Roles="EMPLOYEE">
+                <Authorized>
+                    <MudNavLink Href="List Invoice" Icon="@Icons.Material.Filled.ShoppingCart">Invoice List</MudNavLink>
+                </Authorized>
+            </AuthorizeView>
+        </MudNavGroup>
+
+    </MudNavMenu>
+</MudDrawer>
+@code {
+    [Parameter]
+    public bool SideBarOpen { get; set; }
+}

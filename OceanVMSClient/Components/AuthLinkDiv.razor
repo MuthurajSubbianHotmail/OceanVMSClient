@@ -1,0 +1,178 @@
+﻿@using System.Security.Claims
+@using System.Linq
+@using System.Text.Json
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+
+<AuthorizeView>
+    <Authorized>
+        @* Clickable full name that toggles details panel *@
+        <span class="auth-name" role="button" @onclick="TogglePanel" style="cursor:pointer; font-weight:500;">
+            @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatStringType(fullNameValue) : context.User.Identity?.Name)
+        </span>
+
+        
+        @* Expanded panel rendered inline, toggled by clicking the name *@
+        @if (isPanelOpen)
+        {
+            <div class="auth-details-panel"
+                 style="position:absolute; right:1rem; top:3.25rem;
+                                    background:var(--mud-palette-surface, #ffffff);
+                                    color:var(--mud-palette-text-primary, #000000);
+                                    border:1px solid rgba(0,0,0,.12);
+                                    padding:.5rem .75rem;
+                                    border-radius:.25rem;
+                                    box-shadow:0 6px 18px rgba(0,0,0,.15);
+                                    z-index:2000;
+                                    min-width:220px;">
+                @* Close button (small) *@
+                <button @onclick="ClosePanel"
+                        title="Close"
+                        aria-label="Close"
+                        style="position:absolute; top:4px; right:6px; background:transparent; border:0; color:var(--mud-palette-text-primary,#000); font-size:16px; line-height:1; cursor:pointer;">
+                    &times;
+                </button>
+
+                <div style="margin-bottom:.375rem;"><strong>@(FormatLabel("Name")):</strong> @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatStringType(fullNameValue) : context.User.Identity?.Name)</div>
+                @if (!string.IsNullOrWhiteSpace(userTypeValue))
+                {
+                    <div style="margin-bottom:.25rem;"><strong>@(FormatLabel("Type")):</strong> @FormatStringType(userTypeValue)</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(emailValue))
+                {
+                    <div style="margin-bottom:.25rem;"><strong>@(FormatLabel("Email")):</strong> @emailValue</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(rolesValue))
+                {
+                    <div style="margin-bottom:.5rem;"><strong>@(FormatLabel("Roles")):</strong> @FormatStringType(rolesValue)</div>
+                }
+
+                <hr style="margin:.25rem 0; border:0; border-top:1px solid rgba(0,0,0,.08)" />
+
+                <div style="display:flex; flex-direction:column; gap:.25rem;">
+                    <button class="btn-link" @onclick="NavigateToChangePassword" style="background:transparent;border:0;padding:0;text-align:left;color:var(--mud-palette-primary,#0d6efd);cursor:pointer;">
+                        Change Password
+                    </button>
+                    <button class="btn-link" @onclick="NavigateToLogout" style="background:transparent;border:0;padding:0;text-align:left;color:var(--mud-palette-primary,#0d6efd);cursor:pointer;">
+                        Log Out
+                    </button>
+                </div>
+
+                
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <MudLink Href="Login" Color="Color.Inherit">LogIn</MudLink>
+        &nbsp;&nbsp;
+        <MudLink Href="Registration" Color="Color.Inherit">Register</MudLink>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public string UserType { get; set; }
+    [Parameter]
+    public string FullName { get; set; }
+
+    private string? userTypeValue;
+    private string? fullNameValue;
+    private string? emailValue;
+    private string? rolesValue;
+    private bool isPanelOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // prefer localStorage values (present after login flow), fall back to provided parameters
+            var userTypeStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userType");
+            var fullNameStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "fullName");
+            var emailStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "email");
+            var rolesStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "roles");
+
+            userTypeValue = !string.IsNullOrWhiteSpace(userTypeStored) ? userTypeStored : UserType;
+            fullNameValue = !string.IsNullOrWhiteSpace(fullNameStored) ? fullNameStored : FullName;
+            emailValue = !string.IsNullOrWhiteSpace(emailStored) ? emailStored : GetClaimValue(ClaimTypes.Email);
+            rolesValue = !string.IsNullOrWhiteSpace(rolesStored) ? rolesStored : GetRolesFromClaims();
+        }
+        catch
+        {
+            // fallback: try claims only (if JS interop fails)
+            userTypeValue = UserType;
+            fullNameValue = FullName;
+            emailValue = GetClaimValue(ClaimTypes.Email);
+            rolesValue = GetRolesFromClaims();
+        }
+    }
+
+    private void TogglePanel()
+    {
+        isPanelOpen = !isPanelOpen;
+    }
+
+    // called by the small close button
+    private void ClosePanel()
+    {
+        isPanelOpen = false;
+    }
+
+    private void NavigateToChangePassword()
+    {
+        isPanelOpen = false;
+        NavigationManager.NavigateTo("ChangePassword");
+    }
+
+    private void NavigateToLogout()
+    {
+        isPanelOpen = false;
+        NavigationManager.NavigateTo("Logout");
+    }
+
+    private static string FormatStringType(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
+
+        var s = raw.Trim();
+
+        // Remove surrounding quotes if present
+        if ((s.StartsWith("\"") && s.EndsWith("\"")) || (s.StartsWith("'") && s.EndsWith("'")))
+        {
+            s = s.Substring(1, s.Length - 2).Trim();
+        }
+
+        // If it's a JSON array like ["EMPLOYEE"], try to deserialize to a string list
+        var trimmed = s.Trim();
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                var arr = JsonSerializer.Deserialize<string[]>(trimmed);
+                if (arr != null && arr.Length > 0)
+                    return string.Join(", ", arr.Select(x => x?.Trim('"', '\'').Trim()));
+            }
+            catch
+            {
+                // fall through to a best-effort cleanup
+                s = trimmed.Trim('[', ']', ' ', '"', '\'');
+            }
+        }
+
+        return s;
+    }
+
+    // Helper to get email or other single-claim values from the current user context
+    private string? GetClaimValue(string claimType)
+    {
+        return null;
+    }
+
+    // Attempt to read roles from localStorage format or claims stored as a string
+    private string? GetRolesFromClaims()
+    {
+        return null;
+    }
+
+    private static string FormatLabel(string label) => label;
+}
