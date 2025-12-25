@@ -1,6 +1,7 @@
 ﻿using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using OceanVMSClient.Features;
+using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 
@@ -34,6 +35,25 @@ namespace OceanVMSClient.AuthProviders
                     var firstName = await _localStorageService.GetItemAsync<string>("firstName");
                     var lastName = await _localStorageService.GetItemAsync<string>("lastName");
                     var vendorName = await _localStorageService.GetItemAsync<string>("vendorName");
+                    var userType = await _localStorageService.GetItemAsync<string>("userType");
+                    if (!string.IsNullOrEmpty(userType))
+                    {
+                        identity.AddClaim(new Claim("UserType", userType));
+                    }
+                    var vendorId = await _localStorageService.GetItemAsync<string>("vendorPK");
+                    if (!string.IsNullOrEmpty(vendorId))
+                    {
+                        identity.AddClaim(new Claim("VendorId", vendorId));
+                    }
+                    var vendorContactId = await _localStorageService.GetItemAsync<string>("vendorContactPK");
+                    if (!string.IsNullOrEmpty(vendorContactId))
+                    {
+                        identity.AddClaim(new Claim("VendorContactId", vendorContactId));
+                    }
+                    var employeeId = await _localStorageService.GetItemAsync<string>("empPK");
+                    if (!string.IsNullOrEmpty(employeeId)) {
+                        identity.AddClaim(new Claim("EmployeeId", employeeId));
+                    }
 
                     if (!string.IsNullOrEmpty(firstName))
                     {
@@ -64,7 +84,9 @@ namespace OceanVMSClient.AuthProviders
         }
 
         // Accept token and optional first/last/vendor name so we can include them as claims immediately after login
-        public void NotifyUserAuthentication(string token, string? firstName = null, string? lastName = null, string? vendorName = null, string? userType = null)
+        public void NotifyUserAuthentication(string token, string? firstName = null, string? lastName = null, 
+            string? vendorName = null, string? userType = null,
+            string? fullName = null, Guid? vendorId = null, Guid? vendorContactId = null, Guid? employeeId = null)
         {
             var claims = JwtParser.ParseClaimsFromJwt(token).ToList();
 
@@ -90,6 +112,21 @@ namespace OceanVMSClient.AuthProviders
                 claims.Add(new Claim("UserType", userType));
             }
 
+            if (!string.IsNullOrEmpty(fullName)) { 
+                claims.Add(new Claim("FullName", fullName));
+            }
+            if (vendorId.HasValue)
+            {
+                claims.Add(new Claim("VendorId", vendorId.Value.ToString()));
+            }
+            if (vendorContactId.HasValue)
+            {
+                claims.Add(new Claim("VendorContactId", vendorContactId.Value.ToString()));
+            }
+            if (employeeId.HasValue)
+            {
+                claims.Add(new Claim("EmployeeId", employeeId.Value.ToString()));
+            }
             var authenticatedUser = new ClaimsPrincipal(new ClaimsIdentity(claims, "jwtAuthType"));
 
             var authState = Task.FromResult(new AuthenticationState(authenticatedUser));

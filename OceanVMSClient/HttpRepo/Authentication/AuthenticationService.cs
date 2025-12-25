@@ -81,9 +81,19 @@ namespace OceanVMSClient.HttpRepo.Authentication
                 await _localStorage.SetItemAsync("userType", result.UserType);
             if (!string.IsNullOrEmpty(fullName))
                 await _localStorage.SetItemAsync("fullName", fullName);
+            if (result.VendorId.HasValue)
+                await _localStorage.SetItemAsync("vendorPK", result.VendorId.Value);
+            if (result.VendorContactId.HasValue)
+                await _localStorage.SetItemAsync("vendorContactPK", result.VendorContactId.Value);
+            if (result.EmployeeId.HasValue)
+                await _localStorage.SetItemAsync("empPK", result.EmployeeId.Value);
+
 
             // Notify AuthStateProvider including first/last/vendor name so UI updates immediately
-            ((AuthStateProvider)_authStateProvider).NotifyUserAuthentication(result.Token.AccessToken, result.FirstName, result.LastName, result.VendorName, result.UserType);
+            ((AuthStateProvider)_authStateProvider).NotifyUserAuthentication(result.Token.AccessToken, 
+                result.FirstName, result.LastName, 
+                result.VendorName, result.UserType,
+                result.FullName, result.VendorId, result.VendorContactId, result.EmployeeId);
 
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", result.Token.AccessToken);
 

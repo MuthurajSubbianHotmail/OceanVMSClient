@@ -4,17 +4,82 @@
 @using OceanVMSClient.Components
 @using Shared.DTO.POModule
 @using MudBlazor.Components
-<PageHeader Title="Purchase Orders"/>
-
+<MudBreadcrumbs Items="_items" Separator="/" />
+<PageHeader Title="Purchase Orders" />
 <MudTable T="PurchaseOrderDto"
           ServerData="GetServerData"
           Hover="true" Breakpoint="Breakpoint.Sm" RightAlignSmall="true"
           @ref="_table" RowsPerPage="15">
-   @*  <ColGroup>
-        <col style="width:30%;" />
-        <col style="width:30%;" />
-        <col style="width:40%;" />
-    </ColGroup> *@
+    <ToolBarContent>
+        <MudGrid>
+            <MudItem xs="12" sm="2">
+                <MudSelect T="string" Label="Invoice Status" Value="selectedInvoiceStatus" ValueChanged="OnInvoiceStatusChanged" Dense="true" Class="mt-0">
+                    @foreach (var status in invoiceStatuses)
+                    {
+                        <MudSelectItem Value="@status">@status</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudTextField T="string"
+                              Label="SAP PO No"
+                              OnDebounceIntervalElapsed="@( (string s) => { sapPONo = s; return OnSearch(); } )"
+                              Placeholder="SAP PO No"
+                              Clearable="true"
+                              DebounceInterval="500"
+                              Class="mt-0" />
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudTextField T="string"
+                              Label="Vendor"
+                              OnDebounceIntervalElapsed="@( (string s) => { vendorName = s; return OnSearch(); } )"
+                              DebounceInterval="500"
+                              Placeholder="Vendor Name"
+                              Clearable="true"
+                              Class="mt-0" />
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudNumericField T="decimal?"
+                                 Label="Min Total Value"
+                                 InputType="InputType.Number"
+                                 ValueChanged="@( (decimal? v) => { minTotalValue = v; return OnSearch(); } )"
+                                 DebounceInterval="500"
+                                 Placeholder="Min PO Value"
+                                 Clearable="true"
+                                 InvertMouseWheel="true"
+                                 Min="0"
+                                 Step="1000"
+                                 Class="mt-0" />
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudNumericField T="decimal?"
+                                 Label="Max Total Value"
+                                 InputType="InputType.Number"
+                                 ValueChanged="@( (decimal? v) => { maxTotalValue = v; return OnSearch(); } )"
+                                 Placeholder="Max PO Value"
+                                 Clearable="true"
+                                 InvertMouseWheel="true"
+                                 Min="0"
+                                 Step="1000"
+                                 Class="mt-0" />
+            </MudItem>
+            <MudItem xs="12" sm="2">
+                <MudDateRangePicker @ref="_dateRangePicker"
+                                    DateRangeChanged="OnDateRangeSearch"
+                                    DateFormat="dd-MMM-yy"
+                                    TitleDateFormat="MMMM dd"
+                                    Margin="Margin.Dense"
+                                    Variant="Variant.Text"
+                                    AutoClose="true"
+                                    Label="PO Date"
+                                    Clearable="true">
+                    <PickerActions>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearDateRange">Clear</MudButton>
+                    </PickerActions>
+                </MudDateRangePicker>
+            </MudItem>
+        </MudGrid>
+    </ToolBarContent>
     <HeaderContent>
         <MudTh Style="width:5%;">Type</MudTh>
         <MudTh Style="width:10%;">PONo</MudTh>
@@ -58,11 +123,11 @@
     <ChildRowContent Context="row">
         @if (IsRowExpanded(row.Id))
         {
-            
+
             <MudTd ColSpan="9">
                 <MudPaper Class="pa-1">
                     <MudText Typo="Typo.subtitle1" Color="Color.Tertiary">Additional Details</MudText>
-                    <MudDivider Class="my-2"/>
+                    <MudDivider Class="my-2" />
                     <MudGrid>
                         <MudItem xs="12" sm="12">
                             <MudText Typo="Typo.subtitle2" Color="Color.Primary"><strong>Project:</strong> @row.ProjectName</MudText>
@@ -94,3 +159,11 @@
         <MudTablePager PageSizeOptions="@_pageSizeOption" RowsPerPageString="POs Per Page" />
     </PagerContent>
 </MudTable>
+@code {
+    private List<BreadcrumbItem> _items = new()
+    {
+        new BreadcrumbItem("Home", href: "/", disabled: false),
+        new BreadcrumbItem("Purchase Orders", href: "/POList", disabled: false),
+    };
+
+}
