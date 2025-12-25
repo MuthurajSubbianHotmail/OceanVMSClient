@@ -4,41 +4,49 @@ using MudBlazor;
 using OceanVMSClient.HttpRepo.Authentication;
 using OceanVMSClient.HttpRepoInterface.PoModule;
 using Shared.DTO.POModule;
-using Shared.RequestFeatures;
-using System.Reflection.Metadata.Ecma335;
-
+using System.Threading;
+using Blazored.LocalStorage;
+using OceanVMSClient.Features;
 namespace OceanVMSClient.Pages.POModule
 {
-    public partial class POList : IDisposable
+    public partial class PoList
     {
+        private bool _ShowChildContent = false;
+        private readonly HashSet<Guid> _expandedRows = new();
+        private MudTable<PurchaseOrderDto>? _table;
+        private PurchaseOrderParameters _productParameters = new PurchaseOrderParameters();
+        private readonly int[] _pageSizeOption = { 15, 25, 50 };
         [CascadingParameter]
-        public Task<AuthenticationState> AuthState { get; set; } = default!;    
-        public List<PurchaseOrderDto>? _purchaseOrders { get; set; } = new();
-        
-        [Inject]
-        public IPurchaseOrderRepository PurchaseOrderRepository { get; set; } = default!;
-        [Inject]
-        public HttpInterceptorService Interceptor {  get; set; }
-        public MetaData MetaData { get; set; } = new MetaData();
-        private PurchaseOrderParameters _purchaseOrderParameters = new PurchaseOrderParameters();
+        public Task<AuthenticationState> AuthState { get; set; } = default!;
 
-        private readonly int[] _purchaseOrdersPerPage = { 2, 4, 6 };
+        // Inject Blazored local storage to read userType
+        [Inject]
+        public ILocalStorageService LocalStorage { get; set; } = default!;
+
+        // Cached user type loaded from local storage before fetching data
+        private string? _userTypeFromLocalStorage;
+
+        [Inject]
+        public IPurchaseOrderRepository Repository { get; set; } = default!;
+        [Inject]
+        public HttpInterceptorService Interceptor { get; set; }
         [Inject]
         private NavigationManager NavigationManager { get; set; } = null!;
 
-        //private async Task<TableData<PurchaseOrderDto>> GetServerData(TableState state)
-        //{
-        //    _purchaseOrderParameters.PageSize = state.PageSize;
-        //    _purchaseOrderParameters.PageNumber = state.Page + 1;
-        //    var response = await PurchaseOrderRepository.GetAllPurchaseOrders(_purchaseOrderParameters);
-        //    return new TableData<PurchaseOrderDto>
-        //    {
-        //        Items = response.Items,
-        //        TotalItems = response.MetaData.TotalCount
-        //    };
-        //}
-
         protected override async Task OnInitializedAsync()
+        {
+            try
+            {
+                _userTypeFromLocalStorage = await LocalStorage.GetItemAsync<string>("userType");
+            }
+            catch
+            {
+                _userTypeFromLocalStorage = null;
+            }
+        }
+
+        // signature must accept CancellationToken to match MudBlazor ServerData delegate
+        private async Task<TableData<PurchaseOrderDto>> GetServerData(TableState state, CancellationToken cancellationToken)
         {
             Interceptor.RegisterEvent();
             var authState = await AuthState;
@@ -51,27 +59,61 @@ namespace OceanVMSClient.Pages.POModule
             {
                 Console.WriteLine("User is not authenticated. Redirecting to login page.");
                 NavigationManager.NavigateTo("/");
-                return;
+                return null;
             }
-            _purchaseOrderParameters.PageNumber = 1;
-            _purchaseOrderParameters.PageSize = 20;
-            await LoadPurchaseOrders(_purchaseOrderParameters.PageNumber);
-        }
+            _productParameters.PageSize = state.PageSize;
+            _productParameters.PageNumber = state.Page + 1;
 
-        private async Task LoadPurchaseOrders(int page)
-        {
-            _purchaseOrderParameters.PageNumber = page;
-            var pagingResponse = await PurchaseOrderRepository.GetAllPurchaseOrders(_purchaseOrderParameters);
-            _purchaseOrders = pagingResponse.Items ?? [];
-            MetaData = pagingResponse.MetaData!;
+            PagingResponse<PurchaseOrderDto> response; // <-- Declare the variable
 
-            foreach (var po in _purchaseOrders)
+            // pass cancellationToken to repository if supported, otherwise ignore it
+            if (_userTypeFromLocalStorage == "VENDOR")
             {
-                Console.WriteLine($"PO Number: {po.SAPPONumber}, Total Value: {po.TotalValue}");
+                response = await Repository.GetAllPurchaseOrdersOfVendorAsync(
+                    Guid.Parse(await LocalStorage.GetItemAsync<string>("vendorPK") ?? Guid.Empty.ToString()),
+                    _productParameters);
+            }
+            else {
+                response = await Repository.GetAllPurchaseOrders(_productParameters);
             }
 
+
+            return new TableData<PurchaseOrderDto>
+            {
+                Items = response.Items?.ToList() ?? new List<PurchaseOrderDto>(),
+                TotalItems = response.MetaData?.TotalCount ?? 0
+            };
         }
 
-        public void Dispose() => Interceptor.DisposeEvent();
+        private Color GetStatusColor(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return Color.Default;
+
+            var s = status.Trim().ToLowerInvariant();
+
+            return s switch
+            {
+                var x when x.Contains("part invoiced") => Color.Warning,   // yellow
+                var x when x.Contains("not invoiced") => Color.Success,   // green
+                var x when x.Contains("fully invoiced") => Color.Info,    // blue (or Color.Primary)
+                _ => Color.Default
+            };
+        }
+        // Helper to format SAPPODate as dd-MMM-yy (e.g. 25-Dec-25). Handles nullable DateTime.
+        private static string FormatDate(DateTime? date)
+        {
+            return date.HasValue ? date.Value.ToString("dd-MMM-yy") : string.Empty;
+        }
+
+        private void ToggleRow(Guid id)
+        {
+            if (!_expandedRows.Add(id))
+                _expandedRows.Remove(id);
+            StateHasChanged();
+        }
+
+        private bool IsRowExpanded(Guid id) => _expandedRows.Contains(id);
     }
 }
+

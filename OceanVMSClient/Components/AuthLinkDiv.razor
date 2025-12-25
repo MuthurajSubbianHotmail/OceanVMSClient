@@ -7,14 +7,11 @@
 @using MudBlazor
 <AuthorizeView>
     <Authorized>
-        @* Clickable full name that toggles details panel *@
         <MudText onclick="@TogglePanel" style="cursor:pointer;">
             @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(context.User.Identity?.Name))
         </MudText>
 
-       @*  <span class="auth-name" role="button" @onclick="TogglePanel" style="cursor:pointer; font-weight:500;">
-            @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(context.User.Identity?.Name))
-        </span> *@
+      
         <MudLink Href="Logout" style="margin-left:.5rem;" Color="Color.Inherit">Log Out</MudLink>
 
         @* Expanded panel rendered inline, toggled by clicking the name *@
@@ -30,7 +27,7 @@
                                     border-radius:.25rem;
                                     box-shadow:0 6px 18px rgba(0,0,0,.15);
                                     z-index:2000;
-                                    min-width:250px;">
+                                    min-width:350px;">
                 @* Close button (small) *@
                 <button @onclick="ClosePanel"
                         title="Close"
@@ -40,6 +37,7 @@
                 </button>
 
                 <div style="margin-bottom:.375rem;"><strong>@(FormatLabel("Name")):</strong> @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(context.User.Identity?.Name))</div>
+
                 @if (!string.IsNullOrWhiteSpace(userTypeValue))
                 {
                     <div style="margin-bottom:.25rem;"><strong>@(FormatLabel("Type")):</strong> @FormatStringType(userTypeValue)</div>
@@ -56,12 +54,20 @@
                 <hr style="margin:.25rem 0; border:0; border-top:1px solid rgba(0,0,0,.08)" />
 
                 <div style="display:flex; flex-direction:column; gap:.25rem;">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToChangePassword" Style="padding:0; text-align:left;">
-                        Change Password
-                    </MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToLogout" Style="padding:0; text-align:left;">
-                        Log Out
-                    </MudButton>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudButton FullWidth="true" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="NavigateToLogout" Style="padding:0; text-align:left;">
+                                Log Out
+                            </MudButton>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudButton FullWidth="true" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="NavigateToChangePassword"  Style="padding:0; text-align:left;">
+                                Change Password
+                            </MudButton>
+                        </MudItem>
+                        
+                    </MudGrid>
+                    
                 </div>
             </div>
         }
@@ -101,6 +107,9 @@
             fullNameValue = !string.IsNullOrWhiteSpace(fullNameStored) ? fullNameStored : FullName;
             emailValue = !string.IsNullOrWhiteSpace(emailStored) ? emailStored : GetClaimValue(ClaimTypes.Email);
             rolesValue = !string.IsNullOrWhiteSpace(rolesStored) ? rolesStored : GetRolesFromClaims();
+
+            //userTypeValue = GetClaimValue("userType") ?? userTypeValue;
+            
         }
         catch
         {

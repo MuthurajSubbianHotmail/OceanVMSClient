@@ -1,32 +1,96 @@
-﻿@page "/po-list"
-@using System.Security.Claims
-@using Microsoft.AspNetCore.Authorization
+﻿@page "/polist"
+@using Entities.Models
+@using Entities.Models.POModule
 @using OceanVMSClient.Components
 @using Shared.DTO.POModule
+@using MudBlazor.Components
+<PageHeader Title="Purchase Orders"/>
 
-<MudTable Items="@_purchaseOrders"
+<MudTable T="PurchaseOrderDto"
+          ServerData="GetServerData"
           Hover="true" Breakpoint="Breakpoint.Sm" RightAlignSmall="true"
-          >
+          @ref="_table" RowsPerPage="15">
+   @*  <ColGroup>
+        <col style="width:30%;" />
+        <col style="width:30%;" />
+        <col style="width:40%;" />
+    </ColGroup> *@
     <HeaderContent>
-        <MudTh>SAP PO Number</MudTh>
-        <MudTh>Vendor</MudTh>
-        <MudTh>Date</MudTh>
-        <MudTh>Total Amount</MudTh>
+        <MudTh Style="width:5%;">Type</MudTh>
+        <MudTh Style="width:10%;">PONo</MudTh>
+        <MudTh Style="width:10%;">PODate</MudTh>
+        <MudTh Style="width:25%;">Supplier</MudTh>
+        <MudTh Align="Align.Right" Style="width:15%;">Item Value</MudTh>
+        <MudTh Align="Align.Right" Style="width:10%;">Tax Value</MudTh>
+        <MudTh Align="Align.Right" Style="width:15%;">Total Value</MudTh>
+        <MudTh Style="width:15%;">Inv Status</MudTh>
+        <MudTh Style="width:5%;"></MudTh>
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="SAP PO Number">@context.SAPPONumber</MudTd>
+        <MudTd>
+            <MudText>@context.PoTypeName</MudText>
+        </MudTd>
+        <MudTd>
+            <MudLink Href="@($"PODetails/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
+                @context.SAPPONumber
+            </MudLink>
+        </MudTd>
+        <MudTd DataLabel="PODate">@FormatDate(context.SAPPODate)</MudTd>
         <MudTd DataLabel="Vendor">@context.VendorName</MudTd>
-        <MudTd DataLabel="Date">@context.SAPPODate.ToShortDateString()</MudTd>
-        <MudTd DataLabel="Total Amount">@context.TotalValue.ToString("C")</MudTd>
+        <MudTd Align="Align.Right" DataLabel="Item Value">@context.ItemValue.ToString("N2")</MudTd>
+        <MudTd Align="Align.Right" DataLabel="Tax Value">@context.GSTTotal.ToString("N2")</MudTd>
+        <MudTd Align="Align.Right" DataLabel="Total PO Value">@context.TotalValue.ToString("N2")</MudTd>
+        <MudTd>
+            <MudText Color="@GetStatusColor(context.InvoiceStatus)" Typo="Typo.body2">
+                @context.InvoiceStatus
+            </MudText>
+
+        </MudTd>
+
+        <MudTd>
+            <MudIconButton OnClick="@(() => ToggleRow(context.Id))"
+                           Icon="@(IsRowExpanded(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Outlined.ArrowDropDown)"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small" />
+        </MudTd>
     </RowTemplate>
-    
-</MudTable>
-
-@code {
-    private List<BreadcrumbItem> _breadcrumbItems = new List<BreadcrumbItem>
+    <ChildRowContent Context="row">
+        @if (IsRowExpanded(row.Id))
         {
-            new BreadcrumbItem("Home", href: "/"),
-            new BreadcrumbItem("Purchase Orders", href: ".", disabled: false)
-        };
+            
+            <MudTd ColSpan="9">
+                <MudPaper Class="pa-1">
+                    <MudText Typo="Typo.subtitle1" Color="Color.Tertiary">Additional Details</MudText>
+                    <MudDivider Class="my-2"/>
+                    <MudGrid>
+                        <MudItem xs="12" sm="12">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary"><strong>Project:</strong> @row.ProjectName</MudText>
+                        </MudItem>
+                    </MudGrid>
+                    <MudDivider Class="my-2" />
+                    <MudGrid>
+                        <MudItem xs="12" sm="3">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary"><strong>Invoice Count:</strong> @row.PreviousInvoiceCount</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary"><strong>Invoiced Value:</strong> @row.PreviousInvoiceValue</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary"><strong>Invoiced Pending:</strong> @row.InvoiceBalanceValue</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary"><strong>Paid Amount:</strong> @row.PaidValue</MudText>
+                        </MudItem>
 
-}
+                    </MudGrid>
+
+                </MudPaper>
+
+            </MudTd>
+        }
+    </ChildRowContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="@_pageSizeOption" RowsPerPageString="POs Per Page" />
+    </PagerContent>
+</MudTable>

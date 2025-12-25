@@ -24,7 +24,8 @@ namespace OceanVMSClient.HttpRepo.Authentication
             _jsonSerializerOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = true
+                WriteIndented = true,
+                PropertyNameCaseInsensitive = true,
             };
             _authStateProvider = authenticationStateProvider;
             _localStorage = localStorageService;
@@ -48,44 +49,49 @@ namespace OceanVMSClient.HttpRepo.Authentication
             };
         }
 
-        public async Task<AuthenticationResponseDto> Login(UserForAuthenticationDto userForAuthentication)
+        public async Task<AuthenticationResponseDto?> Login(UserForAuthenticationDto userForAuthenticationDto)
         {
-            var content = JsonSerializer.Serialize(userForAuthentication);
+            var content = JsonSerializer.Serialize(userForAuthenticationDto);
             var bodyContent = new StringContent(content, Encoding.UTF8, "application/json");
-
             var authResult = await _httpClient.PostAsync("authentication/login", bodyContent);
             var authContent = await authResult.Content.ReadAsStringAsync();
             var result = JsonSerializer.Deserialize<AuthenticationResponseDto>(authContent, _jsonSerializerOptions);
 
-            if (!authResult.IsSuccessStatusCode)
-                return result;
-            var fullName = $"{result.FirstName ?? string.Empty} {result.LastName ?? string.Empty}".Trim();
-            var UserType = result.UserType;
-            var FirstName = result.FirstName;
-            var LastName = result.LastName;
-            var AssignedRoles = result.Roles;
-            var EmpPK = result.EmployeeId;
-            var VendorPK = result.VendorId;
-            var VendorContactPK = result.VendorContactId;
-            var VendorName = result.VendorName;
+            if (!authResult.IsSuccessStatusCode || result == null || result.Token == null)
+                return new AuthenticationResponseDto
+                {
+                    IsAuthSuccessful = false,
+                    ErrorMessage = result?.ErrorMessage ?? "Login failed or invalid response.",
+                    Token = null
+                };
 
             await _localStorage.SetItemAsync("authToken", result.Token.AccessToken);
-            //await _localStorage.SetItemAsync("refreshToken", result.Token.RefreshToken);
-            await _localStorage.SetItemAsync("userRoles", AssignedRoles);
-            await _localStorage.SetItemAsync("firstName", FirstName);
-            await _localStorage.SetItemAsync("lastName", LastName);
-            await _localStorage.SetItemAsync("userType", UserType);
-            await _localStorage.SetItemAsync("fullName", fullName);
-            await _localStorage.SetItemAsync("empPK", EmpPK);
-            await _localStorage.SetItemAsync("vendorPK", VendorPK);
-            await _localStorage.SetItemAsync("vendorContactPK", VendorContactPK);
-            await _localStorage.SetItemAsync("vendorName", VendorName);
+            await _localStorage.SetItemAsync("refreshToken", result.Token.RefreshToken);
+            var fullName = $"{result.FirstName} {result.LastName}".Trim();
+            // persist first/last/vendor name so AuthStateProvider can add them on reload
+            if (!string.IsNullOrEmpty(result.FirstName))
+                await _localStorage.SetItemAsync("firstName", result.FirstName);
+            if (!string.IsNullOrEmpty(result.LastName))
+                await _localStorage.SetItemAsync("lastName", result.LastName);
+            if (!string.IsNullOrEmpty(result.VendorName))
+                await _localStorage.SetItemAsync("vendorName", result.VendorName);
+            if (!string.IsNullOrEmpty(result.Roles))
+                await _localStorage.SetItemAsync("userRoles", result.Roles);
+            if (!string.IsNullOrEmpty(result.UserType))
+                await _localStorage.SetItemAsync("userType", result.UserType);
+            if (!string.IsNullOrEmpty(fullName))
+                await _localStorage.SetItemAsync("fullName", fullName);
 
-            ((AuthStateProvider)_authStateProvider).NotifyUserAuthentication(result.UserName ?? userForAuthentication.UserName, fullName, FirstName, LastName, UserType);
+            // Notify AuthStateProvider including first/last/vendor name so UI updates immediately
+            ((AuthStateProvider)_authStateProvider).NotifyUserAuthentication(result.Token.AccessToken, result.FirstName, result.LastName, result.VendorName, result.UserType);
+
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("bearer", result.Token.AccessToken);
 
+            result.IsAuthSuccessful = true;
             return new AuthenticationResponseDto { IsAuthSuccessful = true };
+            //return result;
         }
+       
 
         public async Task Logout()
         {

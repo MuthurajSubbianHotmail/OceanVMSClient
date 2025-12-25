@@ -7,5 +7,7 @@ namespace OceanVMSClient.HttpRepoInterface.PoModule
     public interface IPurchaseOrderRepository
     {
         Task<PagingResponse<PurchaseOrderDto>> GetAllPurchaseOrders(PurchaseOrderParameters purchaseOrderParameters);
+        Task<PurchaseOrderDto> GetPurchaseOrderById(Guid PurchaseOrderId);
+        Task<PagingResponse<PurchaseOrderDto>> GetAllPurchaseOrdersOfVendorAsync(Guid vendorId, PurchaseOrderParameters purchaseOrderParameters);
     }
 }
