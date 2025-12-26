@@ -37,6 +37,47 @@
 .invoice-table td { font-size:0.95rem; padding:0.6rem 0.75rem; vertical-align:middle; }
 .invoice-table tbody tr:hover { background: rgba(27,110,194,0.03); }
 
+/* Emphasize PO Total, Invoice Total and Paid in child row */
+.child-row-paper .child-stat .stat-value {
+    font-weight: 600;
+    font-size: 0.98rem;
+    color: #111827; /* default dark */
+}
+
+/* Specific accents */
+.child-row-paper .child-stat .po-total-value {
+    color: rebeccapurple; /* matches PO emphasis used elsewhere */
+    font-weight: 700;
+    font-size: 1.02rem;
+}
+
+.child-row-paper .child-stat .invoice-total-value {
+    color: #059669; /* success/green */
+    font-weight: 700;
+    font-size: 1.02rem;
+}
+
+.child-row-paper .child-stat .paid-value {
+    color: #0ea5a4; /* teal */
+    font-weight: 700;
+    font-size: 1.02rem;
+}
+
+/* Small visual polish */
+.child-row-paper .child-stat {
+    background: rgba(255,255,255,0.92);
+    border-radius: 6px;
+    padding: 0.5rem;
+    text-align: center;
+    box-shadow: inset 0 0 0 1px rgba(15,23,42,0.02);
+}
+
+.child-row-paper .stat-label-small {
+    font-size: 0.78rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+}
+
 /* Responsive */
 @media (max-width:720px) {
     .invoice-paper { padding:0.75rem; }

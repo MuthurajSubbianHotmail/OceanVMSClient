@@ -88,6 +88,7 @@
             <MudTh Align="Align.Right">Invoice Total</MudTh>
             <MudTh>Invoice Status</MudTh>
             <MudTh>Payment Status</MudTh>
+            <MudTh></MudTh>
         </HeaderContent>
 
         <RowTemplate>
@@ -110,7 +111,172 @@
                 <MudChip T="string" Size="Size.Small" Color="@GetInvoiceChipColor(context.InvoiceStatus)" Variant="Variant.Filled">@context.InvoiceStatus</MudChip>
             </MudTd>
             <MudTd>@context.PaymentStatus</MudTd>
+            <MudTd>
+                <MudIconButton OnClick="@(() => ToggleRow(context.Id))"
+                               Icon="@(IsRowExpanded(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Outlined.ArrowDropDown)"
+                               Variant="Variant.Filled"
+                               Color="Color.Default"
+                               Size="Size.Small" />
+            </MudTd>
         </RowTemplate>
+
+        <ChildRowContent Context="row">
+            @if (IsRowExpanded(row.Id))
+            {
+                <MudTd ColSpan="10">
+                    <MudPaper Class="pa-3 child-row-paper" Elevation="0">
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary">Invoice & PO Details</MudText>
+                        <MudDivider Class="my-2" />
+
+                        <MudGrid GutterSize="2">
+                            <MudItem xs="12" sm="6" md="4">
+                                <div class="field-pair">
+                                    <div class="field-label">Invoice Ref No</div>
+                                    <div class="field-value"><strong>@row.InvoiceRefNo</strong></div>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="4">
+                                <div class="field-pair">
+                                    <div class="field-label">Invoice Date</div>
+                                    <div class="field-value">@FormatDate(row.InvoiceDate)</div>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="4">
+                                <div class="field-pair">
+                                    <div class="field-label">SAP PO No</div>
+                                    <div class="field-value">
+                                        <MudLink Href="@($"ViewPurchaseOrder/{row.PurchaseOrderId}")" Color="Color.Primary" Underline="Underline.Hover">
+                                            <strong>@row.SAPPONumber</strong>
+                                        </MudLink>
+                                    </div>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="4">
+                                <div class="field-pair">
+                                    <div class="field-label">PO Date</div>
+                                    <div class="field-value">@FormatDate(row.SAPPODate)</div>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="4">
+                                <div class="field-pair">
+                                    <div class="field-label">Project Code</div>
+                                    <div class="field-value">@row.ProjectCode</div>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="6" md="4">
+                                <div class="field-pair">
+                                    <div class="field-label">Remarks</div>
+                                    <div class="field-value">@row.Remarks</div>
+                                </div>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudDivider Class="my-2" />
+
+                        <MudGrid GutterSize="2" Class="mb-2">
+                            <MudItem xs="6" sm="4" md="3">
+                                <div class="child-stat">
+                                    <div class="stat-label-small">PO Value</div>
+                                    <div class="stat-value">@($"{row.POValue:N2}")</div>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="3">
+                                <div class="child-stat">
+                                    <div class="stat-label-small">PO Tax</div>
+                                    <div class="stat-value">@($"{row.POTaxValue:N2}")</div>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="3">
+                                <div class="child-stat">
+                                    <div class="stat-label-small">PO Total</div>
+                                    <div class="stat-value po-total-value">@($"{row.POTotalValue:N2}")</div>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="6" sm="4" md="3">
+                                <div class="child-stat">
+                                    <div class="stat-label-small">Invoice Value</div>
+                                    <div class="stat-value">@($"{row.InvoiceValue:N2}")</div>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="3">
+                                <div class="child-stat">
+                                    <div class="stat-label-small">Invoice Tax</div>
+                                    <div class="stat-value">@($"{row.InvoiceTaxValue:N2}")</div>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="6" sm="4" md="3">
+                                <div class="child-stat">
+                                    <div class="stat-label-small">Invoice Total</div>
+                                    <div class="stat-value invoice-total-value">@($"{row.InvoiceTotalValue:N2}")</div>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="6" sm="4" md="3">
+                                <div class="child-stat">
+                                    <div class="stat-label-small">Paid</div>
+                                    <div class="stat-value paid-value">@($"{row.PaidValue:N2}")</div>
+                                </div>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudDivider Class="my-2" />
+
+                        <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
+                            <MudItem xs="12" sm="6">
+                                <div class="field-pair">
+                                    <div class="field-label">Invoice File</div>
+                                    @if (!string.IsNullOrWhiteSpace(row.InvoiceFileURL))
+                                    {
+                                        <div class="field-value">
+                                            <MudLink Href="@row.InvoiceFileURL" Target="_blank" Color="Color.Primary" Underline="Underline.Hover">
+                                                Open Attachment
+                                            </MudLink>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="field-value">—</div>
+                                    }
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="3">
+                                <div class="field-pair">
+                                    <div class="field-label">Invoice Status</div>
+                                    <div class="field-value"><MudChip T="string" Size="Size.Small" Color="@GetInvoiceChipColor(row.InvoiceStatus)" Variant="Variant.Filled">@row.InvoiceStatus</MudChip></div>
+                                </div>
+                            </MudItem>
+
+                            <MudItem xs="12" sm="3">
+                                <div class="field-pair">
+                                    <div class="field-label">Payment Status</div>
+                                    <div class="field-value">@row.PaymentStatus</div>
+                                </div>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudDivider Class="my-2" />
+
+                        <!-- Workflow stepper -->
+                        <MudStepper Elevation="0" ActiveIndex="@GetWorkflowStepIndex(row.InvoiceStatus)" Class="mt-3 child-stepper" hidden="hidden">
+                            <MudStep Label="Submitted" />
+                            <MudStep Label="Initiator" />
+                            <MudStep Label="Checker" />
+                            <MudStep Label="Validator" />
+                            <MudStep Label="Approver" />
+                            <MudStep Label="Accounts Payable" />
+                            <MudStep Label="Paid" />
+                        </MudStepper>
+                     </MudPaper>
+                 </MudTd>
+             }
+         </ChildRowContent>
 
         <PagerContent>
             <MudTablePager PageSizeOptions="@_pageSize_option" RowsPerPageString="Invoices Per Page" />

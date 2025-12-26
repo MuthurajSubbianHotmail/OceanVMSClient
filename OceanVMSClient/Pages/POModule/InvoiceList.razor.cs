@@ -20,6 +20,15 @@ namespace OceanVMSClient.Pages.POModule
 
         // Add this field to the class to fix CS0103
         private MudDateRangePicker? _date_range_picker;
+        private readonly HashSet<Guid> _expandedRows = new();
+        private bool IsRowExpanded(Guid id) => _expandedRows.Contains(id);
+        private void ToggleRow(Guid id)
+        {
+            if (!_expandedRows.Add(id))
+                _expandedRows.Remove(id);
+
+            StateHasChanged();
+        }
 
         // ServerData provider for MudTable
         private async Task<TableData<InvoiceDto>> GetServerData(TableState state, CancellationToken cancellationToken)
@@ -103,6 +112,28 @@ namespace OceanVMSClient.Pages.POModule
                 "part invoiced" or "partially paid" or "partial" => Color.Info,
                 "cancelled" or "void" => Color.Secondary,
                 _ => Color.Secondary
+            };
+        }
+
+        // Return index for MudStepper ActiveIndex (0-based)
+        private int GetWorkflowStepIndex(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                return 0;
+
+            var s = status.Trim().ToLowerInvariant();
+
+            // Map known workflow labels to step index
+            return s switch
+            {
+                "submitted" => 0,
+                "initiator" or "initiator review" or "initiator review required" => 1,
+                "checker" or "checker review" or "checker review required" => 2,
+                "validator" or "validator review" or "validator review required" => 3,
+                "approver" or "approver review" or "awaiting approval" => 4,
+                "accounts payable" or "accounts" or "ap" => 5,
+                "paid" or "approved" or "fully invoiced" => 6,
+                _ => 0
             };
         }
 
