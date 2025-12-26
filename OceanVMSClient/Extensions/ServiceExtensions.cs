@@ -44,6 +44,7 @@ namespace OceanVMSClient.Extensions
             services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
             services.AddScoped<IInvoiceApproverRepository, InvoiceApproverRepository>();
             services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+            services.AddScoped<IVendorRepository, VendorRepository>();
             return services;
         }
 

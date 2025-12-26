@@ -37,6 +37,83 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             };
             return pagingResponse;
         }
+
+        public async Task<PagingResponse<InvoiceDto>> GetInvoicesByVendorId(Guid vendorContactId, InvoiceParameters invoiceParameters)
+        {
+            var response = await _httpClient.GetAsync($"invoices/vendor/{vendorContactId}?{invoiceParameters.ToQueryString()}");
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var pagingResponse = new PagingResponse<InvoiceDto>
+            {
+                Items = JsonSerializer.Deserialize<List<InvoiceDto>>(content, _options),
+                MetaData = JsonSerializer.Deserialize<MetaData>(response.Headers.GetValues("X-Pagination").First(), _options)
+            };
+            return pagingResponse;
+        }
+
+        public async Task<PagingResponse<InvoiceDto>> GetInvoicesByApproverEmployeeId(Guid employeeId, InvoiceParameters invoiceParameters)
+        {
+            var response = await _httpClient.GetAsync($"invoices/by-approver-employee/{employeeId}?{invoiceParameters.ToQueryString()}");
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var pagingResponse = new PagingResponse<InvoiceDto>
+            {
+                Items = JsonSerializer.Deserialize<List<InvoiceDto>>(content, _options),
+                MetaData = JsonSerializer.Deserialize<MetaData>(response.Headers.GetValues("X-Pagination").First(), _options)
+            };
+            return pagingResponse;
+        }
+
+        public async Task<InvoiceDto> GetInvoiceById(Guid invoiceId)
+        {
+            var response = await _httpClient.GetAsync($"invoices/{invoiceId}");
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var invoice = JsonSerializer.Deserialize<InvoiceDto>(content, _options);
+            return invoice!;
+        }
+
+        public async Task<PagingResponse<InvoiceDto>> GetInvoicesByPurchaseOrderId(Guid purchaseOrderId, InvoiceParameters invoiceParameters)
+        {
+            var response = await _httpClient.GetAsync($"invoices/purchaseorder/{purchaseOrderId}?{invoiceParameters.ToQueryString()}");
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var pagingResponse = new PagingResponse<InvoiceDto>
+            {
+                Items = JsonSerializer.Deserialize<List<InvoiceDto>>(content, _options),
+                MetaData = JsonSerializer.Deserialize<MetaData>(response.Headers.GetValues("X-Pagination").First(), _options)
+            };
+            return pagingResponse;
+        }
+
+        public async Task<InvoiceDto> CreateInvoice(InvoiceForCreationDto invoiceForCreation)
+        {
+            var invoiceJson = new StringContent(JsonSerializer.Serialize(invoiceForCreation), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("invoices", invoiceJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var createdInvoice = JsonSerializer.Deserialize<InvoiceDto>(content, _options);
+            return createdInvoice!;
+        }
     }
 
     public static class InvoiceParametersExtensions

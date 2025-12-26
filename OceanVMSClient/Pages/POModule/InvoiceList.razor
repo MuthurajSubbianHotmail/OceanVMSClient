@@ -282,6 +282,14 @@
             <MudTablePager PageSizeOptions="@_pageSize_option" RowsPerPageString="Invoices Per Page" />
         </PagerContent>
     </MudTable>
+    <MudDivider Class="my-3" />
+
+    <MudGrid>
+        <MudItem xs="12" Class="d-flex justify-end">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewInvoice">New Invoice</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Class="ml-2" StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewInvoiceFromPo">New Invoice (From PO)</MudButton>
+        </MudItem>
+    </MudGrid>
 </MudPaper>
 
 @code {
@@ -307,5 +315,16 @@
     private string FormatDate(DateTime? date)
     {
         return date.HasValue ? date.Value.ToString("dd-MMM-yy") : string.Empty;
+    }
+
+    private void CreateNewInvoice()
+    {
+        NavigationManager.NavigateTo("/newinvoice");
+    }
+
+    // Navigates to the same create page with a query parameter that your create page can use to open PO selector if desired.
+    private void CreateNewInvoiceFromPo()
+    {
+        NavigationManager.NavigateTo("/newinvoice");
     }
 }

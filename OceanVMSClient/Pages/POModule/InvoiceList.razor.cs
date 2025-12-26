@@ -1,11 +1,15 @@
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
+using OceanVMSClient.HttpRepo.Authentication;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +17,12 @@ namespace OceanVMSClient.Pages.POModule
 {
     public partial class InvoiceList
     {
+        [CascadingParameter]
+        public Task<AuthenticationState> AuthState { get; set; } = default!;
+
+        [Inject]
+        public ILocalStorageService LocalStorage { get; set; } = default!;
+
         [Inject] public IInvoiceRepository InvoiceRepository { get; set; } = default!;
         [Inject] public ISnackbar Snackbar { get; set; } = default!;
         [Inject] public ILogger<InvoiceList> Logger { get; set; } = default!;
@@ -22,6 +32,12 @@ namespace OceanVMSClient.Pages.POModule
         private MudDateRangePicker? _date_range_picker;
         private readonly HashSet<Guid> _expandedRows = new();
         private bool IsRowExpanded(Guid id) => _expandedRows.Contains(id);
+
+        // user context
+        private string? _userType;
+        private Guid? _vendorId;
+        private Guid? _vendorContactId;
+        private Guid? _employeeId;
         private void ToggleRow(Guid id)
         {
             if (!_expandedRows.Add(id))
@@ -30,6 +46,22 @@ namespace OceanVMSClient.Pages.POModule
             StateHasChanged();
         }
 
+        #region Lifecycle
+
+        protected override async Task OnInitializedAsync()
+        {
+            try
+            {
+                await LoadUserContextAsync();
+            }
+            catch
+            {
+                _userType = null;
+                Console.WriteLine("Failed to retrieve user type from claims/local storage.");
+            }
+        }
+
+        #endregion
         // ServerData provider for MudTable
         private async Task<TableData<InvoiceDto>> GetServerData(TableState state, CancellationToken cancellationToken)
         {
@@ -55,6 +87,17 @@ namespace OceanVMSClient.Pages.POModule
                 _invoiceParameters.InvEndDate = _invoice_date_range?.End ?? default;
 
                 var response = await InvoiceRepository.GetAllInvoices(_invoiceParameters);
+
+
+                // choose repository call based on user type
+                if (string.Equals(_userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
+                {
+                    response = await InvoiceRepository.GetInvoicesByVendorId(_vendorId ?? Guid.Empty, _invoiceParameters);
+                }
+                else
+                {
+                    response = await InvoiceRepository.GetInvoicesByApproverEmployeeId(_employeeId ?? Guid.Empty, _invoiceParameters);
+                }
 
                 return new TableData<InvoiceDto>
                 {
@@ -108,7 +151,8 @@ namespace OceanVMSClient.Pages.POModule
             {
                 "approved" or "paid" or "fully invoiced" => Color.Success,
                 "rejected" or "declined" or "overdue" => Color.Error,
-                "pending" or "awaiting approval" or "awaiting" => Color.Warning,
+                "submitted" or "awaiting approval" or "awaiting" => Color.Default,
+                "with initiator" or "with checker" or "with validator" or "with approver" or "under review" => Color.Warning,
                 "part invoiced" or "partially paid" or "partial" => Color.Info,
                 "cancelled" or "void" => Color.Secondary,
                 _ => Color.Secondary
@@ -149,5 +193,59 @@ namespace OceanVMSClient.Pages.POModule
             public decimal? MaxInvoiceTotal { get; set; }
             public string? VendorName { get; set; }
         }
+
+
+        #region User context helpers
+
+        private async Task LoadUserContextAsync()
+        {
+            var authState = await AuthState;
+            var user = authState.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                _userType = GetClaimValue(user, "userType");
+                _vendorId = ParseGuid(GetClaimValue(user, "vendorPK") ?? GetClaimValue(user, "vendorId"));
+                _vendorContactId = ParseGuid(GetClaimValue(user, "vendorContactId") ?? GetClaimValue(user, "vendorContact"));
+                _employeeId = ParseGuid(GetClaimValue(user, "empPK") ?? GetClaimValue(user, "EmployeeId"));
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_userType))
+            {
+                _userType = await LocalStorage.GetItemAsync<string>("userType");
+            }
+
+            if (string.Equals(_userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
+            {
+                _vendorId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("vendorPK"));
+                _vendorContactId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("vendorContactId"));
+            }
+            else
+            {
+                _employeeId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("empPK"));
+            }
+        }
+
+        #endregion
+
+        #region Helpers
+
+        private static string? GetClaimValue(ClaimsPrincipal? user, string claimType)
+        {
+            if (user == null) return null;
+            var claim = user.Claims.FirstOrDefault(c => string.Equals(c.Type, claimType, StringComparison.OrdinalIgnoreCase))
+                        ?? user.Claims.FirstOrDefault(c => c.Type.EndsWith($"/{claimType}", StringComparison.OrdinalIgnoreCase))
+                        ?? user.Claims.FirstOrDefault(c => c.Type.EndsWith(claimType, StringComparison.OrdinalIgnoreCase));
+            return claim?.Value;
+        }
+
+        private static Guid? ParseGuid(string? value) => Guid.TryParse(value, out var g) ? g : (Guid?)null;
+
+        #endregion
     }
 }

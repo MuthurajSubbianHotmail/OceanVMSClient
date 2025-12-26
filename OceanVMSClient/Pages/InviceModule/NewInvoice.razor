@@ -1,0 +1,44 @@
+﻿@page "/newinvoice"
+
+<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+<PageHeader Title="New Invoices" Class="mb-0" />
+<MudPaper Class="pa-4 invoice-paper">
+    <MudPaper Elevation="0" Class="pa-3 section">
+        <EditForm Model="_invoiceDto" OnValidSubmit="CreateInvoiceAsync">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Vendor" @bind-Value="_invoiceDto.VendorId" Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Purchase Order" @bind-Value="_invoiceDto.PurchaseOrderId" Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Invoice Reference No" @bind-Value="_invoiceDto.InvoiceRefNo" Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Invoice Item Value" @bind-Value="_invoiceDto.InvoiceTotalValue" Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Invoice Tax Value" @bind-Value="_invoiceDto.InvoiceTaxValue" Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Invoice Total Value" @bind-Value="_invoiceDto.InvoiceTotalValue" Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Invoice Remarks" @bind-Value="_invoiceDto.Remarks" Variant="Variant.Outlined" FullWidth="true" />
+                </MudItem>
+                <MudItem xs="12" Class="d-flex justify-end">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary">Create Invoice</MudButton>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+        </MudPaper>
+</MudPaper>
+@code {
+    private List<BreadcrumbItem> _items = new()
+    {
+        new BreadcrumbItem("Home", href: "/", disabled: false),
+        new BreadcrumbItem("Invoices", href: "/invoices", disabled: false),
+        new BreadcrumbItem("New Invoice", href: null, disabled: true)
+    };
+}
