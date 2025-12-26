@@ -1,0 +1,6 @@
+﻿/* Hide stepper prev/next buttons if ShowButtons not available */
+.mud-stepper .mud-stepper-nav,
+.mud-stepper .mud-stepper-actions,
+.mud-stepper .mud-stepper-footer {
+  display: none !important;
+}

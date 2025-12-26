@@ -2,6 +2,7 @@
 using Entities.Models.POModule;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
@@ -22,7 +23,8 @@ namespace OceanVMSClient.Pages.InviceModule
         private InvoiceDto _invoiceDto = new InvoiceDto();
         private InvoiceForCreationDto _invoiceForCreationDto = new InvoiceForCreationDto();
         [Inject] public NavigationManager NavigationManager { get; set; }
-        [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;
+        [Inject] public ILocalStorageService LocalStorage { get; set; } = default!
+;
         [Inject] public ILogger<NewInvoice> Logger { get; set; }
         [Inject] public IInvoiceRepository InvoiceRepository { get; set; }
         [Inject] public IVendorRepository VendorRepository { get; set; }
@@ -50,6 +52,64 @@ namespace OceanVMSClient.Pages.InviceModule
         private Guid? _vendorContactId;
         private Guid? _employeeId;
 
+        // Selected vendor instance bound to the MudAutocomplete
+        private VendorDto? _selectedVendor;
+        private VendorDto? SelectedVendor
+        {
+            get => _selectedVendor;
+            set
+            {
+                if (_selectedVendor != value)
+                {
+                    _selectedVendor = value;
+                    if (_selectedVendor?.Id.HasValue == true)
+                    {
+                        VendorID = _selectedVendor.Id.Value;
+                        _invoiceDto.VendorId = VendorID;
+                        //_invoiceForCreationDto.VendorId = VendorID; // ensure DTO has vendor id
+                        isVendorProvided = true;
+                        VendorName = _selectedVendor.VendorName ?? string.Empty;
+                    }
+                    else
+                    {
+                        VendorID = Guid.Empty;
+                        _invoiceDto.VendorId = VendorID;
+                        //_invoiceForCreationDto.VendorId = Guid.Empty;
+                        isVendorProvided = false;
+                        VendorName = string.Empty;
+                    }
+                }
+            }
+        }
+
+        // Purchase order details for right-side display
+        private PurchaseOrderDto? PurchaseOrderDetails { get; set; }
+
+        private string PoDateText =>
+            PurchaseOrderDetails?.SAPPODate is DateTime d ? d.ToString("dd-MMM-yy") : "—";
+
+        private string ProjectNameText => PurchaseOrderDetails?.ProjectName ?? "—";
+
+        private string PoValueText => PurchaseOrderDetails != null ? PurchaseOrderDetails.ItemValue.ToString("N2") : "0.00";
+
+        private string PoTaxText => PurchaseOrderDetails != null ? PurchaseOrderDetails.GSTTotal.ToString("N2") : "0.00";
+
+        private string PoTotalText => PurchaseOrderDetails != null ? PurchaseOrderDetails.TotalValue.ToString("N2") : "0.00";
+
+        private string PrevInvoiceCountText => PurchaseOrderDetails?.PreviousInvoiceCount?.ToString() ?? "0";
+
+        private string PrevInvoiceValueText => PurchaseOrderDetails != null && PurchaseOrderDetails.PreviousInvoiceValue.HasValue
+            ? PurchaseOrderDetails.PreviousInvoiceValue.Value.ToString("N2")
+            : "0.00";
+
+        private string InvoiceBalanceValueText => PurchaseOrderDetails != null && PurchaseOrderDetails.InvoiceBalanceValue.HasValue
+            ? PurchaseOrderDetails.InvoiceBalanceValue.Value.ToString("N2")
+            : "0.00";
+
+        // EditContext + validation store
+        private EditContext? _editContext;
+        private ValidationMessageStore? _messageStore;
+
         protected override async Task OnParametersSetAsync()
         {
             await base.OnParametersSetAsync();
@@ -70,6 +130,7 @@ namespace OceanVMSClient.Pages.InviceModule
                         if (vendor != null)
                         {
                             VendorName = vendor.VendorName;
+                            SelectedVendor = vendor;
                         }
                         else
                         {
@@ -94,6 +155,7 @@ namespace OceanVMSClient.Pages.InviceModule
                         var purchaseOrder = await PurchaseOrderRepository.GetPurchaseOrderById(PurchaseOrderID);
                         if (purchaseOrder != null)
                         {
+                            PurchaseOrderDetails = purchaseOrder;
                             PurchaseOrderNumber = purchaseOrder.SAPPONumber;
                             PurchaseOrderDate = purchaseOrder.SAPPODate;
                         }
@@ -114,8 +176,53 @@ namespace OceanVMSClient.Pages.InviceModule
             }
         }
 
+        // Search function used by MudAutocomplete.
+        private async Task<IEnumerable<VendorDto>> SearchVendors(string value, CancellationToken token)
+        {
+            try
+            {
+                if (token.IsCancellationRequested)
+                    return Enumerable.Empty<VendorDto>();
+
+                if (string.IsNullOrWhiteSpace(value))
+                    return Enumerable.Empty<VendorDto>();
+
+                var vendorParameters = new VendorParameters
+                {
+                    PageNumber = 1,
+                    PageSize = 10,
+                    SearchTerm = value
+                };
+
+                var response = await VendorRepository.GetAllVendors(vendorParameters);
+                var items = response?.Items ?? Enumerable.Empty<VendorDto>();
+
+                // apply client-side filter to ensure match
+                return items.Where(x => !string.IsNullOrWhiteSpace(x?.VendorName)
+                                        && x.VendorName.Contains(value, StringComparison.OrdinalIgnoreCase));
+            }
+            catch (OperationCanceledException)
+            {
+                return Enumerable.Empty<VendorDto>();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "SearchVendors failed");
+                return Enumerable.Empty<VendorDto>();
+            }
+        }
+
         protected override async Task OnInitializedAsync()
         {
+            // create EditContext and ValidationMessageStore early so form renders correctly
+            _editContext = new EditContext(_invoiceForCreationDto);
+            _messageStore = new ValidationMessageStore(_editContext);
+            _editContext.OnFieldChanged += (sender, args) =>
+            {
+                // clear messages for the field when user edits it
+                _messageStore?.Clear(args.FieldIdentifier);
+            };
+
             try
             {
                 // Keep existing query-string support (in case vendorId/purchaseOrderId are supplied as query params)
@@ -130,6 +237,7 @@ namespace OceanVMSClient.Pages.InviceModule
                     if (vendor != null)
                     {
                         VendorName = vendor.VendorName;
+                        SelectedVendor = vendor;
                     }
                     else
                     {
@@ -145,6 +253,7 @@ namespace OceanVMSClient.Pages.InviceModule
                     var purchaseOrder = await PurchaseOrderRepository.GetPurchaseOrderById(PurchaseOrderID);
                     if (purchaseOrder != null)
                     {
+                        PurchaseOrderDetails = purchaseOrder;
                         PurchaseOrderNumber = purchaseOrder.SAPPONumber;
                         PurchaseOrderDate = purchaseOrder.SAPPODate;
                     }
@@ -180,10 +289,38 @@ namespace OceanVMSClient.Pages.InviceModule
             }
         }
 
+        private string? _uploadedFileUrl; // URL returned by the server after upload
+
         private async Task CreateInvoiceAsync()
         {
             try
             {
+                // If a file was selected, upload it first and set InvoiceFileURL on DTO
+                if (_uploadedInvoiceFile != null && _uploadedInvoiceFile.Length > 0)
+                {
+                    try
+                    {
+                        using var content = new MultipartFormDataContent();
+                        var fileContent = new ByteArrayContent(_uploadedInvoiceFile);
+                        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(_uploadedFileContentType ?? "application/octet-stream");
+                        content.Add(fileContent, "file", _uploadedFileName ?? "invoice-file");
+
+                        var url = await InvoiceRepository.UploadInvoiceFile(content);
+                        if (!string.IsNullOrWhiteSpace(url))
+                        {
+                            _invoiceForCreationDto.InvoiceFileURL = url;
+                            _uploadedFileUrl = url;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Failed to upload invoice file before creating invoice");
+                        _fileValidationMessage = "Failed to upload file. You can try again or create invoice without file.";
+                        // abort to let user decide
+                        return;
+                    }
+                }
+
                 var createdInvoice = await InvoiceRepository.CreateInvoice(_invoiceForCreationDto);
                 if (createdInvoice != null)
                 {
@@ -199,6 +336,147 @@ namespace OceanVMSClient.Pages.InviceModule
                 Logger.LogError(ex, "Error creating new invoice");
             }
         }
+
+        // Recalculate invoice total when value or tax changes
+        private void RecalculateInvoiceTotal()
+        {
+            var value = _invoiceForCreationDto.InvoiceValue;
+            var tax = _invoiceForCreationDto.InvoiceTaxValue;
+            _invoiceForCreationDto.InvoiceTotalValue = value + tax;
+        }
+
+        private async Task OnInvoiceValueChanged(decimal? value)
+        {
+            _invoiceForCreationDto.InvoiceValue = value ?? 0m;
+            RecalculateInvoiceTotal();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private async Task OnInvoiceTaxValueChanged(decimal? value)
+        {
+            _invoiceForCreationDto.InvoiceTaxValue = value ?? 0m;
+            RecalculateInvoiceTotal();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private const long MaxFileSize = 3 * 1024 * 1024; // 3 MB
+        private byte[]? _uploadedInvoiceFile;
+        private string? _uploadedFileName;
+        private string? _uploadedFileContentType;
+        private string? _fileValidationMessage;
+
+        private async Task OnInputFileChange(InputFileChangeEventArgs e)
+        {
+            var file = e.File;
+            ClearFile();
+            if (file == null)
+            {
+                return;
+            }
+
+            if (file.Size > MaxFileSize)
+            {
+                _fileValidationMessage = "File exceeds 3 MB limit.";
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            var ct = (file.ContentType ?? string.Empty).ToLowerInvariant();
+            if (!(ct == "application/pdf" || ct.StartsWith("image/")))
+            {
+                _fileValidationMessage = "Only PDF or image files are allowed.";
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            try
+            {
+                using var stream = file.OpenReadStream(MaxFileSize);
+                using var ms = new System.IO.MemoryStream();
+                await stream.CopyToAsync(ms);
+                _uploadedInvoiceFile = ms.ToArray();
+                _uploadedFileName = file.Name;
+                _uploadedFileContentType = file.ContentType;
+                _fileValidationMessage = null;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed reading uploaded file");
+                _fileValidationMessage = "Failed to read file.";
+                ClearFile();
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private void ClearFile()
+        {
+            _uploadedInvoiceFile = null;
+            _uploadedFileName = null;
+            _uploadedFileContentType = null;
+            _fileValidationMessage = null;
+            _uploadedFileUrl = null;
+        }
+
+        // Handle form submit with custom validation
+        private async Task HandleSubmit(EditContext editContext)
+        {
+            // clear previous messages
+            _messageStore?.Clear();
+            RecalculateInvoiceTotal();
+
+            var valid = ValidateInputs();
+
+            if (!valid)
+            {
+                _editContext?.NotifyValidationStateChanged();
+                return;
+            }
+
+            await CreateInvoiceAsync();
+        }
+
+        // Perform validations and add messages to ValidationMessageStore
+        private bool ValidateInputs()
+        {
+            bool isValid = true;
+            if (_messageStore == null || _editContext == null)
+                return false;
+
+            //// Vendor required
+            //if (!(_invoiceForCreationDto.VendorId.HasValue && _invoiceForCreationDto.VendorId.Value != Guid.Empty))
+            //{
+            //    _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.VendorId)), "Vendor is required.");
+            //    isValid = false;
+            //}
+
+            // PurchaseOrder: either PurchaseOrderId or PurchaseOrderNumber must be present
+            if ((_invoiceForCreationDto.PurchaseOrderId == Guid.Empty)
+                && string.IsNullOrWhiteSpace(PurchaseOrderNumber))
+            {
+                _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.PurchaseOrderId)), "Purchase Order is required.");
+                isValid = false;
+            }
+
+            // Invoice reference required
+            if (string.IsNullOrWhiteSpace(_invoiceForCreationDto.InvoiceRefNo))
+            {
+                _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceRefNo)), "Invoice reference is required.");
+                isValid = false;
+            }
+
+            // Invoice total must be > 0
+            if (!(_invoiceForCreationDto.InvoiceTotalValue > 0m))
+            {
+                _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceTotalValue)), "Invoice total must be greater than zero.");
+                isValid = false;
+            }
+
+            // File size/type already validated on pick; if you require file, add check here.
+
+            return isValid;
+        }
+
         #region User context helpers
 
 

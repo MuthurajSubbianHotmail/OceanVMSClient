@@ -1,0 +1,194 @@
+﻿@page "/invoiceview/{InvoiceId:Guid?}"
+@using Shared.DTO.POModule
+
+<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+<PageHeader Title="Invoice" Class="mb-2" />
+
+<div class="newinvoice">
+    <MudGrid GutterSize="1">
+        <MudItem xs="12">
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudStepper Elevation="0" Class="mx-0" ActiveIndex="@GetWorkflowStepIndex(_invoiceDto?.InvoiceStatus)" ShowButtons="false">
+                    <MudStep Label="Submitted" Title="Submitted">
+                        <MudGrid GutterSize="1" AlignItems="Center">
+                            <!-- Left: Invoice details (display only) -->
+                            <MudItem xs="12" sm="6">
+                                <MudPaper Elevation="0" Class="pa-2">
+                                    <MudText Typo="Typo.h6" Class="mb-1">Invoice Details</MudText>
+                                    <MudDivider Class="mb-2" />
+
+                                    <MudGrid GutterSize="1">
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Invoice Reference No</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@(_invoiceDto.InvoiceRefNo ?? "—")</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Invoice Date</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@(_invoiceDto.InvoiceDate is DateTime d ? d.ToString("dd-MMM-yyyy") : "—")</MudText>
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Vendor</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@VendorName</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Purchase Order</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@PurchaseOrderNumber</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Invoice Status</MudText>
+                                            <div class="mb-1">
+                                                <MudChip T="string"
+                                                         Color="@GetInvoiceChipColor(_invoiceDto.InvoiceStatus)"
+                                                         Variant="Variant.Filled">
+                                                    @(_invoiceDto.InvoiceStatus ?? "—")
+                                                </MudChip>
+                                            </div>
+                                        </MudItem>
+
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Invoice Item Value</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@((_invoiceDto.InvoiceValue).ToString("N2"))</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Invoice Tax Value</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@((_invoiceDto.InvoiceTaxValue).ToString("N2"))</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Invoice Total Value</MudText>
+                                            <MudText Typo="Typo.h6" Class="mb-1">@((_invoiceDto.InvoiceTotalValue).ToString("N2"))</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Remarks</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@(_invoiceDto.Remarks ?? "—")</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Invoice File</MudText>
+                                            @if (!string.IsNullOrWhiteSpace(_invoiceDto.InvoiceFileURL))
+                                            {
+                                                <div class="d-flex align-center">
+                                                    <a class="mud-link" href="@_invoiceDto.InvoiceFileURL" target="_blank" rel="noopener noreferrer">Open file</a>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2">No file attached</MudText>
+                                            }
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+                            </MudItem>
+
+                            <!-- Right: Purchase Order summary (display only) -->
+                            <MudItem xs="12" sm="6">
+                                <MudPaper Elevation="0" Class="pa-2">
+                                    <MudText Typo="Typo.h6" Class="mb-1">Purchase Order Summary</MudText>
+                                    <MudDivider Class="mb-2" />
+
+                                    <MudGrid GutterSize="1">
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">SAP PO Date</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@PoDateText</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Project</MudText>
+                                            <MudText Typo="Typo.body1" Class="mb-1">@ProjectNameText</MudText>
+                                        </MudItem>
+
+                                        <MudItem xs="12" Class="mt-1">
+                                            <MudCard Elevation="0" Class="pa-2">
+                                                <MudGrid AlignItems="Center" GutterSize="1">
+                                                    <MudItem xs="6">
+                                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">PO Value</MudText>
+                                                        <MudText Typo="Typo.h6">@PoValueText</MudText>
+                                                    </MudItem>
+
+                                                    <MudItem xs="6">
+                                                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">PO Tax</MudText>
+                                                        <MudText Typo="Typo.h6">@PoTaxText</MudText>
+                                                    </MudItem>
+
+                                                    <MudItem xs="12" Class="mt-1">
+                                                        <MudDivider />
+                                                        <div class="d-flex justify-space-between mt-1">
+                                                            <div>
+                                                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">PO Total</MudText>
+                                                                <MudText Typo="Typo.h5" Color="Color.Primary">@PoTotalText</MudText>
+                                                            </div>
+
+                                                            <div style="text-align:right">
+                                                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Balance</MudText>
+                                                                <MudText Typo="Typo.h6" Color="Color.Warning">@InvoiceBalanceValueText</MudText>
+                                                            </div>
+                                                        </div>
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </MudCard>
+                                        </MudItem>
+
+                                        <MudItem xs="12" Class="mt-1">
+                                            <MudGrid GutterSize="1">
+                                                <MudItem xs="6">
+                                                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Prev. Invoice Count</MudText>
+                                                    <MudText Typo="Typo.body1">@PrevInvoiceCountText</MudText>
+                                                </MudItem>
+                                                <MudItem xs="6">
+                                                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Prev. Invoice Value</MudText>
+                                                    <MudText Typo="Typo.body1">@PrevInvoiceValueText</MudText>
+                                                </MudItem>
+                                            </MudGrid>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+                    </MudStep>
+
+                   <MudStep Label="Initiator" Title="With Initiator">
+                        <InvoiceInitiatorReview _invoiceDto="@_invoiceDto" />
+                    </MudStep>
+                    <MudStep Label="Checker" Title="With Checker" >
+                        <EditForm Model="@_invoiceDto">
+                            <MudText Typo="Typo.body1">Checker</MudText>
+                        </EditForm>
+                    </MudStep>
+                    <MudStep Label="Validator" Title="With Validator" >
+                        <MudText Typo="Typo.body1">Validator</MudText>
+                    </MudStep>
+                </MudStepper>
+            </MudPaper>
+            <MudPaper Class="pa-2 mb-2" Elevation="0">
+                @*  <MudStepper Elevation="0" Class="mx-0" ActiveIndex="@GetWorkflowStepIndex(_invoiceDto?.InvoiceStatus)" ShowButtons="false">
+                    <MudStep Label="Submitted"  Title="Submitted"/>
+                    <MudStep Label="Initiator" Title="With Initiator"/>
+                    <MudStep Label="Checker" Title="With Checker"/>
+                    <MudStep Label="Validator" Title="With Validator"/>
+                    <MudStep Label="Approver" Title="With Approver"/>
+                    <MudStep Label="Accounts Payable" Title="With Accounts Payable"/>
+                    <MudStep Label="Approved" Title="Approved"/>
+                    
+                </MudStepper> *@
+
+            </MudPaper>
+
+        </MudItem>
+        <!-- Workflow stepper -->
+
+    </MudGrid>
+</div>
+
+@code {
+    private List<BreadcrumbItem> _items = new()
+    {
+        new BreadcrumbItem("Home", href: "/", disabled: false),
+        new BreadcrumbItem("Invoices", href: "/invoices", disabled: false),
+        new BreadcrumbItem("Invoice", href: null, disabled: true)
+    };
+}

@@ -11,5 +11,8 @@ namespace OceanVMSClient.HttpRepoInterface.InvoiceModule
         Task<InvoiceDto> GetInvoiceById(Guid invoiceId);
         Task<PagingResponse<InvoiceDto>> GetInvoicesByPurchaseOrderId(Guid purchaseOrderId, InvoiceParameters invoiceParameters);
         Task<InvoiceDto> CreateInvoice(InvoiceForCreationDto invoiceForCreation);
+
+        // Uploads a file and returns the public URL (server should return the URL as plain string or JSON string)
+        Task<string> UploadInvoiceFile(MultipartFormDataContent content);
     }
 }

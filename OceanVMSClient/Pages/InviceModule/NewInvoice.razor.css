@@ -1,0 +1,48 @@
+﻿/* Local spacing tweaks to make the layout more compact and sleek */
+
+/* reduce padding of main paper */
+.newinvoice .pa-3 {
+    padding: 12px; /* smaller than MudBlazor pa-3 default */
+}
+
+/* reduce inner paper padding */
+.newinvoice .pa-2 {
+    padding: 8px;
+}
+
+/* tighten item gutters (covers both possible Mud classes) */
+.newinvoice .mud-grid > .mud-item,
+.newinvoice .mud-grid > .mud-grid-item,
+.newinvoice .mud-grid-item {
+    padding-bottom: 6px;
+    padding-top: 6px;
+}
+
+/* reduce bottom margin for headings and small text helpers */
+.newinvoice .mb-1 {
+    margin-bottom: 6px !important;
+}
+
+.newinvoice .mb-2 {
+    margin-bottom: 8px !important;
+}
+
+/* reduce card padding inside right column */
+.newinvoice .mud-card.pa-2 {
+    padding: 8px;
+}
+
+/* reduce vertical spacing inside form controls */
+.newinvoice .mud-input-root,
+.newinvoice .mud-form-field {
+    margin-bottom: 6px;
+}
+
+/* small responsive tweak to keep density on small screens */
+@media (max-width: 600px) {
+    .newinvoice .mud-grid > .mud-item,
+    .newinvoice .mud-grid-item {
+        padding-bottom: 4px;
+        padding-top: 4px;
+    }
+}

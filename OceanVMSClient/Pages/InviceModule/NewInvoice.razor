@@ -1,42 +1,215 @@
 ﻿@page "/newinvoice"
 @page "/newinvoice/{VendorId:Guid?}"
 @page "/newinvoice/{VendorId:Guid?}/{PurchaseOrderId:Guid?}"
-
+@using Shared.DTO.POModule
 
 <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
-<PageHeader Title="New Invoices" Class="mb-0" />
-<MudPaper Class="pa-4 invoice-paper">
-    <MudPaper Elevation="0" Class="pa-3 section">
-        <EditForm Model="_invoiceDto" OnValidSubmit="CreateInvoiceAsync">
-            <MudGrid>
-                <MudItem xs="12" sm="6">
-                    <MudTextField Label="Vendor" @bind-Value="_invoiceDto.VendorId" Variant="Variant.Outlined" FullWidth="true" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField Label="Purchase Order" @bind-Value="_invoiceDto.PurchaseOrderId" Variant="Variant.Outlined" FullWidth="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField Label="Invoice Reference No" @bind-Value="_invoiceDto.InvoiceRefNo" Variant="Variant.Outlined" FullWidth="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField Label="Invoice Item Value" @bind-Value="_invoiceDto.InvoiceTotalValue" Variant="Variant.Outlined" FullWidth="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField Label="Invoice Tax Value" @bind-Value="_invoiceDto.InvoiceTaxValue" Variant="Variant.Outlined" FullWidth="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField Label="Invoice Total Value" @bind-Value="_invoiceDto.InvoiceTotalValue" Variant="Variant.Outlined" FullWidth="true" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField Label="Invoice Remarks" @bind-Value="_invoiceDto.Remarks" Variant="Variant.Outlined" FullWidth="true" />
-                </MudItem>
-                <MudItem xs="12" Class="d-flex justify-end">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary">Create Invoice</MudButton>
-                </MudItem>
-            </MudGrid>
-        </EditForm>
-        </MudPaper>
-</MudPaper>
+<PageHeader Title="New Invoice" Class="mb-2" />
+
+<!-- wrapper class used by local CSS -->
+<div class="newinvoice">
+    <MudGrid GutterSize="1">
+        <!-- Main container -->
+        <MudItem xs="12">
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudGrid GutterSize="1" AlignItems="Center">
+                    <!-- Left: Inputs -->
+                    <MudItem xs="12" sm="6">
+                        <MudPaper Elevation="0" Class="pa-2">
+                            <MudText Typo="Typo.h6" Class="mb-1">Invoice Details</MudText>
+                            <MudDivider Class="mb-2" />
+
+                            <EditForm EditContext="_editContext" OnSubmit="HandleSubmit">
+                                <ValidationSummary />
+
+                                <MudGrid GutterSize="1">
+                                    <MudItem xs="12">
+                                        <MudAutocomplete id="VendorName" T="VendorDto"
+                                                         Label="Vendor"
+                                                         Variant="Variant.Outlined"
+                                                         FullWidth="true"
+                                                         @bind-Value="SelectedVendor"
+                                                         ToStringFunc="@(vendor => vendor?.VendorName ?? string.Empty)"
+                                                         SearchFunc="@SearchVendors"
+                                                         CoerceText="true"
+                                                         Clearable="@(!isVendorProvided)"
+                                                         Disabled="@isVendorProvided"
+                                                         Margin="Margin.Dense"/>
+                                         
+                                    </MudItem>
+
+                                    <MudItem xs="6">
+                                        <MudTextField Label="Purchase Order"
+                                                      Placeholder="Enter or select PO number"
+                                                      Variant="Variant.Outlined"
+                                                      FullWidth="true"
+                                                      @bind-Value="PurchaseOrderNumber"
+                                                      Clearable="@(!isPurchaseOrderProvided)"
+                                                      Disabled="@isPurchaseOrderProvided"
+                                                      Margin="Margin.Dense"/>
+                                        <ValidationMessage For="@(() => _invoiceForCreationDto.PurchaseOrderId)" />
+                                    </MudItem>
+
+                                    <MudItem xs="6">
+                                        <MudTextField Label="Invoice Reference No"
+                                                      Variant="Variant.Outlined"
+                                                      FullWidth="true"
+                                                      @bind-Value="_invoiceForCreationDto.InvoiceRefNo"
+                                                      Margin="Margin.Dense" />
+                                        <ValidationMessage For="@(() => _invoiceForCreationDto.InvoiceRefNo)" />
+                                    </MudItem>
+
+                                    <MudItem xs="12" sm="6">
+                                        <MudTextField T="decimal?"
+                                                      Label="Invoice Item Value"
+                                                      Variant="Variant.Outlined"
+                                                      FullWidth="true"
+                                                      Adornment="Adornment.End"
+                                                      AdornmentText="₹"
+                                                      Value="_invoiceForCreationDto.InvoiceValue"
+                                                      ValueChanged="@( (decimal? v) => OnInvoiceValueChanged(v) )"
+                                                      ValueExpression="() => _invoiceForCreationDto.InvoiceValue"
+                                                      Immediate="true"
+                                                      Margin="Margin.Dense" />
+                                        <ValidationMessage For="@(() => _invoiceForCreationDto.InvoiceValue)" />
+                                    </MudItem>
+
+                                    <MudItem xs="12" sm="6">
+                                        <MudTextField T="decimal?"
+                                                      Label="Invoice Tax Value"
+                                                      Variant="Variant.Outlined"
+                                                      FullWidth="true"
+                                                      Adornment="Adornment.End"
+                                                      AdornmentText="₹"
+                                                      Value="_invoiceForCreationDto.InvoiceTaxValue"
+                                                      ValueChanged="@( (decimal? v) => OnInvoiceTaxValueChanged(v) )"
+                                                      ValueExpression="() => _invoiceForCreationDto.InvoiceTaxValue"
+                                                      Immediate="true"
+                                                      Margin="Margin.Dense" />
+                                        <ValidationMessage For="@(() => _invoiceForCreationDto.InvoiceTaxValue)" />
+                                    </MudItem>
+
+                                    <MudItem xs="12">
+                                        <MudTextField T="decimal?"
+                                                      Label="Invoice Total Value"
+                                                      Variant="Variant.Outlined"
+                                                      FullWidth="true"
+                                                      Adornment="Adornment.End"
+                                                      AdornmentText="₹"
+                                                      Value="_invoiceForCreationDto.InvoiceTotalValue"
+                                                      ValueExpression="() => _invoiceForCreationDto.InvoiceTotalValue"
+                                                      Margin="Margin.Dense"
+                                                      Disabled="true" />
+                                        <ValidationMessage For="@(() => _invoiceForCreationDto.InvoiceTotalValue)" />
+                                    </MudItem>
+
+                                    <MudItem xs="12">
+                                        <MudTextField Label="Remarks"
+                                                      Variant="Variant.Outlined"
+                                                      FullWidth="true"
+                                                      Lines="3"
+                                                      @bind-Value="_invoiceForCreationDto.Remarks"
+                                                      Margin="Margin.Dense" />
+                                    </MudItem>
+                                    <!-- File upload -->
+                                    <MudItem xs="6">
+                                        <InputFile OnChange="OnInputFileChange" accept=".pdf,image/*" />
+                                        @if (!string.IsNullOrWhiteSpace(_uploadedFileName))
+                                        {
+                                            <div class="d-flex align-center mt-1">
+                                                <MudText Typo="Typo.body2">@_uploadedFileName (@(Math.Round((_uploadedInvoiceFile?.Length ?? 0) / 1024.0, 1)) KB)</MudText>
+                                                <MudSpacer />
+                                                @if (!string.IsNullOrWhiteSpace(_uploadedFileUrl))
+                                                {
+                                                    <a class="mud-link" href="@_uploadedFileUrl" target="_blank" rel="noopener noreferrer">View uploaded file</a>
+                                                }
+                                                <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small" OnClick="ClearFile" Title="Remove file" />
+                                            </div>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(_fileValidationMessage))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Error">@_fileValidationMessage</MudText>
+                                        }
+                                    </MudItem>
+                                    <MudItem xs="6" Class="d-flex justify-end">
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" StartIcon="@Icons.Material.Filled.Save">
+                                            Create Invoice
+                                        </MudButton>
+                                    </MudItem>
+                                </MudGrid>
+                            </EditForm>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Right: Purchase Order summary (display only) -->
+                    <MudItem xs="12" sm="6">
+                        <MudPaper Elevation="0" Class="pa-2">
+                            <MudText Typo="Typo.h6" Class="mb-1">Purchase Order Summary</MudText>
+                            <MudDivider Class="mb-2" />
+
+                            <MudGrid GutterSize="1">
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">SAP PO Date</MudText>
+                                    <MudText Typo="Typo.body1" Class="mb-1">@PoDateText</MudText>
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Project</MudText>
+                                    <MudText Typo="Typo.body1" Class="mb-1">@ProjectNameText</MudText>
+                                </MudItem>
+
+                                <MudItem xs="12" Class="mt-1">
+                                    <MudCard Elevation="0" Class="pa-2">
+                                        <MudGrid AlignItems="Center" GutterSize="1">
+                                            <MudItem xs="6">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">PO Value</MudText>
+                                                <MudText Typo="Typo.h6">@PoValueText</MudText>
+                                            </MudItem>
+
+                                            <MudItem xs="6">
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">PO Tax</MudText>
+                                                <MudText Typo="Typo.h6">@PoTaxText</MudText>
+                                            </MudItem>
+
+                                            <MudItem xs="12" Class="mt-1">
+                                                <MudDivider />
+                                                <div class="d-flex justify-space-between mt-1">
+                                                    <div>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">PO Total</MudText>
+                                                        <MudText Typo="Typo.h5" Color="Color.Primary">@PoTotalText</MudText>
+                                                    </div>
+
+                                                    <div style="text-align:right">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Balance</MudText>
+                                                        <MudText Typo="Typo.h6" Color="Color.Warning">@InvoiceBalanceValueText</MudText>
+                                                    </div>
+                                                </div>
+                                            </MudItem>
+                                        </MudGrid>
+                                    </MudCard>
+                                </MudItem>
+
+                                <MudItem xs="12" Class="mt-1">
+                                    <MudGrid GutterSize="1">
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Prev. Invoice Count</MudText>
+                                            <MudText Typo="Typo.body1">@PrevInvoiceCountText</MudText>
+                                        </MudItem>
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Prev. Invoice Value</MudText>
+                                            <MudText Typo="Typo.body1">@PrevInvoiceValueText</MudText>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudItem>
+                            </MudGrid>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</div>
+
 @code {
     private List<BreadcrumbItem> _items = new()
     {
@@ -44,4 +217,6 @@
         new BreadcrumbItem("Invoices", href: "/invoices", disabled: false),
         new BreadcrumbItem("New Invoice", href: null, disabled: true)
     };
+
+    // Make sure VendorDto and PurchaseOrderDto are in the imported namespace.
 }

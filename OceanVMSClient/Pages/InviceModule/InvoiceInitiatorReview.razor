@@ -1,0 +1,149 @@
+﻿@using MudBlazor
+
+<MudPaper Class="pa-4">
+    <EditForm Model="_invoiceDto">
+        <MudGrid GutterSize="2" AlignItems="Center">
+            <!-- Header with avatar/icon, title and status -->
+
+            
+
+            <MudItem xs="6" sm="6">
+                <MudPaper Elevation="0" Class="pa-2">
+                    <MudGrid GutterSize="1">
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Reviewer</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.InitiatorReviewerName ?? "—")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Review Date</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.InitiatorReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudTextField T="decimal?"
+                                          Label="Approved Amount"
+                                          Value="_invoiceDto.InitiatorApprovedAmount"
+                                          ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, v => _invoiceDto.InitiatorApprovedAmount = v))"
+                                          Variant="Variant.Outlined"
+                                          Adornment="Adornment.Start"
+                                          AdornmentText="₹"
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudTextField T="decimal?"
+                                          Label="Withheld Amount"
+                                          Value="_invoiceDto.InitiatorWithheldAmount"
+                                          ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, v => _invoiceDto.InitiatorWithheldAmount = v))"
+                                          Variant="Variant.Outlined"
+                                          Adornment="Adornment.Start"
+                                          AdornmentText="₹"
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Label="Withheld Reason"
+                                          Value="_invoiceDto.InitiatorWithheldReason"
+                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _invoiceDto.InitiatorWithheldReason = v))"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField Label="Remarks"
+                                          Value="_invoiceDto.InitiatorReviewComment"
+                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _invoiceDto.InitiatorReviewComment = v))"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Lines="2" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudSelect Label="Approval"
+                                       Value="_invoiceDto.InitiatorReviewStatus"
+                                       ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _invoiceDto.InitiatorReviewStatus = v))"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense">
+                                <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveDecision">Submit Review</MudButton>
+                        </MudItem>
+                    </MudGrid>
+
+                </MudPaper>
+
+            </MudItem>
+
+            <MudItem xs="6" sm="6">
+
+                <!-- Selection section: show label + value using MudText (display style like InvoiceView) -->
+                <MudPaper Elevation="0" Class="pa-2">
+                    <MudGrid GutterSize="1">
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Assignment Date</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.InitiatorReviewAssigedOn is DateTime d ? d.ToString("dd-MMM-yyyy") : "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">SLA (Days)</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.InitiatorReviewSLADays?.ToString() ?? "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Target Date</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.InitiatorReviewTargetDate is DateTime td ? td.ToString("dd-MMM-yyyy") : "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">SLA Status</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.InitiatorReviewSLAStatus ?? "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Current Status</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.InitiatorReviewStatus ?? "—")
+                            </MudText>
+                        </MudItem>
+                        <MudDivider />
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">PO Amount</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.POTotalValue.ToString("C") ?? "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Invoice Item Value</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto?.InvoiceValue.ToString("C") ?? "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Invoice Total Value</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1">
+                                @(_invoiceDto.InvoiceTotalValue.ToString("C") ?? "—")
+                            </MudText>
+                        </MudItem>
+
+                        
+                    </MudGrid>
+                </MudPaper>
+
+            </MudItem>
+        </MudGrid>
+    </EditForm>
+</MudPaper>

@@ -4,6 +4,7 @@ using Shared.DTO.POModule;
 using Shared.RequestFeatures;
 using System.Text.Json;
 using System.Web;
+using System.Net.Http.Headers;
 
 namespace OceanVMSClient.HttpRepo.InvoiceModule
 {
@@ -113,6 +114,22 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             }
             var createdInvoice = JsonSerializer.Deserialize<InvoiceDto>(content, _options);
             return createdInvoice!;
+        }
+
+        public async Task<string> UploadInvoiceFile(MultipartFormDataContent content)
+        {
+            var postResult = await _httpClient.PostAsync("upload/Invoice", content);
+            var postContent = await postResult.Content.ReadAsStringAsync();
+            if (!postResult.IsSuccessStatusCode)
+            {
+                throw new Exception(postContent);
+            }
+            else
+            {
+                //var imageUrl = Path.Combine("https://myoceanapp.azurewebsites.net/", postContent);
+                var imageUrl = postContent;
+                return imageUrl;
+            }
         }
     }
 
