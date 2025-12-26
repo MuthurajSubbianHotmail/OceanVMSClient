@@ -28,6 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Pages\InviceModule\" />
     <Folder Include="wwwroot\assets\" />
   </ItemGroup>
 

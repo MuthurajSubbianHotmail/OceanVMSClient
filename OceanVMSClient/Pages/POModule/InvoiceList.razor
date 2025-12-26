@@ -1,0 +1,145 @@
+@page "/invoices"
+@using MudBlazor.Components
+@using Shared.DTO
+@using Shared.DTO.POModule
+@inject NavigationManager NavigationManager
+
+<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+<PageHeader Title="Invoices" Class="mb-0" />
+
+<MudPaper Class="pa-4 invoice-paper">
+    <MudPaper Elevation="0" Class="pa-3 section">
+        <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
+            <MudItem xs="12" md="12">
+                <MudGrid GutterSize="1">
+                    <MudItem xs="12" sm="2" md="2">
+                        <MudTextField T="string" Label="Invoice Ref No" Placeholder="Ref No"
+                                      @bind-Value="invoiceRefNo"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      Dense="true" Class="filter-control" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="2" md="2">
+                        <MudTextField T="string" Label="SAP PO No" Placeholder="SAP PO No"
+                                      @bind-Value="sapPoNo"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      Dense="true" Class="filter-control" />
+                    </MudItem>
+                    <MudItem xs="12" sm="2" md="2">
+                        <MudTextField T="string" Label="Vendor" Placeholder="Vendor"
+                                      @bind-Value="vendorName"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      Dense="true" Class="filter-control" />
+                    </MudItem>
+
+                    <MudItem xs="12" sm="2" md="2">
+                        <MudNumericField T="decimal?" Label="Min Total" Placeholder="Min"
+                                         @bind-Value="minInvoiceTotal"
+                                         DebounceInterval="300"
+                                         Dense="true"
+                                         Class="filter-control" />
+                    </MudItem>
+                    <MudItem xs="12" sm="2" md="2">
+                        <MudNumericField T="decimal?" Label="Max Total" Placeholder="Max"
+                                         @bind-Value="maxInvoiceTotal"
+                                         DebounceInterval="300"
+                                         Dense="true"
+                                         Class="filter-control" />
+                    </MudItem>
+                    <MudItem xs="12" sm="2" md="2">
+                        <MudDateRangePicker @ref="_dateRange_picker"
+                                            DateRangeChanged="OnDateRangeSearch"
+                                            DateFormat="dd-MMM-yy"
+                                            TitleDateFormat="MMMM dd"
+                                            Margin="Margin.Dense"
+                                            Variant="Variant.Text"
+                                            Dense="true"
+                                            Label="Invoice Date"
+                                            Clearable="true"
+                                            AutoClose="true"
+                                            Class="filter-control">
+                            <PickerActions>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearDateRange">Clear</MudButton>
+                            </PickerActions>
+                        </MudDateRangePicker>
+                    </MudItem>
+                </MudGrid>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudTable T="InvoiceDto"
+              ServerData="GetServerData"
+              Hover="true"
+              Breakpoint="Breakpoint.Sm"
+              @ref="_table"
+              RowsPerPage="15"
+              Class="invoice-table mt-3">
+        <HeaderContent>
+            <MudTh>Invoice Ref</MudTh>
+            <MudTh>Invoice Date</MudTh>
+            <MudTh>Vendor</MudTh>
+            <MudTh>SAP PO No</MudTh>
+            <MudTh Align="Align.Right">PO Date</MudTh>
+            <MudTh Align="Align.Right">PO Total</MudTh>
+            <MudTh Align="Align.Right">Invoice Total</MudTh>
+            <MudTh>Invoice Status</MudTh>
+            <MudTh>Payment Status</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd>
+                <MudLink Href="@($"ViewInvoice/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
+                    @context.InvoiceRefNo
+                </MudLink>
+            </MudTd>
+            <MudTd>@FormatDate(context.InvoiceDate)</MudTd>
+            <MudTd>@context.VendorName</MudTd>
+            <MudTd>
+                <MudLink Href="@($"ViewPurchaseOrder/{context.PurchaseOrderId}")" Color="Color.Primary" Underline="Underline.Hover">
+                    @context.SAPPONumber
+                </MudLink>
+            </MudTd>
+            <MudTd Align="Align.Right">@FormatDate(context.SAPPODate)</MudTd>
+            <MudTd Align="Align.Right">@($"{context.POTotalValue:N2}")</MudTd>
+            <MudTd Align="Align.Right">@($"{context.InvoiceTotalValue:N2}")</MudTd>
+            <MudTd>
+                <MudChip T="string" Size="Size.Small" Color="@GetInvoiceChipColor(context.InvoiceStatus)" Variant="Variant.Filled">@context.InvoiceStatus</MudChip>
+            </MudTd>
+            <MudTd>@context.PaymentStatus</MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager PageSizeOptions="@_pageSize_option" RowsPerPageString="Invoices Per Page" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<BreadcrumbItem> _items = new()
+    {
+        new BreadcrumbItem("Home", href: "/", disabled: false),
+        new BreadcrumbItem("Invoices", href: "/invoices", disabled: true),
+    };
+
+    private MudTable<InvoiceDto>? _table;
+    private MudDateRangePicker? _dateRange_picker;
+    private DateRange? _invoice_date_range;
+
+    // filter fields
+    private string? invoiceRefNo;
+    private string? sapPoNo;
+    private decimal? minInvoiceTotal;
+    private decimal? maxInvoiceTotal;
+    private string? vendorName;
+
+    private readonly int[] _pageSize_option = { 15, 25, 50 };
+
+    private string FormatDate(DateTime? date)
+    {
+        return date.HasValue ? date.Value.ToString("dd-MMM-yy") : string.Empty;
+    }
+}

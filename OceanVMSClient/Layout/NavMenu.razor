@@ -16,11 +16,12 @@
         </MudNavGroup>
 
         <MudNavGroup Title="Invoices" Icon="@Icons.Material.Filled.AccountBalance" Expanded="false">
-            <AuthorizeView Roles="EMPLOYEE">
+            <AuthorizeView Roles="EMPLOYEE, VENDOR">
                 <Authorized>
-                    <MudNavLink Href="List Invoice" Icon="@Icons.Material.Filled.ShoppingCart">Invoice List</MudNavLink>
+                    <MudNavLink Href="invoices" Icon="@Icons.Material.Filled.ShoppingCart">Invoice List</MudNavLink>
                 </Authorized>
             </AuthorizeView>
+            <MudNavLink Href="invoices" Icon="@Icons.Material.Filled.ShoppingCart">Invoice List</MudNavLink>
         </MudNavGroup>
 
     </MudNavMenu>

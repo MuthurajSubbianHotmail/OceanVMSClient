@@ -1,0 +1,88 @@
+﻿using OceanVMSClient.Features;
+using OceanVMSClient.HttpRepoInterface.InvoiceModule;
+using Shared.DTO.POModule;
+using Shared.RequestFeatures;
+using System.Text.Json;
+using System.Web;
+
+namespace OceanVMSClient.HttpRepo.InvoiceModule
+{
+    public class InvoiceRepository : IInvoiceRepository
+    {
+        private readonly HttpClient _httpClient;
+        private readonly JsonSerializerOptions _options = new JsonSerializerOptions();
+        public InvoiceRepository(HttpClient httpClient)
+        {
+            _httpClient = httpClient;
+            _options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+        }
+
+        public async Task<PagingResponse<InvoiceDto>> GetAllInvoices(InvoiceParameters invoiceParameters)
+        {
+            var response = await _httpClient.GetAsync($"invoices?{invoiceParameters.ToQueryString()}");
+            response.EnsureSuccessStatusCode();
+            
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var pagingResponse = new PagingResponse<InvoiceDto>
+            {
+                Items = JsonSerializer.Deserialize<List<InvoiceDto>>(content, _options),
+                MetaData = JsonSerializer.Deserialize<MetaData>(response.Headers.GetValues("X-Pagination").First(), _options)
+            };
+            return pagingResponse;
+        }
+    }
+
+    public static class InvoiceParametersExtensions
+    {
+        public static string ToQueryString(this InvoiceParameters parameters)
+        {
+            var query = HttpUtility.ParseQueryString(string.Empty);
+
+            if (parameters.PageNumber > 0)
+                query["PageNumber"] = parameters.PageNumber.ToString();
+
+            if (parameters.PageSize > 0)
+                query["PageSize"] = parameters.PageSize.ToString();
+
+            if (!string.IsNullOrEmpty(parameters.OrderBy))
+                query["OrderBy"] = parameters.OrderBy;
+
+            if (!string.IsNullOrEmpty(parameters.SearchTerm))
+                query["SearchTerm"] = parameters.SearchTerm;
+            if (parameters.VendorId.HasValue && parameters.VendorId.Value != Guid.Empty)
+                query["VendorId"] = parameters.VendorId.Value.ToString();
+            if (!string.IsNullOrEmpty(parameters.InvoiceRefNo))
+                query["InvoiceRefNo"] = parameters.InvoiceRefNo;
+            if (parameters.InvStartDate != default(DateTime))
+                query["InvStartDate"] = parameters.InvStartDate.ToString("o");
+            if (parameters.InvEndDate != default(DateTime))
+                query["InvEndDate"] = parameters.InvEndDate.ToString("o");
+            if (parameters.MinTotalValue.HasValue)
+                query["MinTotalValue"] = parameters.MinTotalValue.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (parameters.MaxTotalValue.HasValue)
+                query["MaxTotalValue"] = parameters.MaxTotalValue.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (!string.IsNullOrEmpty(parameters.SAPPONumber))
+                query["SAPPONumber"] = parameters.SAPPONumber;
+            if (!string.IsNullOrEmpty(parameters.ProjectManagerName))
+                query["ProjectManagerName"] = parameters.ProjectManagerName;
+            if (!string.IsNullOrEmpty(parameters.SiteSupervisorName))
+                query["SiteSupervisorName"] = parameters.SiteSupervisorName;
+            if (!string.IsNullOrEmpty(parameters.InvoiceStatus))
+                query["InvoiceStatus"] = parameters.InvoiceStatus;
+            if (!string.IsNullOrEmpty(parameters.PaymentStatus))
+                query["PaymentStatus"] = parameters.PaymentStatus;
+            if (parameters.ProjectId.HasValue && parameters.ProjectId.Value != Guid.Empty)
+                query["ProjectId"] = parameters.ProjectId.Value.ToString();
+
+
+            return query.ToString();
+        }
+    }
+}

@@ -1,312 +1,109 @@
-﻿/* Make PoList typography match ViewPurchaseOrder exactly.
-   - Uses the same colors, weights and sizes established in ViewPurchaseOrder.razor.css
-   - Keeps page-scoped input fixes (label/placeholder alignment) but aligns sizes with ViewPurchaseOrder
-*/
+﻿/* Refreshed visual design for POList: clearer hierarchy, compact toolbar, and polished table */
 
-/* Card / paper (copy from ViewPurchaseOrder) */
+/* Card */
 .po-paper {
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,250,0.98));
-    border-radius: 8px;
-    box-shadow: 0 1px 6px rgba(16,24,40,0.06);
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,250,252,0.98));
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(15,23,42,0.06);
     padding: 1rem;
 }
 
-/* Header (copy from ViewPurchaseOrder) */
-.po-header {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
+/* Header */
+.po-header { display:flex; flex-direction:column; gap:4px; }
+.po-number { color:#16213E; font-weight:700; }
+.po-meta { color:#6b7280; font-size:0.95rem; }
 
-.po-number {
-    color: #2b3e6b;
-    font-weight: 700;
-    letter-spacing: 0.2px;
-}
+/* Actions (right) */
+.actions-right { display:flex; justify-content:flex-end; align-items:center; }
 
-.po-meta {
-    color: #6b7280;
-}
-
-.po-total {
-    color: #3b2b5a;
-    margin-bottom: 0;
-}
-
-/* Section card that contains the toolbar (copy + small padding) */
+/* Section containing filters */
 .po-section {
     background: transparent;
-    border-left: 3px solid rgba(27,110,194,0.06);
-    margin-bottom: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 6px;
-}
-
-/* Section titles / labels to match ViewPurchaseOrder */
-.section-title {
-    color: #1b6ec2;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-/* Field label / value styles copied from ViewPurchaseOrder */
-.field-label {
-    display: block;
-    color: #6b7280;
-    margin-top: 0.6rem;
-    font-size: 0.88rem;
-    font-weight: 600;
-}
-
-.field-value {
-    display: block;
-    color: #111827;
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-    font-size: 0.95rem;
-}
-
-.total-accent {
-    color: rebeccapurple;
-    font-weight: 700;
-}
-
-/* Table container and visual emphasis */
-.po-table {
-    width: 100%;
-    background: transparent;
-    border-radius: 6px;
-    overflow: visible; /* <-- important: do not clip the sticky thead */
-}
-
-/* Child row */
-.child-row-paper {
+    border-left: 4px solid rgba(27,110,194,0.06);
     padding: 0.75rem;
-    background: rgba(27,110,194,0.03);
-    border-radius: 6px;
-    border: 1px solid rgba(27,110,194,0.035);
+    border-radius: 8px;
 }
 
-/* Small container spacing inside the child area */
-.child-row-td {
-    padding: 0.5rem 0.5rem;
-}
-
-/* Emphasis columns */
-.total-col {
-    font-weight: 600;
-    color: rebeccapurple;
-}
-
-.status-text {
-    font-weight: 600;
-}
-
-/* ---------------------------------------------------------------------------
-   Typography alignment for table and inputs to match ViewPurchaseOrder
-   --------------------------------------------------------------------------- */
-
-/* Table headers and cells use same base size as field-value */
-.po-table th,
-.po-table td {
-    font-size: 0.95rem;        /* matches .field-value */
-    vertical-align: middle;
-    padding-top: 0.6rem;
-    padding-bottom: 0.6rem;
-}
-
-/* Headers slightly bolder */
-.po-table th {
-    font-weight: 600;
-    color: #111827;
-}
-
-/* Ensure Type and PONo match other columns */
-.po-table th.col-type,
-.po-table th.col-pono,
-.po-table td {
-    font-size: 0.95rem;
-}
-
-/* Ensure links inherit the same cell typography */
-.po-table a.mud-link {
-    font-size: 0.95rem !important;
-    line-height: 1.3;
-    font-weight: 500;
-    color: inherit;
-}
-
-/* Cell text utility matching ViewPurchaseOrder field-value */
-.cell-text {
-    display: inline-block;
-    line-height: 1.3;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #111827;
-}
-
-/* ---------------------------------------------------------------------------
-   Inputs — set label/value/placeholder sizes to match ViewPurchaseOrder visuals
-   - Labels should use .field-label sizing/weight
-   - Values should use .field-value sizing/weight
-   --------------------------------------------------------------------------- */
-
-/* Align input label with .field-label (scoped to this page) */
+/* Compact filter control styling */
+.filter-control { width:100%; }
 .po-section .mud-form-field .mud-input-label,
-.po-section .mud-form-field label,
 .po-section .mud-input-label {
-    font-size: 0.88rem !important;   /* same as .field-label */
-    font-weight: 600 !important;
-    color: #6b7280 !important;
-    line-height: 1;
-    margin-bottom: 0;
-    transform-origin: left top;
+    font-size:0.88rem !important;
+    font-weight:600;
+    color:#6b7280;
 }
 
-/* Input value text should match .field-value */
+/* Inputs: value and placeholder sizing */
 .po-section .mud-input-root input,
-.po-section .mud-input-root textarea,
 .po-section .mud-text-field .mud-input-slot input,
 .po-section .mud-numeric-field input,
-.po-section .mud-date-range-picker .mud-input-slot input,
-.po-section .mud-select .mud-select-input,
-.po-section .mud-autocomplete .mud-input-slot input {
-    font-size: 0.95rem !important;   /* same as .field-value */
-    font-weight: 500 !important;
-    line-height: 1.2 !important;
-    color: #111827 !important;
+.po-section .mud-date-range-picker .mud-input-slot input {
+    font-size:0.95rem !important;
+    color:#111827;
 }
 
-/* Placeholder sizing (slightly smaller, but consistent with page) */
 .po-section input::placeholder,
-.po-section textarea::placeholder,
-.po-section .mud-select .mud-select-input::placeholder,
-.po-section .mud-autocomplete .mud-input-slot input::placeholder,
-.po-section .mud-date-range-picker .mud-input-slot input::placeholder,
-.po-section .mud-numeric-field input::placeholder {
-    font-size: 0.80rem !important;
-    opacity: 0.75 !important;
+.po-section textarea::placeholder {
+    font-size:0.82rem !important;
+    opacity:0.75;
 }
 
-/* Ensure MudTextField-specific placeholder variations are covered */
-.po-section .mud-text-field .mud-input-slot input::placeholder,
-.po-section .mud-text-field input::placeholder {
-    font-size: 0.82rem !important;
-    opacity: 0.75 !important;
-}
+/* Table styling */
+.po-table { width:100%; border-radius:8px; overflow:visible; }
 
-/* Maintain compact spacing inside toolbar */
-.po-section .mud-text-field,
-.po-section .mud-select,
-.po-section .mud-numeric-field,
-.po-section .mud-date-range-picker {
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-}
-
-/* ---------------------------------------------------------------------------
-   Floating label / underline fixes (keep visual parity with ViewPurchaseOrder)
-   --------------------------------------------------------------------------- */
-
-/* Provide extra room so underline doesn't collide with floating label */
-.po-section .mud-form-field {
-    padding-bottom: 0.65rem;
-    position: relative;
-}
-
-/* Make floating labels render above underline and avoid overlap */
-.po-section .mud-form-field .mud-input-label,
-.po-section .mud-date-range-picker .mud-form-field .mud-input-label {
-    z-index: 3;
-    transform: translateY(-6px);
-    transition: transform .12s ease;
-    padding: 0 0.25rem;
-    background: var(--mud-paper, #fff);
-    border-radius: 2px;
-    display: inline-block;
-}
-
-/* Ensure underline sits beneath label */
-.po-section .mud-input-underline,
-.po-section .mud-input-underline::before,
-.po-section .mud-input-underline::after {
-    z-index: 1;
-}
-
-/* Dense inputs adjust label slightly */
-.po-section .mud-form-field.mud-dense .mud-input-label {
-    transform: translateY(-5px);
-}
-
-/* ---------------------------------------------------------------------------
-   RESPONSIVE TWEAKS
-   --------------------------------------------------------------------------- */
-@media (max-width: 600px) {
-    .po-header {
-        align-items: flex-start;
-    }
-
-    .po-total {
-        text-align: left;
-    }
-
-    .po-section .mud-form-field .mud-input-label,
-    .po-section .mud-form-field label {
-        font-size: 0.78rem !important;
-    }
-
-    .po-table th,
-    .po-table td {
-        font-size: 0.92rem;
-    }
-}
-
-/* Header background and styling for HeaderContent */
+/* Header background and sticky behavior */
 .po-table thead {
     position: sticky;
     top: 0;
-    z-index: 100; /* high so it sits above row content */
-    background-color: var(--mud-surface, #ffffff) !important;
-    background-image: linear-gradient(90deg, rgba(27,110,194,0.04), rgba(250,250,255,0.98)) !important;
-    -webkit-backdrop-filter: blur(2px);
+    z-index: 30;
+    background: linear-gradient(90deg, rgba(27,110,194,0.04), rgba(255,255,255,0.98));
     backdrop-filter: blur(2px);
     box-shadow: 0 1px 0 rgba(15,23,42,0.04);
 }
 
-/* Ensure each header cell uses the same solid background (prevents bleed-through) */
 .po-table thead th {
-    background: inherit !important;
-    border-bottom: 1px solid rgba(15,23,42,0.06);
+    padding:0.65rem 0.75rem;
+    border-bottom:1px solid rgba(15,23,42,0.06);
+    font-weight:600;
+    color:#0f172a;
+    text-align:left;
 }
 
-/* Ensure header background is visible and not clipped or transparent */
-.po-table {
-    overflow: visible !important; /* allow thead to paint outside inner containers */
+/* Row & cell */
+.po-table td, .po-table th { font-size:0.95rem; vertical-align:middle; padding-top:0.6rem; padding-bottom:0.6rem; }
+.po-table tbody tr { transition: background .12s ease, transform .06s ease; }
+.po-table tbody tr:hover { background: rgba(27,110,194,0.03); transform: translateY(-1px); }
+
+/* Alternating rows */
+.po-table tbody tr:nth-child(even) { background: rgba(15,23,42,0.015); }
+
+/* Link styling in cells */
+.cell-link { font-weight:500; font-size:0.95rem; }
+
+/* Emphasis columns */
+.total-col { font-weight:600; color:rebeccapurple; }
+
+/* Child row card */
+.child-row-paper {
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,255,0.98));
+    border-radius:8px;
+    padding:0.75rem;
+    border:1px solid rgba(15,23,42,0.03);
 }
 
-/* Make inner container allow header to be visible (use auto if you want body scrolling) */
-.po-table .mud-table-container,
-.po-table .mud-table-root {
-    overflow: visible !important;
-}
+/* Child stats */
+.child-stat { padding:0.5rem; border-radius:6px; text-align:center; background:rgba(255,255,255,0.9); box-shadow: inset 0 0 0 1px rgba(15,23,42,0.02); }
+.stat-value { font-weight:700; color:rebeccapurple; font-size:0.95rem; }
+.stat-label-small { font-size:0.78rem; color:#6b7280; margin-top:0.25rem; }
 
-/* Actions column */
-.child-actions .actions-wrap {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-    align-items: center;
-    height: 100%;
-}
+/* Child actions */
+.child-actions .actions-wrap { display:flex; gap:0.5rem; justify-content:flex-end; align-items:center; }
 
-/* Make buttons full width on very small screens */
-@media (max-width: 600px) {
-    .child-actions .actions-wrap {
-        justify-content: flex-start;
-        gap: 0.5rem;
-    }
-
-    .child-actions .actions-wrap .mud-button {
-        width: auto;
-    }
+/* Responsive tweaks */
+@media (max-width: 720px) {
+    .po-paper { padding:0.75rem; }
+    .po-section { padding:0.5rem; }
+    .actions-right { margin-top:0.5rem; justify-content:flex-start; }
+    .po-table thead th { font-size:0.92rem; padding:0.5rem; }
+    .child-actions .actions-wrap { justify-content:flex-start; }
 }

@@ -1,99 +1,114 @@
 ﻿@page "/ViewPurchaseOrder/{PurchaseOrderId:guid}"
 @using Shared.DTO.POModule
+
 <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
 
 <PageHeader Title="Purchase Order Details" Class="mb-0" />
 
 <MudPaper Class="pa-4 po-paper">
-    <MudGrid GutterSize="3" Class="mb-2" Style="align-items:center;">
-        <MudItem xs="12" sm="8">
-            <div class="po-header">
-                <MudText Typo="Typo.h5" Class="po-number">@PoNumberText</MudText>
-                <MudText Typo="Typo.subtitle2" Class="po-meta">PO Date: @PoDateText — Supplier: @VendorText</MudText>
-            </div>
-        </MudItem>
-        <MudItem xs="12" sm="4" Style="text-align:right;">
-            <MudText Typo="Typo.h6" Class="po-total">Total: <span class="po-total-value">@TotalValueText</span></MudText>
-            <MudChip T="string" Color="@GetInvoiceChipColor()" Variant="Variant.Filled" Class="ml-2">@InvoiceStatusText</MudChip>
-        </MudItem>
-    </MudGrid>
+    @if (isDetailsLoading)
+    {
+        <div style="display:flex; align-items:center; justify-content:center; min-height:180px;">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        </div>
+    }
+    else
+    {
+        <MudGrid GutterSize="3" Class="mb-2" Style="align-items:center;">
+            <MudItem xs="12" sm="8">
+                <div class="po-header">
+                    <MudText Typo="Typo.h5" Class="po-number">@PoNumberText</MudText>
+                    <MudText Typo="Typo.subtitle2" Class="po-meta">PO Date: @PoDateText — Supplier: @VendorText</MudText>
+                </div>
+            </MudItem>
+            <MudItem xs="12" sm="4" Style="text-align:right;">
+                <MudText Typo="Typo.h6" Class="po-total">Total: <span class="po-total-value">@TotalValueText</span></MudText>
+                <MudChip T="string" Color="@GetInvoiceChipColor()" Variant="Variant.Filled" Class="ml-2">@InvoiceStatusText</MudChip>
+            </MudItem>
+        </MudGrid>
 
-    <MudGrid Class="mt-1" Style="align-items:stretch;">
-        <MudItem xs="12" sm="8">
-            <MudPaper Elevation="0" Class="pa-3 po-section">
-                <MudText Typo="Typo.subtitle1" Class="section-title">Purchase Order</MudText>
-                <MudGrid>
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.caption" Class="field-label">Project</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@ProjectText</MudText>
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.caption" Class="field-label">Supplier</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@VendorText</MudText>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.caption" Class="field-label">Item Value</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@ItemValueText</MudText>
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.caption" Class="field-label">Special Discount</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@SpecialDiscountText</MudText>
-                    </MudItem>
-
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.caption" Class="field-label">Tax (GST)</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@GSTTotalText</MudText>
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudText Typo="Typo.caption" Class="field-label">Total Value</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value total-accent">@TotalValueText</MudText>
-                    </MudItem>
-                </MudGrid>
-            </MudPaper>
-        </MudItem>
-
-        <MudItem xs="12" sm="4">
-            <MudPaper Elevation="0" Class="pa-3 po-section">
-                <MudText Typo="Typo.subtitle1" Class="section-title">Invoice Status</MudText>
-                <MudGrid>
-                    @* Show employee's current role when user is Employee *@
-                    @if (string.Equals(_userType, "Employee", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(CurrentRoleName))
-                    {
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.caption" Color="Color.Info" Class="mb-1">Assigned Role: @CurrentRoleName</MudText>
+        <MudGrid Class="mt-1" Style="align-items:stretch;">
+            <MudItem xs="12" sm="8">
+                <MudPaper Elevation="0" Class="pa-3 po-section">
+                    <MudText Typo="Typo.subtitle1" Class="section-title">Purchase Order</MudText>
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Class="field-label">Project</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@ProjectText</MudText>
                         </MudItem>
-                    }
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Class="field-label">Supplier</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@VendorText</MudText>
+                        </MudItem>
 
-                    <MudItem xs="12">
-                        <MudText Typo="Typo.caption" Class="field-label">Invoice Count</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@PreviousInvoiceCountText</MudText>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Class="field-label">Item Value</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@ItemValueText</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Class="field-label">Special Discount</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@SpecialDiscountText</MudText>
+                        </MudItem>
 
-                        <MudText Typo="Typo.caption" Class="field-label">Invoiced Value</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@PreviousInvoiceValueText</MudText>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Class="field-label">Tax (GST)</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@GSTTotalText</MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.caption" Class="field-label">Total Value</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value total-accent">@TotalValueText</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
 
-                        <MudText Typo="Typo.caption" Class="field-label">Invoice Pending</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@InvoiceBalanceValueText</MudText>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-3 po-section">
+                    <MudText Typo="Typo.subtitle1" Class="section-title">Invoice Status</MudText>
+                    <MudGrid>
+                        @* Show employee's current role when user is Employee *@
+                        @if (string.Equals(_userType, "Employee", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(CurrentRoleName))
+                        {
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Info" Class="mb-1">Assigned Role: @CurrentRoleName</MudText>
+                            </MudItem>
+                        }
 
-                        <MudText Typo="Typo.caption" Class="field-label">Total Paid</MudText>
-                        <MudText Typo="Typo.body2" Class="field-value">@PaidValueText</MudText>
-                    </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Class="field-label">Invoice Count</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@PreviousInvoiceCountText</MudText>
 
-                    <MudItem xs="6" sm="6">
-                        <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add" Class="full-width" Disabled="@(!CanCreateInvoice)">
-                            Create Invoice
-                        </MudButton>
-                    </MudItem>
+                            <MudText Typo="Typo.caption" Class="field-label">Invoiced Value</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@PreviousInvoiceValueText</MudText>
 
-                    <MudItem xs="6" sm="6">
-                        <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Visibility" Class="full-width">
-                            View Invoices
-                        </MudButton>
-                    </MudItem>
-                </MudGrid>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+                            <MudText Typo="Typo.caption" Class="field-label">Invoice Pending</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@InvoiceBalanceValueText</MudText>
+
+                            <MudText Typo="Typo.caption" Class="field-label">Total Paid</MudText>
+                            <MudText Typo="Typo.body2" Class="field-value">@PaidValueText</MudText>
+                        </MudItem>
+
+                        <MudItem xs="6" sm="6">
+                            <MudButton Color="Color.Primary"
+                                       Variant="Variant.Filled"
+                                       Size="Size.Small"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       Class="full-width"
+                                       Disabled="@(!CanCreateInvoice || isDetailsLoading || isActionInProgress)">
+                                Create Invoice
+                            </MudButton>
+                        </MudItem>
+
+                        <MudItem xs="6" sm="6">
+                            <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Visibility" Class="full-width" Disabled="@isDetailsLoading">
+                                View Invoices
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
 </MudPaper>
 
 @code{
@@ -103,7 +118,4 @@
         new BreadcrumbItem("Purchase Orders", href: "/POList", disabled: false),
         new BreadcrumbItem("Purchase Order Details", href: null, disabled: true)
     };
-
-   
-   
 }

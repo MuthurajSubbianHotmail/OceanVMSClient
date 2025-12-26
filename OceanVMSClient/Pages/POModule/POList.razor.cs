@@ -67,7 +67,8 @@ namespace OceanVMSClient.Pages.POModule
             "All",
             "Not Invoiced",
             "Part Invoiced",
-            "Fully Invoiced"
+            "Fully Invoiced",
+            "Over Invoiced"
         };
 
         private string? selectedInvoiceStatus = "All";
@@ -139,7 +140,18 @@ namespace OceanVMSClient.Pages.POModule
         }
 
         private bool IsRowExpanded(Guid id) => _expandedRows.Contains(id);
-
+        private Color GetInvoiceChipColor(string invoiceStatus)
+        {
+            return invoiceStatus.ToLower() switch
+            {
+                "part invoiced" => Color.Info,
+                "not invoiced" => Color.Default,
+                "rejected" => Color.Error,
+                "fully invoiced" => Color.Success,
+                "over invoiced" => Color.Warning,
+                _ => Color.Default
+            };
+        }
         private Color GetStatusColor(string? status)
         {
             if (string.IsNullOrWhiteSpace(status))

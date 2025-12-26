@@ -6,9 +6,11 @@ using OceanVMSClient.HttpRepo.POModule;
 using OceanVMSClient.HttpRepoInterface.Authentication;
 using OceanVMSClient.HttpRepoInterface.PoModule;
 using OceanVMSClient.HttpRepoInterface.POModule;
+using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using System;
 using System.Net.Http;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
+using OceanVMSClient.HttpRepo.InvoiceModule;
 
 namespace OceanVMSClient.Extensions
 {
@@ -41,6 +43,7 @@ namespace OceanVMSClient.Extensions
             //Data Repositories
             services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
             services.AddScoped<IInvoiceApproverRepository, InvoiceApproverRepository>();
+            services.AddScoped<IInvoiceRepository, InvoiceRepository>();
             return services;
         }
 
