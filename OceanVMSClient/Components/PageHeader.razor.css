@@ -1,0 +1,71 @@
+﻿.page-header {
+    background: transparent;
+    border-radius: 6px;
+    /* remove any default top/bottom spacing so host page controls spacing */
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.header-icon {
+    color: #1b6ec2;
+    opacity: 0.95;
+}
+
+.header-texts {
+    min-width: 0;
+}
+
+.title {
+    font-weight: 700;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.subtitle {
+    color: #6b7280;
+    margin-top: 2px;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.85rem;
+}
+
+.header-right {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 600px) {
+    .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .header-right {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

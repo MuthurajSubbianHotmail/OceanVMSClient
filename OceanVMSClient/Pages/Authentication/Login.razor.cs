@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
 using OceanVMSClient.HttpRepoInterface.Authentication;
 using Shared.DTO;
 
@@ -14,6 +15,20 @@ namespace OceanVMSClient.Pages.Authentication
         public bool ShowAuthError { get; set; }
         public string ErrorMessage { get; set; }
 
+        // EditForm OnValidSubmit provides an EditContext — accept it to match the delegate.
+        private async Task HandleSubmit(EditContext _)
+        {
+            isSubmitting = true;
+            try
+            {
+                await ExecuteLogin();
+            }
+            finally
+            {
+                isSubmitting = false;
+            }
+        }
+
         public async Task ExecuteLogin()
         {
             ShowAuthError = false;
@@ -27,6 +42,17 @@ namespace OceanVMSClient.Pages.Authentication
             {
                 NavigationManager.NavigateTo("/");
             }
+        }
+
+        private bool showPassword = false;
+        private bool isSubmitting = false;
+        private bool rememberMe = false;
+        private string PasswordInputType => showPassword ? "text" : "password";
+
+        // Add the missing toggle method referenced from the Razor markup
+        private void ToggleShowPassword()
+        {
+            showPassword = !showPassword;
         }
     }
 }

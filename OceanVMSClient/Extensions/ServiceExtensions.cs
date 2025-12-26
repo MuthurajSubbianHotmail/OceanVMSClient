@@ -5,6 +5,7 @@ using OceanVMSClient.HttpRepo.Authentication;
 using OceanVMSClient.HttpRepo.POModule;
 using OceanVMSClient.HttpRepoInterface.Authentication;
 using OceanVMSClient.HttpRepoInterface.PoModule;
+using OceanVMSClient.HttpRepoInterface.POModule;
 using System;
 using System.Net.Http;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
@@ -39,6 +40,7 @@ namespace OceanVMSClient.Extensions
             services.AddScoped<IAuthenticationService, AuthenticationService>();
             //Data Repositories
             services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
+            services.AddScoped<IInvoiceApproverRepository, InvoiceApproverRepository>();
             return services;
         }
 
