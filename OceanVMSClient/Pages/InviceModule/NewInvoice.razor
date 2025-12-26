@@ -1,4 +1,7 @@
 ﻿@page "/newinvoice"
+@page "/newinvoice/{VendorId:Guid?}"
+@page "/newinvoice/{VendorId:Guid?}/{PurchaseOrderId:Guid?}"
+
 
 <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
 <PageHeader Title="New Invoices" Class="mb-0" />

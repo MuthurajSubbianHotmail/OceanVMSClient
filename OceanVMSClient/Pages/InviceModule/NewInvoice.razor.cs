@@ -28,6 +28,14 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] public IVendorRepository VendorRepository { get; set; }
         [Inject] public IPurchaseOrderRepository PurchaseOrderRepository { get; set; }
 
+        // Route parameters received from the router are strings in some scenarios
+        // (avoid InvalidCast when Blazor supplies boxed string). Parse to Guid below.
+        [Parameter]
+        public string? VendorId { get; set; }
+
+        [Parameter]
+        public string? PurchaseOrderId { get; set; }
+
         private Guid VendorID;
         private Guid PurchaseOrderID;
         private bool isVendorProvided = false;
@@ -41,15 +49,82 @@ namespace OceanVMSClient.Pages.InviceModule
         private Guid? _vendorId;
         private Guid? _vendorContactId;
         private Guid? _employeeId;
+
+        protected override async Task OnParametersSetAsync()
+        {
+            await base.OnParametersSetAsync();
+
+            try
+            {
+                // Parse the string route parameters safely to Guid
+                if (!string.IsNullOrWhiteSpace(VendorId))
+                {
+                    if (Guid.TryParse(VendorId, out var parsedVendorId))
+                    {
+                        VendorID = parsedVendorId;
+                        _invoiceDto.VendorId = VendorID;
+                        //_invoiceForCreationDto.VendorId = VendorID;
+                        isVendorProvided = true;
+
+                        var vendor = await VendorRepository.GetVendorById(VendorID);
+                        if (vendor != null)
+                        {
+                            VendorName = vendor.VendorName;
+                        }
+                        else
+                        {
+                            Logger.LogWarning("Vendor with ID {VendorID} not found", VendorID);
+                        }
+                    }
+                    else
+                    {
+                        Logger.LogWarning("VendorId route parameter could not be parsed as GUID: {VendorId}", VendorId);
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(PurchaseOrderId))
+                {
+                    if (Guid.TryParse(PurchaseOrderId, out var parsedPoId))
+                    {
+                        PurchaseOrderID = parsedPoId;
+                        _invoiceDto.PurchaseOrderId = PurchaseOrderID;
+                        _invoiceForCreationDto.PurchaseOrderId = PurchaseOrderID;
+                        isPurchaseOrderProvided = true;
+
+                        var purchaseOrder = await PurchaseOrderRepository.GetPurchaseOrderById(PurchaseOrderID);
+                        if (purchaseOrder != null)
+                        {
+                            PurchaseOrderNumber = purchaseOrder.SAPPONumber;
+                            PurchaseOrderDate = purchaseOrder.SAPPODate;
+                        }
+                        else
+                        {
+                            Logger.LogWarning("Purchase Order with ID {PurchaseOrderID} not found", PurchaseOrderID);
+                        }
+                    }
+                    else
+                    {
+                        Logger.LogWarning("PurchaseOrderId route parameter could not be parsed as GUID: {PurchaseOrderId}", PurchaseOrderId);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error handling route parameters in OnParametersSetAsync");
+            }
+        }
+
         protected override async Task OnInitializedAsync()
         {
             try
             {
+                // Keep existing query-string support (in case vendorId/purchaseOrderId are supplied as query params)
                 var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
                 if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("vendorId", out var vendorId) && !StringValues.IsNullOrEmpty(vendorId))
                 {
                     VendorID = Guid.Parse(vendorId.ToString());
                     _invoiceDto.VendorId = VendorID;
+                    //_invoiceForCreationDto.VendorId = VendorID;
                     isVendorProvided = true;
                     var vendor = await VendorRepository.GetVendorById(VendorID);
                     if (vendor != null)
@@ -60,11 +135,12 @@ namespace OceanVMSClient.Pages.InviceModule
                     {
                         Logger.LogWarning("Vendor with ID {VendorID} not found", VendorID);
                     }
-                } // <-- FIX: Added missing closing brace for vendorId if block
+                }
                 if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("purchaseOrderId", out var purchaseOrderId) && !StringValues.IsNullOrEmpty(purchaseOrderId))
                 {
                     PurchaseOrderID = Guid.Parse(purchaseOrderId.ToString());
                     _invoiceForCreationDto.PurchaseOrderId = PurchaseOrderID;
+                    _invoiceDto.PurchaseOrderId = PurchaseOrderID;
                     isPurchaseOrderProvided = true;
                     var purchaseOrder = await PurchaseOrderRepository.GetPurchaseOrderById(PurchaseOrderID);
                     if (purchaseOrder != null)
@@ -77,16 +153,16 @@ namespace OceanVMSClient.Pages.InviceModule
                         Logger.LogWarning("Purchase Order with ID {PurchaseOrderID} not found", PurchaseOrderID);
                     }
                 }
-               
+
                 try
                 {
                     await LoadUserContextAsync();
-                    if (_userType.ToUpper() == "EMPLOYEE")
+                    if (!string.IsNullOrWhiteSpace(_userType) && _userType.ToUpper() == "EMPLOYEE")
                     {
                         _invoiceForCreationDto.InvoiceUploaderEmpID = _employeeId;
                         _invoiceForCreationDto.InvoiceUploader = "EMPLOYEE";
                     }
-                    else if (_userType.ToUpper() == "VENDOR")
+                    else if (!string.IsNullOrWhiteSpace(_userType) && _userType.ToUpper() == "VENDOR")
                     {
                         _invoiceForCreationDto.InvoiceUploader = "VENDOR";
                     }

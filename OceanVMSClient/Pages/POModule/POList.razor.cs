@@ -13,7 +13,7 @@ using System.Security.Claims;
 using System.Threading;
 namespace OceanVMSClient.Pages.POModule
 {
-    public partial class PoList
+    public partial class POList
     {
         #region Injected services & cascading parameters
 
@@ -325,5 +325,18 @@ namespace OceanVMSClient.Pages.POModule
         private static readonly DateTime DefaultPOStartDate = new(2025, 1, 1);
 
         #endregion
+
+        private void newInvoice(Guid vendorId, Guid purchaseOrderId)
+        {
+            // Basic validation
+            if (vendorId == Guid.Empty || purchaseOrderId == Guid.Empty)
+            {
+                Console.WriteLine("Invalid vendor or purchase order id for new invoice.");
+                return;
+            }
+
+            // Navigate to create-invoice page — adjust route as your app expects
+            NavigationManager.NavigateTo($"/newinvoice/{vendorId}/{purchaseOrderId}");
+        }
     }
 }
