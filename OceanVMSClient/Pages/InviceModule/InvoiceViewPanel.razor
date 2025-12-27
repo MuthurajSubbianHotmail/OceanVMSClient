@@ -1,0 +1,141 @@
+﻿<MudGrid GutterSize="1" AlignItems="Center">
+    <!-- Left: Invoice details (display only) -->
+    <MudItem xs="12" sm="6">
+        <MudPaper Elevation="0" Class="pa-2">
+            <MudText Typo="Typo.h6" Class="mb-1">Invoice Details</MudText>
+            <MudDivider Class="mb-1" />
+
+            <MudGrid GutterSize="1" Spacing="1">
+                <MudItem xs="6">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Reference No</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-1">@(_invoiceDto.InvoiceRefNo ?? "—")</MudText>
+                </MudItem>
+
+                <MudItem xs="6">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Date</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-1">@(_invoiceDto.InvoiceDate is DateTime d ? d.ToString("dd-MMM-yyyy") : "—")</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Vendor</MudText>
+                    <MudText Typo="Typo.h6" Color="Color.Info" Class="mb-1">@(VendorName)</MudText>
+                </MudItem>
+
+                <MudItem xs="6">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Purchase Order</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-1">@(PurchaseOrderNumber)</MudText>
+                </MudItem>
+
+                <MudItem xs="6">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Status</MudText>
+                    <div class="mb-1">
+                        <MudChip T="string"
+                                 Color="@GetInvoiceChipColor(_invoiceDto.InvoiceStatus)"
+                                 Variant="Variant.Filled">
+                            @(_invoiceDto.InvoiceStatus ?? "—")
+                        </MudChip>
+                    </div>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Item Value</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-1">@((_invoiceDto.InvoiceValue).ToString("N2"))</MudText>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Tax Value</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-1">@((_invoiceDto.InvoiceTaxValue).ToString("N2"))</MudText>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Total Value</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-1">@((_invoiceDto.InvoiceTotalValue).ToString("N2"))</MudText>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Remarks</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-1">@(_invoiceDto.Remarks ?? "—")</MudText>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Color="_labelColor">Invoice File</MudText>
+                    @if (!string.IsNullOrWhiteSpace(_invoiceDto.InvoiceFileURL))
+                    {
+                        <div class="d-flex align-center">
+                            <a class="mud-link" href="@_invoiceDto.InvoiceFileURL" target="_blank" rel="noopener noreferrer">Open file</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No file attached</MudText>
+                    }
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    </MudItem>
+
+    <!-- Right: Purchase Order summary (display only) -->
+    <MudItem xs="12" sm="6">
+        <MudPaper Elevation="0" Class="pa-2">
+            <MudText Typo="Typo.h6" Class="mb-1">Purchase Order Summary</MudText>
+
+            <MudGrid GutterSize="1" Spacing="1">
+                
+
+                <MudItem xs="12" Class="mt-1">
+                    <MudCard Elevation="0" Class="pa-1">
+                        <MudGrid AlignItems="Center" GutterSize="1">
+                            <MudItem xs="6" sm="6">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">Purchase Order</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Info">@(PurchaseOrderNumber)</MudText>
+                            </MudItem>
+                            <MudItem xs="6" sm="6">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Date</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Info">@PurchaseOrderDate</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="12">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">Project</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Info">@ProjectNameText</MudText>
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Value</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Info">@PoValueText</MudText>
+                            </MudItem>
+
+                            <MudItem xs="4">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Tax</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Info">@PoTaxText</MudText>
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Total</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Primary">@PoTotalText</MudText>
+                            </MudItem>
+
+                            
+                        </MudGrid>
+                        <MudDivider />
+                        <MudGrid AlignItems="Center" GutterSize="1" Class="mt-1">
+                            <MudItem xs="4">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">Prev Inv Count</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Info">@PrevInvoiceCountText</MudText>
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoiced Amount</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Info">@PrevInvoiceValueText</MudText>
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Balance</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Warning">@InvoiceBalanceValueText</MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudCard>
+                </MudItem>
+
+
+            </MudGrid>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+
+}

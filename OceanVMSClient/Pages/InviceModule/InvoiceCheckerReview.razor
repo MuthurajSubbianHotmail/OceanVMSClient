@@ -1,0 +1,215 @@
+﻿@using MudBlazor
+
+<MudPaper Class="pa-4">
+    <EditForm Model="_CheckercompleteDto">
+        <MudGrid GutterSize="2" AlignItems="Center">
+            <!-- Header with avatar/icon, title and status -->
+
+            <MudItem xs="6" sm="6">
+                <MudPaper Elevation="0" Class="pa-2">
+                    
+                    <MudGrid GutterSize="1" Spacing="1" AlignItems="Center">
+                        <MudItem xs="8">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Reviewer</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info" Class="mb-1">
+                                @(_invoiceDto?.CheckerName ?? "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Review Date</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-1" Color="Color.Info">
+                                @(_invoiceDto?.CheckerReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                            </MudText>
+                        </MudItem>
+                        <MudDivider />
+                        <MudItem xs="8">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Inv No</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Info">@_invoiceDto.InvoiceRefNo</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Inv Date</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Info">@_invoiceDto.InvoiceDate.ToString("dd-MMM-yyyy")</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Inv Amount</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info">@_invoiceDto.InvoiceValue</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Tax Amount</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info">@_invoiceDto.InvoiceTaxValue</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Total</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Warning">@_invoiceDto.InvoiceTotalValue</MudText>
+                        </MudItem>
+
+                        <MudDivider />
+                        <MudItem xs="4">
+                            <MudTextField T="decimal?"
+                                          Label="Approved Amount"
+                                          Value="_CheckercompleteDto.CheckerApprovedAmount"
+                                          ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnCheckerApprovedAmountChanged))"
+                                          Variant="_variant"
+                                          Adornment="Adornment.Start"
+                                          AdornmentText="₹"
+                                          Margin="_margin"
+                                          Class="short-field"
+                                          ReadOnly="!CanEditApprovedAmount()" />
+                        </MudItem>
+
+                        <MudItem xs="2" />
+
+                        <MudItem xs="4">
+                            <MudTextField T="decimal?"
+                                          Label="Withheld Amount"
+                                          Value="_CheckercompleteDto.CheckerWithheldAmount"
+                                          Variant="_variant"
+                                          Adornment="Adornment.Start"
+                                          AdornmentText="₹"
+                                          Margin="_margin"
+                                          Class="short-field"
+                                          ReadOnly="true" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField Label="Withheld Reason"
+                                          Value="_CheckercompleteDto.CheckerWithheldReason"
+                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _CheckercompleteDto.CheckerWithheldReason = v))"
+                                          Variant="_variant"
+                                          Adornment="Adornment.End"
+                                          AdornmentIcon="Icons.Material.Filled.Info"
+                                          Margin="_margin"
+                                          ReadOnly="!CanEditApprovedAmount()" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudTextField Label="Remarks"
+                                          Value="_CheckercompleteDto.CheckerReviewComment"
+                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _CheckercompleteDto.CheckerReviewComment = v))"
+                                          Variant="_variant"
+                                          Margin="_margin"
+                                          Adornment="Adornment.End"
+                                          AdornmentIcon="Icons.Material.Filled.Info"
+                                          Lines="1"
+                                          ReadOnly="!CanEditApprovedAmount()" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudSelect Label="Approval"
+                                       Value="_CheckercompleteDto.CheckerReviewStatus"
+                                       ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _CheckercompleteDto.CheckerReviewStatus = v))"
+                                       Variant="_variant"
+                                       Margin="Margin.Dense"
+                                       Class="short-field">
+                                <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+
+                            </MudSelect>
+                        </MudItem>
+
+                    </MudGrid>
+
+                </MudPaper>
+
+            </MudItem>
+
+            <MudItem xs="6" sm="6">
+
+                <!-- Selection section: show label + value using MudText (display style like InvoiceView) -->
+                <MudPaper Elevation="0" Class="pa-2">
+                    <MudGrid GutterSize="1" Spacing="2">
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Prev Inv Count</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info">@PrevInvoiceCountText</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoiced Amount</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info">@PrevInvoiceValueText</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Balance</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Warning">@InvoiceBalanceValueText</MudText>
+                        </MudItem>
+                        <MudDivider />
+
+
+                        <MudItem xs="8">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO No</MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Info">@_invoiceDto.SAPPONumber</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Date</MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Info">@_invoiceDto.SAPPODate.ToString("dd-MMM-yyyy")</MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Value</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info">@PoValueText</MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Tax</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info">@PoTaxText</MudText>
+                        </MudItem>
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Total</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Primary">@PoTotalText</MudText>
+                        </MudItem>
+                        <MudDivider />
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Assignment Date</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info" Class="mb-1">
+                                @(_invoiceDto?.CheckerReviewAssigedOn is DateTime d ? d.ToString("dd-MMM-yyyy") : "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">SLA (Days)</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info" Class="mb-1">
+                                @(_invoiceDto?.CheckerReviewSLADays?.ToString() ?? "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Target Date</MudText>
+                            <MudText Typo="Typo.body1" Color="GetSLAStatusColor(_invoiceDto?.CheckerReviewSLAStatus)" Class="mb-1">
+                                @(_invoiceDto?.CheckerReviewTargetDate is DateTime td ? td.ToString("dd-MMM-yyyy") : "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">SLA Status</MudText>
+                            <MudText Typo="Typo.body1" Color="GetSLAStatusColor(_invoiceDto?.CheckerReviewSLAStatus)" Class="mb-1">
+                                @(_invoiceDto?.CheckerReviewSLAStatus ?? "—")
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Current Status</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Info" Class="mb-1">
+                                @(_invoiceDto?.CheckerReviewStatus ?? "—")
+                            </MudText>
+                        </MudItem>
+
+
+                    </MudGrid>
+                </MudPaper>
+                <MudItem xs="6">
+
+                </MudItem>
+            </MudItem>
+        </MudGrid>
+        <MudItem xs="12" Class="d-flex justify-end mt-2">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="SaveDecision"
+                       Disabled="!CanEditApprovedAmount()">
+                Submit Review
+            </MudButton>
+        </MudItem>
+    </EditForm>
+</MudPaper>
+@code {
+
+}

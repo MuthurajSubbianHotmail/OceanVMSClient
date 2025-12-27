@@ -1,0 +1,13 @@
+﻿/* Shorter input style used for numeric/select controls.
+       Uses max-width so layout stays responsive; on very small screens it goes full-width. */
+.short-field {
+    max-width: 100px;
+    width: 100%;
+    display: inline-block;
+}
+
+@media (max-width: 600px) {
+    .short-field {
+        max-width: 100%;
+    }
+}

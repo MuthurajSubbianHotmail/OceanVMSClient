@@ -2,15 +2,16 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
+using MudBlazor;
+using OceanVMSClient.HttpRepo.POModule;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using OceanVMSClient.HttpRepoInterface.PoModule;
 using OceanVMSClient.HttpRepoInterface.POModule;
 using Shared.DTO.POModule;
 using System.Security.Claims;
-using MudBlazor;
-using Microsoft.AspNetCore.Components.Web;
 
 namespace OceanVMSClient.Pages.InviceModule
 {
@@ -18,6 +19,21 @@ namespace OceanVMSClient.Pages.InviceModule
     {
         [CascadingParameter]
         public Task<AuthenticationState> AuthState { get; set; } = default!;
+        public Margin _margin = Margin.Dense;
+        public Variant _variant = Variant.Text!;
+        public Color _labelColor = Color.Default!;
+        public Color _valueColor = Color.Default!;
+        public Typo _labelTypo = Typo.subtitle2!;
+        public Typo _valueTypo = Typo.body2!;
+        public Guid _LoggedInEmployeeID = Guid.Empty;
+        public string _LoggedInUserType = string.Empty;
+        public Guid _LoggedInVendorID = Guid.Empty;
+        public string _CurrentRoleName = string.Empty;
+        public bool _isInvAssigned = false;
+        public bool _isInitiator = false;
+        public bool _isChecker = false;
+        public bool _isValidator = false;
+        public bool _isApprover = false;
 
         [Inject] public NavigationManager NavigationManager { get; set; }
         [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;
@@ -25,7 +41,7 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] public IInvoiceRepository InvoiceRepository { get; set; } = default!;
         [Inject] public IVendorRepository VendorRepository { get; set; } = default!;
         [Inject] public IPurchaseOrderRepository PurchaseOrderRepository { get; set; } = default!;
-
+        [Inject] public IInvoiceApproverRepository invoiceApproverRepository { get; set; }
         // Route parameter for the invoice to view
         [Parameter]
         public string? InvoiceId { get; set; }
@@ -63,8 +79,10 @@ namespace OceanVMSClient.Pages.InviceModule
             ? PurchaseOrderDetails.InvoiceBalanceValue.Value.ToString("N2")
             : "0.00";
 
+
         // EditContext (not used for editing here, kept for compatibility)
         private EditContext? _editContext;
+
 
         protected override async Task OnParametersSetAsync()
         {
@@ -85,7 +103,7 @@ namespace OceanVMSClient.Pages.InviceModule
                             PurchaseOrderDetails = await PurchaseOrderRepository.GetPurchaseOrderById(_invoiceDto.PurchaseOrderId);
                             PurchaseOrderNumber = PurchaseOrderDetails?.SAPPONumber ?? string.Empty;
                             PurchaseOrderDate = PurchaseOrderDetails?.SAPPODate ?? DateTime.Today;
-                            
+
                         }
                         catch (Exception ex)
                         {
@@ -105,7 +123,7 @@ namespace OceanVMSClient.Pages.InviceModule
                             Logger.LogWarning(ex, "Failed to load vendor for invoice {InvoiceId}", InvoiceGuid);
                         }
                     }
-                    if(string.Equals(_invoiceDto.InvoiceStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(_invoiceDto.InvoiceStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
                     {
                         _isInvRejected = true;
                     }
@@ -113,8 +131,42 @@ namespace OceanVMSClient.Pages.InviceModule
                     {
                         _isInvRejected = false;
                     }
-                        // create EditContext so UI helpers that expect it can work
-                        _editContext = new EditContext(_invoiceDto);
+
+                    if (PurchaseOrderDetails != null && _employeeId.HasValue)
+                    {
+                        var empInitiatorPermission = await invoiceApproverRepository.IsInvoiceApproverAsync(PurchaseOrderDetails.ProjectId, _employeeId.Value);
+                        _CurrentRoleName = empInitiatorPermission.AssignedType ?? string.Empty;
+                        _isInvAssigned = empInitiatorPermission.IsAssigned;
+                    }
+                    else
+                    {
+                        _CurrentRoleName = string.Empty;
+                        _isInvAssigned = false;
+                    }
+
+                    _isInitiator = await PurchaseOrderRepository.IsEmployeeAssignedforRoleAsync(
+                        _invoiceDto.PurchaseOrderId != Guid.Empty ? _invoiceDto.PurchaseOrderId : Guid.Empty,
+                        _employeeId ?? Guid.Empty,
+                            "Initiator"
+                        );
+                    _isChecker = await PurchaseOrderRepository.IsEmployeeAssignedforRoleAsync(
+                        _invoiceDto.PurchaseOrderId != Guid.Empty ? _invoiceDto.PurchaseOrderId : Guid.Empty,
+                        _employeeId ?? Guid.Empty,
+                        "Checker"
+                    );
+                    _isValidator = await PurchaseOrderRepository.IsEmployeeAssignedforRoleAsync(
+                        _invoiceDto.PurchaseOrderId != Guid.Empty ? _invoiceDto.PurchaseOrderId : Guid.Empty,
+                        _employeeId ?? Guid.Empty,
+                        "Validator"
+                    );
+                    _isApprover = await PurchaseOrderRepository.IsEmployeeAssignedforRoleAsync(
+                        _invoiceDto.PurchaseOrderId != Guid.Empty ? _invoiceDto.PurchaseOrderId : Guid.Empty,
+                        _employeeId ?? Guid.Empty,
+                        "Approver"
+                    );
+
+                    // create EditContext so UI helpers that expect it can work
+                    _editContext = new EditContext(_invoiceDto);
                     StateHasChanged();
                 }
                 else
@@ -134,6 +186,7 @@ namespace OceanVMSClient.Pages.InviceModule
             try
             {
                 await LoadUserContextAsync();
+
             }
             catch
             {
@@ -141,24 +194,7 @@ namespace OceanVMSClient.Pages.InviceModule
             }
         }
 
-        // Keep same mapping used in InvoiceList child row for chip color
-        private Color GetInvoiceChipColor(string? status)
-        {
-            if (string.IsNullOrWhiteSpace(status))
-                return Color.Default;
-
-            var s = status.Trim().ToLowerInvariant();
-            return s switch
-            {
-                "approved" or "paid" or "fully invoiced" => Color.Success,
-                "rejected" or "declined" or "overdue" => Color.Error,
-                "submitted" or "awaiting approval" or "awaiting" => Color.Default,
-                "with initiator" or "with checker" or "with validator" or "with approver" or "under review" => Color.Warning,
-                "part invoiced" or "partially paid" or "partial" => Color.Info,
-                "cancelled" or "void" => Color.Secondary,
-                _ => Color.Secondary
-            };
-        }
+        
 
         // Map invoice status to workflow stepper index
         private int GetWorkflowStepIndex(string? status)
@@ -207,6 +243,8 @@ namespace OceanVMSClient.Pages.InviceModule
                 _vendorId = ParseGuid(GetClaimValue(user, "vendorPK") ?? GetClaimValue(user, "vendorId"));
                 _vendorContactId = ParseGuid(GetClaimValue(user, "vendorContactId") ?? GetClaimValue(user, "vendorContact"));
                 _employeeId = ParseGuid(GetClaimValue(user, "empPK") ?? GetClaimValue(user, "EmployeeId"));
+                _LoggedInEmployeeID = _employeeId ?? Guid.Empty;
+                _LoggedInUserType = _userType ?? string.Empty;
             }
             else
             {
@@ -223,12 +261,12 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 _vendorId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("vendorPK"));
                 _vendorContactId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("vendorContactId"));
-                }
-                else
-                {
-                    _employeeId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("empPK"));
-                }
             }
+            else
+            {
+                _employeeId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("empPK"));
+            }
+        }
 
         #endregion
 

@@ -10,5 +10,6 @@ namespace OceanVMSClient.HttpRepoInterface.PoModule
         Task<PurchaseOrderDto> GetPurchaseOrderById(Guid PurchaseOrderId);
         Task<PagingResponse<PurchaseOrderDto>> GetAllPurchaseOrdersOfVendorAsync(Guid vendorId, PurchaseOrderParameters purchaseOrderParameters);
         Task<PagingResponse<PurchaseOrderDto>> GetAllPurchaseOrdersOfApproversAsync(Guid employeeId, PurchaseOrderParameters purchaseOrderParameters);
+        Task<bool> IsEmployeeAssignedforRoleAsync(Guid purchaseOrderId, Guid employeeId, string roleName);
     }
 }

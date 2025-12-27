@@ -141,5 +141,17 @@ namespace OceanVMSClient.HttpRepo.POModule
             };
             return pagingResponse;
         }
+
+        public async Task<bool> IsEmployeeAssignedforRoleAsync(Guid purchaseOrderId, Guid employeeId, string roleName)
+        {
+            var response = await _httpClient.GetAsync($"purchaseorders/{purchaseOrderId}/has-role?employeeId={employeeId}&role={roleName}");
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var isAssigned = JsonSerializer.Deserialize<bool>(content, _options);
+            return isAssigned;
+        }
     }
 }

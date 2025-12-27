@@ -1,4 +1,5 @@
-﻿using OceanVMSClient.HttpRepoInterface.POModule;
+﻿using MudBlazor;
+using OceanVMSClient.HttpRepoInterface.POModule;
 using System.Text.Json;
 
 namespace OceanVMSClient.HttpRepo.POModule
@@ -17,15 +18,22 @@ namespace OceanVMSClient.HttpRepo.POModule
         }
         public async Task<(bool IsAssigned, string AssignedType)> IsInvoiceApproverAsync(Guid projectID, Guid employeeId)
         {
-            var response = await _httpClient.GetAsync($"invoiceapprovers/project/{projectID}/{employeeId}");
+            var response = await _httpClient.GetAsync($"invoiceapprovers/project/{projectID}/employee/{employeeId}/approver-types");
             var content = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
+                var result = System.Text.Json.JsonSerializer.Deserialize<InvoiceApproverResponse>(content);
+                return (result?.isAssigned ?? false, result?.assignedApproverTypes ?? string.Empty);
                 throw new Exception(content);
+            } else if(response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return (false, "Not Assigned");
+            } else
+            {
+                return (false, "Unknown Error");
             }
             // Assuming the API returns a JSON object with IsAssigned and AssignedType properties
-            var result = System.Text.Json.JsonSerializer.Deserialize<InvoiceApproverResponse>(content);
-            return (result?.isAssigned ?? false, result?.assignedApproverTypes ?? string.Empty);
+
         }
         private class InvoiceApproverResponse
         {

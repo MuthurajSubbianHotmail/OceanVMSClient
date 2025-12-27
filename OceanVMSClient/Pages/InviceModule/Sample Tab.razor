@@ -1,0 +1,58 @@
+﻿@page "/sample"
+<h3>Sample_Tab</h3>
+<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+<PageHeader Title="Invoice" Class="mb-2" />
+<MudGrid GutterSize="1">
+    <MudItem xs="12" sm="6" md="4" lg="3">
+
+    </MudItem>
+</MudGrid>
+<MudTabs>
+    <MudTabPanel Text="Submitted" >
+        <MudPaper>
+            <MudGrid GutterSize="1" Class="pa-4 mt-1">
+                <MudItem xs="6">
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="HelperText" Label="With Helper"  Variant="@_variant" Margin="@_margin" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="HelperText" Label="With Helper" Variant="@_variant" Margin="@_margin" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="HelperText" Label="With Helper" Variant="@_variant" Margin="@_margin" />
+                    </MudItem>
+                </MudItem>
+
+                <MudItem xs="6">
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="HelperText" Label="With Helper" Variant="@_variant" Margin="@_margin" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="HelperText" Label="With Helper" Variant="@_variant" Margin="@_margin" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="HelperText" Label="With Helper" Variant="@_variant" Margin="@_margin" />
+                    </MudItem>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+    </MudTabPanel>
+    <MudTabPanel Text="Payments">
+        <MudText>This is the Payments tab content.</MudText>
+    </MudTabPanel>
+    <MudTabPanel Text="History">
+        <MudText>This is the History tab content.</MudText>
+    </MudTabPanel>
+</MudTabs>
+@code {
+    private List<BreadcrumbItem> _items = new()
+    {
+    new BreadcrumbItem("Home", href: "/", disabled: false),
+    new BreadcrumbItem("Invoices", href: "/invoices", disabled: false),
+    new BreadcrumbItem("Invoice", href: null, disabled: true)
+    };
+    public string HelperText { get; set; } = "";
+    private Margin _margin = Margin.Dense;
+    private Variant _variant = Variant.Text;
+}
