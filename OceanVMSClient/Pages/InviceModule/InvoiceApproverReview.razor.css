@@ -1,0 +1,29 @@
+﻿/* Short input width for larger screens, full-width on mobile */
+.short-field {
+    max-width: 220px;
+    width: 100%;
+    display: inline-block;
+}
+
+@media (max-width: 599px) {
+    .short-field {
+        max-width: 100%;
+    }
+}
+
+/* Actions: right-aligned on wide screens, centered on small screens */
+.actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+@media (max-width: 599px) {
+    .actions {
+        justify-content: center;
+    }
+}
+
+/* Small vertical spacing for stacked items on mobile */
+.field-block {
+    margin-bottom: 0.5rem;
+}

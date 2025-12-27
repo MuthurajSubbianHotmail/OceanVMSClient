@@ -34,6 +34,7 @@ namespace OceanVMSClient.Pages.InviceModule
         public bool _isChecker = false;
         public bool _isValidator = false;
         public bool _isApprover = false;
+        public bool _isApApprover = false;
 
         [Inject] public NavigationManager NavigationManager { get; set; }
         [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;

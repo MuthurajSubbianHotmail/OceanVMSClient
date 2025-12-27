@@ -1,0 +1,299 @@
+﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Forms;
+using MudBlazor;
+using OceanVMSClient.HttpRepoInterface.InvoiceModule;
+using Shared.DTO.POModule;
+
+namespace OceanVMSClient.Pages.InviceModule
+{
+    public partial class InvoiceAPReview
+    {
+        // Component parameters (inputs)
+        [Parameter] public InvoiceDto? _invoiceDto { get; set; }
+        [Parameter] public PurchaseOrderDto? _PODto { get; set; }
+
+        // Internal DTO used when completing approver review
+        [Parameter] public InvAPApproverReviewCompleteDto _apApproverCompleteDto { get; set; } = new();
+
+        // repository + UI feedback + logger
+        [Inject] private IInvoiceRepository InvoiceRepository { get; set; } = default!;
+        [Inject] private ISnackbar Snackbar { get; set; } = default!;
+        [Inject] private ILogger<InvoiceApproverReview> Logger { get; set; } = default!;
+
+        // Cascading parameters (UI theme / user context)
+        [CascadingParameter] public Margin _margin { get; set; } = Margin.Dense;
+        [CascadingParameter] public Variant _variant { get; set; } = Variant.Text;
+        [CascadingParameter] public Color _labelColor { get; set; } = Color.Default;
+        [CascadingParameter] public Color _valueColor { get; set; } = Color.Default;
+        [CascadingParameter] public Typo _labelTypo { get; set; } = Typo.subtitle2;
+        [CascadingParameter] public Typo _valueTypo { get; set; } = Typo.body2;
+
+        // Logged-in user context (supplied by parent)
+        [Parameter] public Guid _LoggedInEmployeeID { get; set; } = Guid.Empty;
+        [Parameter] public string _LoggedInUserType { get; set; } = string.Empty;
+        [Parameter] public Guid _LoggedInVendorID { get; set; } = Guid.Empty;
+        [Parameter] public string _CurrentRoleName { get; set; } = string.Empty;
+        [Parameter] public bool _isInvAssigned { get; set; } = false;
+        [Parameter] public bool _isApApprover { get; set; } = false;
+
+        // small state
+        private bool _apApproverSaved = false;
+
+        // EditContext used for client-side DataAnnotations validation
+        private EditContext? _editContext;
+
+        #region Display helpers (computed properties)
+        private string FormatCurrency(decimal? value) => value?.ToString("C") ?? "-";
+        private string PoValueText => _PODto != null ? _PODto.ItemValue.ToString("N2") : "0.00";
+        private string PoTaxText => _PODto != null ? _PODto.GSTTotal.ToString("N2") : "0.00";
+        private string PoTotalText => _PODto != null ? _PODto.TotalValue.ToString("N2") : "0.00";
+        private string PrevInvoiceCountText => _PODto?.PreviousInvoiceCount?.ToString() ?? "0";
+        private string PrevInvoiceValueText => _PODto != null && _PODto.PreviousInvoiceValue.HasValue
+            ? _PODto.PreviousInvoiceValue.Value.ToString("N2")
+            : "0.00";
+        private string InvoiceBalanceValueText => _PODto != null && _PODto.InvoiceBalanceValue.HasValue
+            ? _PODto.InvoiceBalanceValue.Value.ToString("N2")
+            : "0.00";
+        #endregion
+
+        #region Lifecycle
+        protected override void OnParametersSet()
+        {
+            base.OnParametersSet();
+
+            // Map server invoice values into working DTO when component opens
+            MapFromInvoiceDto();
+
+            // ensure EditContext tracks current working DTO so DataAnnotationsValidator works
+            if (_editContext == null || _editContext.Model != _apApproverCompleteDto)
+                _editContext = new EditContext(_apApproverCompleteDto);
+
+            // Apply defaults if ApproverReviewStatus == "Pending"
+            EnsureDefaultApproverAmounts();
+
+            // If server already indicates review completed, lock UI
+            _apApproverSaved = IsAPApproverReviewCompleted();
+        }
+        #endregion
+
+        #region UI helpers
+        private Color GetSLAStatusColor(string? slaStatus) =>
+            slaStatus switch
+            {
+                null => Color.Default,
+                var s when s.Equals("Delayed", StringComparison.OrdinalIgnoreCase) => Color.Warning,
+                var s when s.Equals("NA", StringComparison.OrdinalIgnoreCase) => Color.Default,
+                var s when s.Equals("Within SLA", StringComparison.OrdinalIgnoreCase) => Color.Success,
+                _ => Color.Info
+            };
+        private Color GetSLAColor(string? slaStatus) => GetSLAStatusColor(slaStatus);
+        #endregion
+
+        #region Validation / defaults / mapping
+        private void MapFromInvoiceDto()
+        {
+            if (_invoiceDto == null || _apApproverCompleteDto == null)
+                return;
+
+            // populate only when the working DTO is empty (to avoid overwriting user edits)
+            if (_apApproverCompleteDto.InvoiceId == Guid.Empty || _apApproverCompleteDto.InvoiceId != _invoiceDto.Id)
+            {
+                _apApproverCompleteDto.InvoiceId = _invoiceDto.Id;
+                _apApproverCompleteDto.APReviewerId = _invoiceDto.APReviewerId ?? Guid.Empty;
+                _apApproverCompleteDto.APApprovedAmount = _invoiceDto.APApprovedAmount;
+                _apApproverCompleteDto.APWithheldAmount = _invoiceDto.APWithheldAmount;
+                _apApproverCompleteDto.APWithheldReason = _invoiceDto.APWithheldReason;
+                _apApproverCompleteDto.APReviewComments = _invoiceDto.APReviewComments;
+                _apApproverCompleteDto.APReviewStatus = _invoiceDto.APReviewStatus;
+            }
+        }
+
+        /// <summary>
+        /// If ApproverReviewStatus is "Pending" set defaults:
+        ///  - ApproverApprovedAmount = InvoiceTotalValue
+        ///  - ApproverWithheldAmount = 0
+        /// </summary>
+        /// 
+        private void EnsureDefaultApproverAmounts()
+        {
+            if (_invoiceDto == null || _apApproverCompleteDto == null)
+                return;
+
+            if (string.Equals(_invoiceDto.ApproverReviewStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                var total = _invoiceDto.InvoiceTotalValue;
+                // set defaults only when amounts are null
+                if (!_apApproverCompleteDto.APApprovedAmount.HasValue)
+                    _apApproverCompleteDto.APApprovedAmount = total;
+                if (!_apApproverCompleteDto.APWithheldAmount.HasValue)
+                    _apApproverCompleteDto.APWithheldAmount = 0m;
+            }
+        }
+
+        private void OnApproverApprovedAmountChanged(decimal? newValue)
+        {
+            if (_invoiceDto == null || _apApproverCompleteDto == null)
+                return;
+
+            decimal total = _invoiceDto.InvoiceTotalValue;
+            decimal approved = newValue.GetValueOrDefault(0m);
+
+            if (approved < 0m) approved = 0m;
+            if (approved > total) approved = total;
+
+            _apApproverCompleteDto.APApprovedAmount = approved;
+            _apApproverCompleteDto.APWithheldAmount = total - approved;
+
+            StateHasChanged();
+        }
+        #endregion
+
+        #region Permissions / read-only
+        private bool IsApproverReviewRequired = true;
+
+        private bool CanEditApprovedAmount()
+        {
+            // simple checks - adapt as needed (role/assignment)
+            if (!_isApApprover)
+                return false;
+            if (!_isInvAssigned)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(_CurrentRoleName) || !_CurrentRoleName.Contains("Approver", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // If server status indicates completed, disallow edit
+            if (IsAPApproverReviewCompleted())
+                return false;
+
+            return true;
+        }
+
+        private bool IsAPApproverReviewCompleted()
+        {
+            var status = _invoiceDto?.APReviewStatus?.Trim();
+            if (string.IsNullOrWhiteSpace(status))
+                return false;
+
+            return status.Equals("Approved", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)
+                || status.Equals("Completed", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // UI read-only helper used by markup
+        private bool IsReadOnly => _apApproverSaved || IsAPApproverReviewCompleted();
+        #endregion
+
+        #region Actions
+        private async Task SaveDecision()
+        {
+            try
+            {
+                if (_invoiceDto == null)
+                {
+                    Snackbar.Add("Invoice not loaded.", Severity.Error);
+                    return;
+                }
+
+                var status = _apApproverCompleteDto.APReviewStatus?.Trim();
+                if (string.IsNullOrWhiteSpace(status) ||
+                    !(status.Equals("Approved", StringComparison.OrdinalIgnoreCase) || status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)))
+                {
+                    Snackbar.Add("Please select Approval status (Approved or Rejected).", Severity.Warning);
+                    return;
+                }
+
+                // Conditional validation
+                decimal total = _invoiceDto.InvoiceTotalValue;
+
+                if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Approved amount is required and must be > 0 and <= total
+                    if (!_apApproverCompleteDto.APApprovedAmount.HasValue)
+                    {
+                        Snackbar.Add("Approved amount is required when status is Approved.", Severity.Warning);
+                        return;
+                    }
+
+                    var approvedValue = _apApproverCompleteDto.APApprovedAmount.GetValueOrDefault(0m);
+                    if (approvedValue <= 0m)
+                    {
+                        Snackbar.Add("Approved amount must be greater than zero.", Severity.Warning);
+                        return;
+                    }
+
+                    if (approvedValue > total)
+                    {
+                        Snackbar.Add("Approved amount cannot exceed invoice total.", Severity.Warning);
+                        // clamp and show recalculation
+                        _apApproverCompleteDto.APApprovedAmount = total;
+                        _apApproverCompleteDto.APWithheldAmount = 0m;
+                        StateHasChanged();
+                        return;
+                    }
+
+                    // recalc withheld
+                    _apApproverCompleteDto.APWithheldAmount = total - approvedValue;
+                }
+                else // Rejected
+                {
+                    // Remarks / comment required on rejection
+                    if (string.IsNullOrWhiteSpace(_apApproverCompleteDto.APReviewComments))
+                    {
+                        Snackbar.Add("Remarks are required when status is Rejected.", Severity.Warning);
+                        return;
+                    }
+
+                    // When rejected, approved amount should be zero and withheld equals total
+                    _apApproverCompleteDto.APApprovedAmount = 0m;
+                    _apApproverCompleteDto.APWithheldAmount = total;
+                }
+
+                // Ensure invoice id is set
+                _apApproverCompleteDto.InvoiceId = _invoiceDto.Id;
+
+                // If ApproverID not provided, set from cascading employee id if available
+                if (_apApproverCompleteDto.APReviewerId == Guid.Empty && _LoggedInEmployeeID != Guid.Empty)
+                    _apApproverCompleteDto.APReviewerId = _LoggedInEmployeeID;
+
+                // Persist via repository (returns updated InvoiceDto)
+                var refreshed = await InvoiceRepository.UpdateInvoiceAPReview(_apApproverCompleteDto);
+                if (refreshed != null)
+                {
+                    _invoiceDto = refreshed;
+                    MapFromInvoiceDto();
+                }
+
+                // Lock UI
+                _apApproverSaved = true;
+
+                Snackbar.Add("AP Approver review saved successfully.", Severity.Success);
+
+                if (this is IInvoiceAPApproverReviewHandlers handlers)
+                    await handlers.SaveAsync();
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error saving AP Approver review for Invoice ID {InvoiceId}", _invoiceDto?.Id);
+                Snackbar.Add("An error occurred while saving the AP Approver review.", Severity.Error);
+            }
+        }
+
+        private Task Cancel()
+        {
+            if (this is IInvoiceAPApproverReviewHandlers handlers)
+                return handlers.CancelAsync();
+
+            return Task.CompletedTask;
+        }
+
+        private interface IInvoiceAPApproverReviewHandlers
+        {
+            Task SaveAsync();
+            Task CancelAsync();
+        }
+        #endregion
+    }
+}

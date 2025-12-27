@@ -170,7 +170,32 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             return updatedInvoice!;
         }
 
+        public async Task<InvoiceDto> UpdateInvoiceApproverApproval(InvApproverReviewCompleteDto invApproverReviewCompleteDto)
+        {
+            var invoiceJson = new StringContent(JsonSerializer.Serialize(invApproverReviewCompleteDto), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("invoices/approver-review-complete", invoiceJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var updatedInvoice = JsonSerializer.Deserialize<InvoiceDto>(content, _options);
+            return updatedInvoice!;
+        }
+        public async Task<InvoiceDto> UpdateInvoiceAPReview(InvAPApproverReviewCompleteDto invAPReviewCompleteDto)
+        {
+            var invoiceJson = new StringContent(JsonSerializer.Serialize(invAPReviewCompleteDto), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("invoices/ap-approver-review-complete", invoiceJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var updatedInvoice = JsonSerializer.Deserialize<InvoiceDto>(content, _options);
+            return updatedInvoice!;
+        }
 
+       
     }
 
     public static class InvoiceParametersExtensions

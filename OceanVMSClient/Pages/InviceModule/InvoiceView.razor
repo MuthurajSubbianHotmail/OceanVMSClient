@@ -42,10 +42,22 @@
                                                _isValidator="@_isValidator" />
                     </MudTabPanel>
                     <MudTabPanel Text="Approver" Icon="@Icons.Material.Rounded.ThumbUpOffAlt">
-                        
+                        <InvoiceApproverReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                              _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                              _LoggedInUserType="@_LoggedInUserType"
+                                              _LoggedInVendorID="@_LoggedInVendorID"
+                                              _CurrentRoleName="@_CurrentRoleName"
+                                              _isInvAssigned="@_isInvAssigned"
+                                               _isApprover="@_isApprover" />
                     </MudTabPanel>
                     <MudTabPanel Text="Authorizer" Icon="@Icons.Material.Rounded.Security">
-                        
+                        <InvoiceAPReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                              _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                              _LoggedInUserType="@_LoggedInUserType"
+                                              _LoggedInVendorID="@_LoggedInVendorID"
+                                              _CurrentRoleName="@_CurrentRoleName"
+                                              _isInvAssigned="@_isInvAssigned"
+                                               _isApApprover="@_isApApprover" />
                     </MudTabPanel>
                     <MudTabPanel Text="Payments" Icon="@Icons.Material.Rounded.Payment">
                         
