@@ -13,14 +13,14 @@
                         <MudItem xs="12" sm="8" Class="field-block">
                             <MudText Typo="Typo.subtitle2" Color="_labelColor">Reviewer</MudText>
                             <MudText Typo="Typo.body1" Color="Color.Info" Class="mb-1">
-                                @(_invoiceDto?.CheckerName ?? "—")
+                                @(_invoiceDto?.ValidatorName ?? "—")
                             </MudText>
                         </MudItem>
 
                         <MudItem xs="12" sm="4" Class="field-block">
                             <MudText Typo="Typo.subtitle2" Color="_labelColor">Review Date</MudText>
                             <MudText Typo="Typo.body1" Color="Color.Info">
-                                @(_invoiceDto?.CheckerReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                @(_invoiceDto?.ValidatorReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
                             </MudText>
                         </MudItem>
 
@@ -57,8 +57,8 @@
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Approved Amount"
-                                          Value="_CheckercompleteDto.CheckerApprovedAmount"
-                                          ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnCheckerApprovedAmountChanged))"
+                                          Value="_validatorCompleteDto.ValidatorApprovedAmount"
+                                          ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnValidatorApprovedAmountChanged))"
                                           Variant="@_variant"
                                           Adornment="Adornment.Start"
                                           AdornmentText="₹"
@@ -67,10 +67,11 @@
                                           ReadOnly="@IsReadOnly" />
                         </MudItem>
                         <MudItem xs="12" sm="6" md="4" Class="field-block" />
+
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Withheld Amount"
-                                          Value="_CheckercompleteDto.CheckerWithheldAmount"
+                                          Value="_validatorCompleteDto.ValidatorWithheldAmount"
                                           Variant="@_variant"
                                           Adornment="Adornment.Start"
                                           AdornmentText="₹"
@@ -81,8 +82,8 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Withheld Reason"
-                                          Value="_CheckercompleteDto.CheckerWithheldReason"
-                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _CheckercompleteDto.CheckerWithheldReason = v))"
+                                          Value="_validatorCompleteDto.ValidatorWithheldReason"
+                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _validatorCompleteDto.ValidatorWithheldReason = v))"
                                           Variant="@_variant"
                                           Adornment="Adornment.End"
                                           AdornmentIcon="Icons.Material.Filled.Info"
@@ -92,8 +93,8 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Remarks"
-                                          Value="_CheckercompleteDto.CheckerReviewComment"
-                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _CheckercompleteDto.CheckerReviewComment = v))"
+                                          Value="_validatorCompleteDto.ValidatorReviewComment"
+                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _validatorCompleteDto.ValidatorReviewComment = v))"
                                           Variant="@_variant"
                                           Margin="@_margin"
                                           Adornment="Adornment.End"
@@ -104,8 +105,8 @@
 
                         <MudItem xs="12" sm="6" Class="field-block">
                             <MudSelect Label="Approval"
-                                       Value="_CheckercompleteDto.CheckerReviewStatus"
-                                       ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _CheckercompleteDto.CheckerReviewStatus = v))"
+                                       Value="_validatorCompleteDto.ValidatorReviewStatus"
+                                       ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _validatorCompleteDto.ValidatorReviewStatus = v))"
                                        Variant="@_variant"
                                        Margin="Margin.Dense"
                                        Class="short-field"

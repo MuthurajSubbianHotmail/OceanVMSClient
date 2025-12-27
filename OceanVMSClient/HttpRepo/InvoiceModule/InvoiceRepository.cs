@@ -132,6 +132,18 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             }
         }
 
+        public async Task<InvoiceDto> UpdateInvoiceInitiatorReview(InvInitiatorReviewCompleteDto invInitiatorReviewCompleteDto)
+        {
+            var invoiceJson = new StringContent(JsonSerializer.Serialize(invInitiatorReviewCompleteDto), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("invoices/initiator-review-complete", invoiceJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var updatedInvoice = JsonSerializer.Deserialize<InvoiceDto>(content, _options);
+            return updatedInvoice!;
+        }
         public async Task<InvoiceDto> UpdateInvoiceCheckerReview(InvCheckerReviewCompleteDto invCheckerReviewCompleteDto)
         {
             var invoiceJson = new StringContent(JsonSerializer.Serialize(invCheckerReviewCompleteDto), System.Text.Encoding.UTF8, "application/json");
@@ -144,6 +156,21 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             var updatedInvoice = JsonSerializer.Deserialize<InvoiceDto>(content, _options);
             return updatedInvoice!;
         }
+
+        public async Task<InvoiceDto> UpdateInvoiceValidatorApproval(InvValidatorReviewCompleteDto invValidatorReviewCompleteDto)
+        {
+            var invoiceJson = new StringContent(JsonSerializer.Serialize(invValidatorReviewCompleteDto), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("invoices/validator-review-complete", invoiceJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var updatedInvoice = JsonSerializer.Deserialize<InvoiceDto>(content, _options);
+            return updatedInvoice!;
+        }
+
+
     }
 
     public static class InvoiceParametersExtensions

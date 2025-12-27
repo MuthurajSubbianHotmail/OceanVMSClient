@@ -10,25 +10,50 @@
             <MudPaper Class="pa-3" Elevation="1">
 
                 <MudTabs>
-                    <MudTabPanel Text="Details" Icon="@Icons.Material.Rounded.CheckCircle" IconColor="Color.Primary">
+                    <MudTabPanel Text="Details" Icon="@Icons.Material.Rounded.Details">
                         <InvoiceViewPanel _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails" />
                     </MudTabPanel>
-                    <MudTabPanel Text="Initiator" Icon="@Icons.Material.Rounded.DoNotDisturb">
-                        <InvoiceInitiatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails" />
+                    <MudTabPanel Text="Initiator" Icon="@Icons.Material.Rounded.AirlineSeatReclineNormal">
+                        <InvoiceInitiatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                                _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                                _LoggedInUserType="@_LoggedInUserType"
+                                                _LoggedInVendorID="@_LoggedInVendorID"
+                                                _CurrentRoleName="@_CurrentRoleName"
+                                                _isInvAssigned="@_isInvAssigned"
+                                                _isInitiator="@_isInitiator" />
                     </MudTabPanel>
-                    <MudTabPanel Text="Checker" Icon="@Icons.Material.Rounded.Face5">
+                    <MudTabPanel Text="Checker" Icon="@Icons.Material.Rounded.PlaylistAddCheckCircle">
                         <InvoiceCheckerReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
-                            _LoggedInEmployeeID="@_LoggedInEmployeeID" 
-                            _LoggedInUserType="@_LoggedInUserType" 
-                            _LoggedInVendorID="@_LoggedInVendorID" 
-                            _CurrentRoleName="@_CurrentRoleName" 
-                            _isInvAssigned="@_isInvAssigned" 
-                            _isChecker="@_isChecker" />
+                                              _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                              _LoggedInUserType="@_LoggedInUserType"
+                                              _LoggedInVendorID="@_LoggedInVendorID"
+                                              _CurrentRoleName="@_CurrentRoleName"
+                                              _isInvAssigned="@_isInvAssigned"
+                                              _isChecker="@_isChecker" />
+                    </MudTabPanel>
+
+                    <MudTabPanel Text="Validator" Icon="@Icons.Material.Rounded.HowToReg">
+                        <InvoiceValidatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                               _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                               _LoggedInUserType="@_LoggedInUserType"
+                                               _LoggedInVendorID="@_LoggedInVendorID"
+                                               _CurrentRoleName="@_CurrentRoleName"
+                                               _isInvAssigned="@_isInvAssigned"
+                                               _isValidator="@_isValidator" />
+                    </MudTabPanel>
+                    <MudTabPanel Text="Approver" Icon="@Icons.Material.Rounded.ThumbUpOffAlt">
+                        
+                    </MudTabPanel>
+                    <MudTabPanel Text="Authorizer" Icon="@Icons.Material.Rounded.Security">
+                        
+                    </MudTabPanel>
+                    <MudTabPanel Text="Payments" Icon="@Icons.Material.Rounded.Payment">
+                        
                     </MudTabPanel>
                 </MudTabs>
-               
+
             </MudPaper>
-            
+
 
         </MudItem>
         <!-- Workflow stepper -->
