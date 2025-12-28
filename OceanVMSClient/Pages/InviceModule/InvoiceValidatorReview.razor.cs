@@ -150,20 +150,28 @@ namespace OceanVMSClient.Pages.InviceModule
         #endregion
 
         #region Permissions / read-only
-        private bool IsInitiatorReviewRequired => _invoiceDto?.IsInitiatorReviewRequired ?? false;
+        private bool IsValidationReviewRequired => _invoiceDto?.IsValidatorReviewRequired ?? false;
 
         private bool CanEditApprovedAmount()
         {
-            // simple checks - adapt as needed (role/assignment)
+            // must be Validator
             if (!_IsValidator)
                 return false;
+
+            // must be assigned to this invoice
             if (!_isInvAssigned)
                 return false;
 
+            // role must indicate Validator
             if (string.IsNullOrWhiteSpace(_CurrentRoleName) || !_CurrentRoleName.Contains("Validator", StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            // If server status indicates completed, disallow edit
+            // invoice must be in "With Validator" status
+            var invStatus = _invoiceDto?.InvoiceStatus?.Trim();
+            if (!string.Equals(invStatus, "With Validator", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // if server indicates review already completed, disallow edit
             if (IsValidationReviewCompleted())
                 return false;
 

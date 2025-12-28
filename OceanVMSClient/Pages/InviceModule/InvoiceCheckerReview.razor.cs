@@ -137,6 +137,10 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private void OnCheckerApprovedAmountChanged(decimal? newValue)
         {
+            // Prevent programmatic/user changes when not allowed
+            if (!CanEditApprovedAmount())
+                return;
+
             if (_invoiceDto == null || _CheckercompleteDto == null)
                 return;
 
@@ -158,16 +162,24 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private bool CanEditApprovedAmount()
         {
-            // simple checks - adapt as needed (role/assignment)
+            // must be checker
             if (!_isChecker)
                 return false;
+
+            // must be assigned to this invoice
             if (!_isInvAssigned)
                 return false;
 
+            // role must indicate Checker
             if (string.IsNullOrWhiteSpace(_CurrentRoleName) || !_CurrentRoleName.Contains("Checker", StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            // If server status indicates completed, disallow edit
+            // invoice must be in "With Checker" status
+            var invStatus = _invoiceDto?.InvoiceStatus?.Trim();
+            if (!string.Equals(invStatus, "With Checker", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // if server indicates review already completed, disallow edit
             if (IsCheckerReviewCompleted())
                 return false;
 

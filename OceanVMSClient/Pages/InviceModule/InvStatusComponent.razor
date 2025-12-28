@@ -1,6 +1,7 @@
 ﻿@using MudBlazor
 @using Shared.DTO.POModule
 @using OceanVMSClient.SharedComp.Components
+@using System.Linq
 
 <MudGrid GutterSize="3" Class="mb-2">
     <!-- Left: status / PO summary -->
@@ -50,28 +51,28 @@
 
                 <MudItem xs="12" sm="4">
                     <MudText Typo="Typo.subtitle2" Color="_labelColor">Assignment Date</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Info">@(_invoiceDto?.CheckerReviewAssigedOn is DateTime d ? d.ToString("dd-MMM-yyyy") : "—")</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Info">@(AssignmentDateStr)</MudText>
                 </MudItem>
                 <MudItem xs="12" sm="4">
                     <MudText Typo="Typo.subtitle2" Color="_labelColor">SLA (Days)</MudText>
-                    <MudText Typo="Typo.body1" Color="Color.Info">@(_invoiceDto?.CheckerReviewSLADays ?? "—")</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Info">@(SLADays)</MudText>
                 </MudItem>
                 <MudItem xs="12" sm="4">
                     <MudText Typo="Typo.subtitle2" Color="_labelColor">Target Date</MudText>
-                    <MudText Typo="Typo.body1" Color="@GetSLAStatusColor(_invoiceDto?.CheckerReviewSLAStatus)">@(_invoiceDto?.CheckerReviewTargetDate is DateTime td ? td.ToString("dd-MMM-yyyy") : "—")</MudText>
+                    <MudText Typo="Typo.body1" Color="@GetSLAStatusColor(TargetDateStr)">@TargetDateStr</MudText>
                 </MudItem>
 
                 <MudItem xs="12" sm="4" Class="mt-2">
                     <MudText Typo="Typo.subtitle2" Color="_labelColor">SLA Status</MudText>
-                    <MudChip T="string" Color="@GetSLAStatusColor(_invoiceDto?.CheckerReviewSLAStatus)" Variant="Variant.Filled" Size="Size.Small">
-                        @(_invoiceDto?.CheckerReviewSLAStatus ?? "—")
+                    <MudChip T="string" Color="GetSLAStatusColor(SLAStatus)" Variant="Variant.Filled" Size="Size.Small">
+                        @(SLAStatus ?? "—")
                     </MudChip>
                 </MudItem>
                 <MudItem xs="12" sm="4" Class="mt-2">
                     <MudText Typo="Typo.subtitle2" Color="_labelColor">Review Status</MudText>
-                    <MudChip T="string" Color="@GetReviewStatusColor()" Variant="Variant.Filled" Size="Size.Small">
-                        @GetFirstReviewStatus()
-                    </MudChip>
+                    <MudChip T="string" Color="GetReviewStatusColor(ReviewStatus)" Variant="Variant.Filled" Size="Size.Small">
+                        @(string.IsNullOrWhiteSpace(ReviewStatus) ? "N/A" : ReviewStatus)
+                    </MudChip>  
                 </MudItem>
 
                 <MudItem xs="12" sm="4" Class="mt-2">
@@ -79,6 +80,10 @@
                     <MudChip T="string" Color="@GetInvStatusColor(_invoiceDto?.InvoiceStatus)" Variant="Variant.Filled" Size="Size.Small">
                         @(_invoiceDto?.InvoiceStatus ?? "—")
                     </MudChip>
+                </MudItem>
+                <MudItem xs="12" sm="12" Class="mt-2">
+                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Assigned Reviewers</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Info">@((_AssignedApprovers == null || !_AssignedApprovers.Any()) ? "None" : string.Join(", ", _AssignedApprovers.Select(a => a.EmployeeName)))</MudText>
                 </MudItem>
             </MudGrid>
         </MudPaper>

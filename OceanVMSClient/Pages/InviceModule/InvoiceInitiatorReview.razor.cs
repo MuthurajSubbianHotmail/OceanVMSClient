@@ -13,6 +13,7 @@ namespace OceanVMSClient.Pages.InviceModule
         // Component parameters (inputs)
         [Parameter] public InvoiceDto? _invoiceDto { get; set; }
         [Parameter] public PurchaseOrderDto? _PODto { get; set; }
+        
 
         // Internal DTO used when completing Initiator review
         [Parameter] public InvInitiatorReviewCompleteDto _InitiatorCompleteDto { get; set; } = new();
@@ -22,13 +23,7 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
         [Inject] private ILogger<InvoiceInitiatorReview> Logger { get; set; } = default!;
 
-        // Cascading parameters (UI theme / user context)
-        [CascadingParameter] public Margin _margin { get; set; } = Margin.Dense;
-        [CascadingParameter] public Variant _variant { get; set; } = Variant.Text;
-        [CascadingParameter] public Color _labelColor { get; set; } = Color.Default;
-        [CascadingParameter] public Color _valueColor { get; set; } = Color.Default;
-        [CascadingParameter] public Typo _labelTypo { get; set; } = Typo.subtitle2;
-        [CascadingParameter] public Typo _valueTypo { get; set; } = Typo.body2;
+       
 
         // Logged-in user context (supplied by parent)
         [Parameter] public Guid _LoggedInEmployeeID { get; set; } = Guid.Empty;
@@ -134,6 +129,10 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private void OnInitiatorApprovedAmountChanged(decimal? newValue)
         {
+            // Prevent programmatic/user changes when not allowed
+            if (!CanEditApprovedAmount())
+                return;
+
             if (_invoiceDto == null || _InitiatorCompleteDto == null)
                 return;
 
@@ -155,16 +154,24 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private bool CanEditApprovedAmount()
         {
-            // simple checks - adapt as needed (role/assignment)
+            // must be initiator
             if (!_isInitiator)
                 return false;
+
+            // must be assigned to this invoice
             if (!_isInvAssigned)
                 return false;
 
+            // role must indicate Initiator
             if (string.IsNullOrWhiteSpace(_CurrentRoleName) || !_CurrentRoleName.Contains("Initiator", StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            // If server status indicates completed, disallow edit
+            // invoice must be in "With Initiator" status
+            var invStatus = _invoiceDto?.InvoiceStatus?.Trim();
+            if (!string.Equals(invStatus, "With Initiator", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // if server indicates review already completed, disallow edit
             if (IsInitiatorReviewCompleted())
                 return false;
 

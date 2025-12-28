@@ -1,5 +1,8 @@
 ﻿using MudBlazor;
+using OceanVMSClient.Features;
 using OceanVMSClient.HttpRepoInterface.POModule;
+using Shared.DTO.POModule;
+using Shared.RequestFeatures;
 using System.Text.Json;
 
 namespace OceanVMSClient.HttpRepo.POModule
@@ -34,6 +37,23 @@ namespace OceanVMSClient.HttpRepo.POModule
             }
             // Assuming the API returns a JSON object with IsAssigned and AssignedType properties
 
+        }
+
+        public async Task<PagingResponse<InvoiceApproverDTO>> GetInvoiceApproverByProjectIdAndType(Guid projectID, string assignedType)
+        {
+            var response = await _httpClient.GetAsync($"invoiceapprovers/project/{projectID}/type/{assignedType}");
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+
+            var pagingResponse = new PagingResponse<InvoiceApproverDTO>
+            {
+                Items = JsonSerializer.Deserialize<List<InvoiceApproverDTO>>(content, _options),
+                MetaData = JsonSerializer.Deserialize<MetaData>(response.Headers.GetValues("X-Pagination").First(), _options)
+            };
+            return pagingResponse;
         }
         private class InvoiceApproverResponse
         {

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using OceanVMSClient.HttpRepoInterface.POModule;
 using Shared.DTO.POModule;
 using System;
 using System.Collections.Generic;
@@ -12,10 +13,17 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public InvoiceDto? _invoiceDto { get; set; }
         [Parameter] public PurchaseOrderDto? _PODto { get; set; }
         [Parameter] public string? CurrentTab { get; set; } = null;
+        [Parameter] public string? AssignmentDate { get; set; } = null;
+        [Parameter] public string? SLADays { get; set; } = null;
+        [Parameter] public string? TargetDate { get; set; } = null;
+        [Parameter] public string? SLAStatus { get; set; } = null;
+        [Parameter] public string? ReviewStatus { get; set; } = null;
+        [Inject] public IInvoiceApproverRepository? invoiceApproverRepository { get; set; }
+        private List<InvoiceApproverDTO>? _AssignedApprovers { get; set; } = null;
 
         // Styling cascade variables used elsewhere in the app
         public Color _labelColor { get; set; } = Color.Default;
-
+         
         private string PrevInvoiceCountText => _PODto?.PreviousInvoiceCount?.ToString() ?? "0";
         private string PrevInvoiceValueText => _PODto != null && _PODto.PreviousInvoiceValue.HasValue ? _PODto.PreviousInvoiceValue.Value.ToString("N2") : "0.00";
         private string InvoiceBalanceValueText => _PODto != null && _PODto.InvoiceBalanceValue.HasValue ? _PODto.InvoiceBalanceValue.Value.ToString("N2") : "0.00";
@@ -24,6 +32,30 @@ namespace OceanVMSClient.Pages.InviceModule
         private string PoTaxText => _PODto != null ? _PODto.GSTTotal.ToString("N2") : "0.00";
         private string PoTotalText => _PODto != null ? _PODto.TotalValue.ToString("N2") : "0.00";
 
+        private string AssignmentDateStr =>
+            DateTime.TryParse(AssignmentDate, out var dt) ? dt.ToString("dd-MMM-yyyy") : "N/A";
+        private string TargetDateStr => 
+            DateTime.TryParse(TargetDate, out var dt) ? dt.ToString("dd-MMM-yyyy") : "N/A";
+
+        protected override async Task OnParametersSetAsync()
+        {
+            // Fix CS8602: Check for null before dereferencing _invoiceDto and invoiceApproverRepository
+            if (_invoiceDto != null && invoiceApproverRepository != null && !string.IsNullOrWhiteSpace(CurrentTab))
+            {
+                // Fix CS8604: CurrentTab is checked for null/whitespace above
+                var response = await invoiceApproverRepository.GetInvoiceApproverByProjectIdAndType(_invoiceDto.ProjectId, CurrentTab);
+                // Fix CS0029: PagingResponse<InvoiceApproverDTO> cannot be assigned to InvoiceApproverDTO
+                // Assign the list of items if available, otherwise null
+                if (response != null) {
+                    _AssignedApprovers = response?.Items;
+                }
+                
+            }
+            else
+            {
+                _AssignedApprovers = null;
+            }
+        }
         private string GetFirstReviewStatus()
         {
             if (_invoiceDto == null) return "—";
@@ -40,9 +72,9 @@ namespace OceanVMSClient.Pages.InviceModule
 
             return list.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s)) ?? "—";
         }
-        private Color GetReviewStatusColor()
+        private Color GetReviewStatusColor(string status)
         {
-            var status = GetFirstReviewStatus()?.Trim().ToLowerInvariant();
+            status = status?.Trim().ToLowerInvariant();
             return status switch
             {
                 "approved" => Color.Success,

@@ -5,7 +5,7 @@
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        <MudGrid GutterSize="2" AlignItems="Center">
+        <MudGrid GutterSize="2" AlignItems="Center" Spacing="1">
             <!-- Left column: reviewer & invoice meta -->
             <MudItem xs="12" sm="6">
                 <MudPaper Elevation="0" Class="pa-2">
@@ -26,30 +26,11 @@
 
                         <MudDivider />
 
-                        <MudItem xs="12" sm="8" Class="field-block">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Inv No</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Info">@(_invoiceDto?.InvoiceRefNo ?? "—")</MudText>
-                        </MudItem>
-
-                        <MudItem xs="12" sm="4" Class="field-block">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Inv Date</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Info">@(_invoiceDto?.InvoiceDate.ToString("dd-MMM-yyyy") ?? "—")</MudText>
-                        </MudItem>
-
-                        <MudItem xs="12" sm="4" Class="field-block">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Inv Amount</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@FormatCurrency(_invoiceDto?.InvoiceValue)</MudText>
-                        </MudItem>
-
-                        <MudItem xs="12" sm="4" Class="field-block">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Tax Amount</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@FormatCurrency(_invoiceDto?.InvoiceTaxValue)</MudText>
-                        </MudItem>
-
-                        <MudItem xs="12" sm="4" Class="field-block">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Total</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Warning">@FormatCurrency(_invoiceDto?.InvoiceTotalValue)</MudText>
-                        </MudItem>
+                        <CurrentInvoiceComponent InvoiceRefNo="@(_invoiceDto?.InvoiceRefNo)"
+                                                 InvoiceDate="@(_invoiceDto?.InvoiceDate)"
+                                                 InvoiceValue="@(_invoiceDto?.InvoiceValue)"
+                                                 InvoiceTaxValue="@(_invoiceDto?.InvoiceTaxValue)"
+                                                 InvoiceTotalValue="@(_invoiceDto?.InvoiceTotalValue)" />
 
                         <MudDivider />
 
@@ -64,7 +45,7 @@
                                           AdornmentText="₹"
                                           Margin="@_margin"
                                           Class="short-field"
-                                          ReadOnly="@IsReadOnly" />
+                                          ReadOnly="!CanEditApprovedAmount()" />
                         </MudItem>
                         <MudItem xs="12" sm="6" md="4" Class="field-block" />
 
@@ -88,7 +69,7 @@
                                           Adornment="Adornment.End"
                                           AdornmentIcon="Icons.Material.Filled.Info"
                                           Margin="@_margin"
-                                          ReadOnly="@IsReadOnly" />
+                                          ReadOnly="!CanEditApprovedAmount()" />
                         </MudItem>
 
                         <MudItem xs="12" Class="field-block">
@@ -100,7 +81,7 @@
                                           Adornment="Adornment.End"
                                           AdornmentIcon="Icons.Material.Filled.Info"
                                           Lines="2"
-                                          ReadOnly="@IsReadOnly" />
+                                          ReadOnly="!CanEditApprovedAmount()" />
                         </MudItem>
 
                         <MudItem xs="12" sm="6" Class="field-block">
@@ -111,7 +92,7 @@
                                        Margin="Margin.Dense"
                                        Class="short-field"
                                        Disabled="@IsReadOnly"
-                                       Required="true">
+                                       Required="!CanEditApprovedAmount()">
                                 <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
                                 <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
                             </MudSelect>
@@ -122,7 +103,14 @@
 
             <!-- Right column: PO & SLA summary -->
             <MudItem xs="12" sm="6">
-                <InvStatusComponent _invoiceDto="@_invoiceDto" _PODto="@_PODto" CurrentTab="Validator" />
+                <InvStatusComponent _invoiceDto="_invoiceDto"
+                                    _PODto="_PODto"
+                                    CurrentTab="Validator"
+                                    AssignmentDate="@(_invoiceDto?.ValidatorReviewAssigedOn?.ToString("dd-MMM-yyyy") ?? string.Empty)"
+                                    SLADays="@_invoiceDto?.ValidatorReviewSLADays"
+                                    TargetDate="@(_invoiceDto?.ValidatorReviewTargetDate?.ToString("dd-MMM-yyyy") ?? string.Empty)"
+                                    SLAStatus="@_invoiceDto?.ValidatorReviewSLAStatus"
+                                    ReviewStatus="@_invoiceDto?.ValidatorReviewStatus" />
             </MudItem>
 
             <MudItem xs="12" Class="actions mt-2">

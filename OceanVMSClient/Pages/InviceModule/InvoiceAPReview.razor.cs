@@ -153,16 +153,24 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private bool CanEditApprovedAmount()
         {
-            // simple checks - adapt as needed (role/assignment)
+            // must be Approver
             if (!_isApApprover)
                 return false;
+
+            // must be assigned to this invoice
             if (!_isInvAssigned)
                 return false;
 
-            if (string.IsNullOrWhiteSpace(_CurrentRoleName) || !_CurrentRoleName.Contains("Approver", StringComparison.OrdinalIgnoreCase))
+            // role must indicate Approver
+            if (string.IsNullOrWhiteSpace(_CurrentRoleName) || !_CurrentRoleName.Contains("APApprover", StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            // If server status indicates completed, disallow edit
+            // invoice must be in "With APApprover" status
+            var invStatus = _invoiceDto?.InvoiceStatus?.Trim();
+            if (!string.Equals(invStatus, "With APApprover", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // if server indicates review already completed, disallow edit
             if (IsAPApproverReviewCompleted())
                 return false;
 

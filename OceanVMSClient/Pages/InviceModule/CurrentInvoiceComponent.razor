@@ -1,0 +1,37 @@
+﻿@using SharedComp.Components
+@using OceanVMSClient.SharedComp.Utils
+
+<MudGrid GutterSize="1" Spacing="1" AlignItems="Center">
+    <MudItem xs="12" sm="8" Class="field-block">
+        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Inv No</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Info">@(InvoiceRefNo ?? "—")</MudText>
+    </MudItem>
+
+    <MudItem xs="12" sm="4" Class="field-block">
+        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Inv Date</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Info">@((InvoiceDate.HasValue ? InvoiceDate.Value.ToString("dd-MMM-yyyy") : "—"))</MudText>
+    </MudItem>
+
+    <MudItem xs="12" sm="4" Class="field-block">
+        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Inv Amount</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Info">@CurrencyFormatter.Format(InvoiceValue)</MudText>
+    </MudItem>
+
+    <MudItem xs="12" sm="4" Class="field-block">
+        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Tax Amount</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Info">@CurrencyFormatter.Format(InvoiceTaxValue)</MudText>
+    </MudItem>
+
+    <MudItem xs="12" sm="4" Class="field-block">
+        <MudText Typo="Typo.subtitle2" Color="Color.Primary">Invoice Total</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Warning">@CurrencyFormatter.Format(InvoiceTotalValue)</MudText>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public string? InvoiceRefNo { get; set; }
+    [Parameter] public DateTime? InvoiceDate { get; set; }
+    [Parameter] public decimal? InvoiceValue { get; set; }
+    [Parameter] public decimal? InvoiceTaxValue { get; set; }
+    [Parameter] public decimal? InvoiceTotalValue { get; set; }
+}
