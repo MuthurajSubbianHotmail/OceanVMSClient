@@ -1,213 +1,77 @@
-﻿@using System.Security.Claims
-@using System.Linq
-@using System.Text.Json
-@using System.Globalization
-@inject IJSRuntime JSRuntime
-@inject NavigationManager NavigationManager
-@using MudBlazor
-<AuthorizeView>
+﻿<AuthorizeView Context="auth">
     <Authorized>
-        <MudText onclick="@TogglePanel" style="cursor:pointer;">
-            @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(context.User.Identity?.Name))
-        </MudText>
+        <div style="display:inline-flex; align-items:center; gap:.5rem;">
+            <div class="auth-trigger" @onclick="TogglePanel" title="Open account panel">
+                <MudAvatar Size="Size.Medium" Color="Color.Primary" Class="auth-panel-avatar" Icon="@Icons.Material.Filled.AccountCircle" />
+                <div class="name">
+                    @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(auth.User.Identity?.Name))
+                </div>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" Color="Color.Inherit" DisableRipple="true" />
+            </div>
 
-      
-        <MudLink Href="Logout" style="margin-left:.5rem;" Color="Color.Inherit">Log Out</MudLink>
+        </div>
 
-        @* Expanded panel rendered inline, toggled by clicking the name *@
         @if (isPanelOpen)
         {
-            
-            <div class="auth-details-panel"
-                 style="position:absolute; right:1rem; top:3.25rem;
-                                    background:var(--mud-palette-surface, #ffffff);
-                                    color:var(--mud-palette-text-primary, #000000);
-                                    border:1px solid rgba(0,0,0,.12);
-                                    padding:.5rem .75rem;
-                                    border-radius:.25rem;
-                                    box-shadow:0 6px 18px rgba(0,0,0,.15);
-                                    z-index:2000;
-                                    min-width:350px;">
-                @* Close button (small) *@
-                <button @onclick="ClosePanel"
-                        title="Close"
-                        aria-label="Close"
-                        style="position:absolute; top:4px; right:6px; background:transparent; border:0; color:var(--mud-palette-text-primary,#000); font-size:16px; line-height:1; cursor:pointer;">
-                    &times;
-                </button>
+            <div class="auth-details-panel" role="dialog" aria-label="Account details">
+                <div class="auth-panel-header">
+                    <button class="close-btn" @onclick="ClosePanel" aria-label="Close">&times;</button>
 
-                <div style="margin-bottom:.375rem;"><strong>@(FormatLabel("Name")):</strong> @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(context.User.Identity?.Name))</div>
+                    <MudAvatar Size="Size.Large" Color="Color.Primary" Icon="@Icons.Material.Filled.Person" />
+                    <div class="auth-panel-meta">
+                        <div class="title">@(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(auth.User.Identity?.Name))</div>
+                        @if (!string.IsNullOrWhiteSpace(userTypeValue))
+                        {
+                            <div class="subtitle">
+                                @FormatUserType(userTypeValue)
+                                @if (userTypeValue?.Equals("Vendor", StringComparison.OrdinalIgnoreCase) == true && !string.IsNullOrWhiteSpace(vendorNameValue))
+                                {
+                                    <span class="vendor-name" style="margin-left:.5rem; opacity:.95;">— @vendorNameValue</span>
+                                }
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(rolesValue))
+                        {
+                            <div class="subtitle" style="margin-top:.25rem;">@FormatStringType(rolesValue)</div>
+                        }
+                    </div>
+                </div>
 
-                @if (!string.IsNullOrWhiteSpace(userTypeValue))
-                {
-                    <div style="margin-bottom:.25rem;"><strong>@(FormatLabel("Type")):</strong> @FormatStringType(userTypeValue)</div>
-                }
-                @if (!string.IsNullOrWhiteSpace(emailValue))
-                {
-                    <div style="margin-bottom:.25rem;"><strong>@(FormatLabel("Email")):</strong> @emailValue</div>
-                }
-                @if (!string.IsNullOrWhiteSpace(rolesValue))
-                {
-                    <div style="margin-bottom:.5rem;"><strong>@(FormatLabel("Roles")):</strong> @FormatStringType(rolesValue)</div>
-                }
+                <div class="auth-panel-body">
+                    @if (!string.IsNullOrWhiteSpace(emailValue))
+                    {
+                        <div style="margin-bottom:.5rem;"><strong>Email</strong> <div style="opacity:.9;">@emailValue</div></div>
+                    }
 
-                <hr style="margin:.25rem 0; border:0; border-top:1px solid rgba(0,0,0,.08)" />
+                    <div style="margin-top:.25rem;">
+                        <div style="display:flex; gap:.5rem; align-items:center;">
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">@FormatLabel("Account")</MudChip>
+                            <MudText Typo="Typo.caption" Class="ml-auto" Color="Color.Secondary">@DateTime.Now.ToString("dd-MMM-yyyy")</MudText>
+                        </div>
+                    </div>
 
-                <div style="display:flex; flex-direction:column; gap:.25rem;">
-                    <MudGrid>
-                        <MudItem xs="6">
-                            <MudButton FullWidth="true" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="NavigateToLogout" Style="padding:0; text-align:left;">
-                                Log Out
-                            </MudButton>
-                        </MudItem>
-                        <MudItem xs="6">
-                            <MudButton FullWidth="true" Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary" OnClick="NavigateToChangePassword"  Style="padding:0; text-align:left;">
-                                Change Password
-                            </MudButton>
-                        </MudItem>
-                        
-                    </MudGrid>
-                    
+                    <div class="auth-panel-actions">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToLogout" FullWidth="true" Size="Size.Small">
+                            Log Out
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="NavigateToChangePassword" FullWidth="true" Size="Size.Small">
+                            Change Password
+                        </MudButton>
+                    </div>
                 </div>
             </div>
         }
     </Authorized>
+
     <NotAuthorized>
-        <MudLink Href="Login" Color="Color.Inherit">LogIn</MudLink>
-        &nbsp;&nbsp;
-        <MudLink Href="Registration" Color="Color.Inherit">Register</MudLink>
+        <div style="display:inline-flex; gap:.5rem; align-items:center;">
+            <MudLink Href="Login" Color="Color.Inherit">LogIn</MudLink>
+            <MudLink Href="Registration" Color="Color.Inherit">Register</MudLink>
+        </div>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    [Parameter]
-    public string UserType { get; set; }
-    [Parameter]
-    public string FullName { get; set; }
-    [Parameter]
-    public string roleName { get; set; }
-
-    private string? userTypeValue;
-    private string? fullNameValue;
-    private string? emailValue;
-    private string? rolesValue;
-    private bool isPanelOpen;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            // prefer localStorage values (present after login flow), fall back to provided parameters
-            var userTypeStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userType");
-            var fullNameStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "fullName");
-            var emailStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "email");
-            var rolesStored = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "userRoles");
-
-            userTypeValue = !string.IsNullOrWhiteSpace(userTypeStored) ? userTypeStored : UserType;
-            fullNameValue = !string.IsNullOrWhiteSpace(fullNameStored) ? fullNameStored : FullName;
-            emailValue = !string.IsNullOrWhiteSpace(emailStored) ? emailStored : GetClaimValue(ClaimTypes.Email);
-            rolesValue = !string.IsNullOrWhiteSpace(rolesStored) ? rolesStored : GetRolesFromClaims();
-
-            //userTypeValue = GetClaimValue("userType") ?? userTypeValue;
-            
-        }
-        catch
-        {
-            // fallback: try claims only (if JS interop fails)
-            userTypeValue = UserType;
-            fullNameValue = FullName;
-
-            emailValue = GetClaimValue(ClaimTypes.Email);
-            rolesValue = GetRolesFromClaims();
-        }
-    }
-
-    private void TogglePanel()
-    {
-        isPanelOpen = !isPanelOpen;
-    }
-
-    // called by the small close button
-    private void ClosePanel()
-    {
-        isPanelOpen = false;
-    }
-
-    private void NavigateToChangePassword()
-    {
-        isPanelOpen = false;
-        NavigationManager.NavigateTo("ChangePassword");
-    }
-
-    private void NavigateToLogout()
-    {
-        isPanelOpen = false;
-        NavigationManager.NavigateTo("Logout");
-    }
-
-    private static string FormatStringType(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw))
-            return string.Empty;
-
-        var s = raw.Trim();
-
-        // Remove surrounding quotes if present
-        if ((s.StartsWith("\"") && s.EndsWith("\"")) || (s.StartsWith("'") && s.EndsWith("'")))
-        {
-            s = s.Substring(1, s.Length - 2).Trim();
-        }
-
-        // If it's a JSON array like ["EMPLOYEE"], try to deserialize to a string list
-        var trimmed = s.Trim();
-        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
-        {
-            try
-            {
-                var arr = JsonSerializer.Deserialize<string[]>(trimmed);
-                if (arr != null && arr.Length > 0)
-                    return string.Join(", ", arr.Select(x => x?.Trim('"', '\'').Trim()));
-            }
-            catch
-            {
-                // fall through to a best-effort cleanup
-                s = trimmed.Trim('[', ']', ' ', '"', '\'');
-            }
-        }
-
-        return s;
-    }
-
-    // Format full name to Proper Case (e.g., "invoice approver1" -> "Invoice Approver1")
-    private static string FormatFullName(string? raw)
-    {
-        var cleaned = string.IsNullOrWhiteSpace(raw) ? string.Empty : FormatStringType(raw);
-        if (string.IsNullOrWhiteSpace(cleaned))
-            return string.Empty;
-
-        try
-        {
-            // Use CurrentCulture to respect locale-specific casing rules.
-            var lower = cleaned.ToLower(CultureInfo.CurrentCulture);
-            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(lower);
-        }
-        catch
-        {
-            return cleaned;
-        }
-    }
-
-    // Helper to get email or other single-claim values from the current user context
-    private string? GetClaimValue(string claimType)
-    {
-        return null;
-    }
-
-    // Attempt to read roles from localStorage format or claims stored as a string
-    private string? GetRolesFromClaims()
-    {
-        return null;
-    }
-
-    private static string FormatLabel(string label) => label;
+    
 }
+

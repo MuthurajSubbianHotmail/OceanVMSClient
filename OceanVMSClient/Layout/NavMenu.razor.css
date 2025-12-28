@@ -1,83 +1,151 @@
-.navbar-toggler {
-    background-color: rgba(255, 255, 255, 0.1);
+/* Stronger rule targeting MudDrawer inner paper to ensure styles are applied.
+   Uses higher specificity and !important to override MudBlazor defaults if necessary. */
+.nav-drawer .mud-drawer-paper,
+.mud-drawer.nav-drawer .mud-drawer-paper {
+    /* solid base for contrast */
+    background-color: #0b3d91 !important;
+    /* darker bluish gradient */
+    background-image: linear-gradient( 180deg, rgba(11,61,145,1) 0%, rgba(15,71,184,0.98) 45%, rgba(42,108,255,0.94) 100% ) !important;
+    color: #ffffff !important; /* ensure text contrast */
+    width: 260px;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(4px);
 }
 
-.top-row {
-    min-height: 3.5rem;
-    background-color: rgba(0,0,0,0.4);
+/* Dark-mode tweak: target paper as well */
+@media (prefers-color-scheme: dark) {
+    .nav-drawer .mud-drawer-paper,
+    .mud-drawer.nav-drawer .mud-drawer-paper {
+        background-color: #082545 !important;
+        background-image: linear-gradient( 180deg, rgba(12,58,122,0.96) 0%, rgba(18,85,195,0.80) 45%, rgba(30,120,255,0.60) 100% ) !important;
+        border-right: 1px solid rgba(255,255,255,0.04) !important;
+        color: var(--mud-palette-text-primary, #e6eefc) !important;
+    }
 }
 
-.navbar-brand {
-    font-size: 1.1rem;
+/* Header / brand - ensure contrast on the paper */
+.nav-drawer .mud-drawer-header,
+.mud-drawer.nav-drawer .mud-drawer-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #fff;
 }
 
-.bi {
-    display: inline-block;
-    position: relative;
-    width: 1.25rem;
-    height: 1.25rem;
-    margin-right: 0.75rem;
-    top: -1px;
-    background-size: cover;
+.nav-brand .title {
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    font-size: 1.05rem;
 }
 
-.bi-house-door-fill-nav-menu {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-house-door-fill' viewBox='0 0 16 16'%3E%3Cpath d='M6.5 14.5v-3.505c0-.245.25-.495.5-.495h2c.25 0 .5.25.5.5v3.5a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4a.5.5 0 0 0 .5-.5Z'/%3E%3C/svg%3E");
+.nav-brand .subtitle {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.9);
+    margin-top: 2px;
 }
 
-.bi-plus-square-fill-nav-menu {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-plus-square-fill' viewBox='0 0 16 16'%3E%3Cpath d='M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3a.5.5 0 0 1 1 0z'/%3E%3C/svg%3E");
+/* Ensure header items are vertically centered with the avatar */
+.nav-drawer-header {
+  display: flex;
+  align-items: center; /* vertical center */
+  gap: 12px;
+  padding: 12px 16px; /* preserve header spacing */
 }
 
-.bi-list-nested-nav-menu {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-list-nested' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M4.5 11.5A.5.5 0 0 1 5 11h10a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5zm-2-4A.5.5 0 0 1 3 7h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm-2-4A.5.5 0 0 1 1 3h10a.5.5 0 0 1 0 1H1a.5.5 0 0 1-.5-.5z'/%3E%3C/svg%3E");
+/* keep avatar sizing consistent and prevent stretching */
+.nav-drawer-header .mud-avatar {
+  flex: 0 0 auto;
 }
 
-.nav-item {
-    font-size: 0.9rem;
-    padding-bottom: 0.5rem;
+/* tighten the brand text so it centers visually with the avatar */
+.brand-title {
+  margin: 0;
+  line-height: 1; /* ensures vertical centering for the text */
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-    .nav-item:first-of-type {
-        padding-top: 1rem;
+/* Add these rules to pierce CSS isolation and target MudBlazor internal classes */
+
+.nav-drawer ::deep(.mud-nav-menu) {
+  padding-top: 6px;
+  padding-bottom: 12px;
+}
+
+/* Nav links */
+.nav-drawer ::deep(.mud-nav-link) {
+  border-radius: 8px;
+  margin: 6px 10px;
+  padding: 8px 12px;
+  transition: background-color .12s ease, transform .06s ease;
+  color: rgba(255,255,255,0.95) !important;
+  background: transparent !important;
+}
+
+/* Hover */
+.nav-drawer ::deep(.mud-nav-link:hover) {
+  background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)) !important;
+  transform: translateY(-1px);
+}
+
+/* Active link */
+.nav-drawer ::deep(.mud-nav-link.mud-nav-link-active) {
+  background: linear-gradient(90deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04)) !important;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.12) !important;
+}
+
+/* Nav group header */
+.nav-drawer ::deep(.mud-nav-group .mud-nav-group-header) {
+  padding: 10px 12px;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .nav-drawer .mud-drawer-paper,
+    .mud-drawer.nav-drawer .mud-drawer-paper {
+        width: 220px;
     }
 
-    .nav-item:last-of-type {
-        padding-bottom: 1rem;
+    .nav-drawer .mud-nav-link {
+        margin: 6px 8px;
     }
 
-    .nav-item ::deep a {
-        color: #d7d7d7;
-        border-radius: 4px;
-        height: 3rem;
-        display: flex;
-        align-items: center;
-        line-height: 3rem;
+    .nav-brand .title {
+        font-size: 1rem;
     }
-
-.nav-item ::deep a.active {
-    background-color: rgba(255,255,255,0.37);
-    color: white;
 }
 
-.nav-item ::deep a:hover {
-    background-color: rgba(255,255,255,0.1);
-    color: white;
+/* Make the NavMenu "body" (drawer paper + nav menu area) use a bluish gradient.
+   Use ::deep() so scoped CSS reaches MudBlazor-generated elements. */
+
+.nav-drawer ::deep(.mud-drawer-paper),
+.nav-drawer ::deep(.mud-nav-menu) {
+  /* dark -> lighter blue vertical gradient */
+  background-image: linear-gradient(
+    180deg,
+    rgba(6,40,100,1) 0%,
+    rgba(13,61,145,0.95) 30%,
+    rgba(34,90,210,0.88) 70%,
+    rgba(58,120,255,0.80) 100%
+  ) !important;
+
+  /* ensure the base color matches (in case some elements use background-color) */
+  background-color: rgba(6,40,100,1) !important;
+  color: #ffffff !important;
 }
 
-@media (min-width: 641px) {
-    .navbar-toggler {
-        display: none;
-    }
+/* Ensure link containers inherit the background and keep good contrast */
+.nav-drawer ::deep(.mud-nav-menu),
+.nav-drawer ::deep(.mud-nav-menu .mud-nav-link) {
+  background: transparent !important;
+  color: rgba(255,255,255,0.95) !important;
+}
 
-    .collapse {
-        /* Never collapse the sidebar for wide screens */
-        display: block;
-    }
-
-    .nav-scrollable {
-        /* Allow sidebar to scroll for tall menus */
-        height: calc(100vh - 3.5rem);
-        overflow-y: auto;
-    }
+/* Slightly soften group headers so they remain readable */
+.nav-drawer ::deep(.mud-nav-group .mud-nav-group-header) {
+  background: rgba(255,255,255,0.03) !important;
+  color: rgba(255,255,255,0.92) !important;
 }

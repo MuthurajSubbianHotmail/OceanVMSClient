@@ -100,32 +100,3 @@
         </div>
     </div>
 </div>
-@* <h3>Login</h3>
-@if (ShowAuthError)
-{
-    <div class="alert alert-danger" role="alert">
-        <p>@ErrorMessage</p>
-    </div>
-}
-<EditForm Model="_userForAuthentication" OnValidSubmit="ExecuteLogin" class="card card-body bg-light mt-5">
-    <DataAnnotationsValidator />
-    <div class="form-group row">
-        <label for="UserName" class="col-md-2 col-form-label">User Name:</label>
-        <div class="col-md-10">
-            <InputText id="UserName" class="form-control" @bind-Value="_userForAuthentication.UserName" />
-            <ValidationMessage For="@(() => _userForAuthentication.UserName)" />
-        </div>
-    </div>
-    <div class="form-group row">
-        <label for="password" class="col-md-2 col-form-label">Password:</label>
-        <div class="col-md-10">
-            <InputText type="password" id="password" class="form-control" @bind-Value="_userForAuthentication.Password" />
-            <ValidationMessage For="@(() => _userForAuthentication.Password)" />
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-md-12 text-right">
-            <button type="submit" class="btn btn-success">Login</button>
-        </div>
-    </div>
-</EditForm> *@

@@ -4,74 +4,83 @@
 <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
 <PageHeader Title="Invoice" Class="mb-2" />
 
-<div class="newinvoice">
-    <MudGrid GutterSize="1">
-        <MudItem xs="12">
-            <MudPaper Class="pa-3" Elevation="1">
+@if (isDetailsLoading)
+{
+    <div style="display:flex; align-items:center; justify-content:center; min-height:120px;">
+        <MudProgressLinear Color="Color.Primary" Striped="true" Size="Size.Large" Value="75" Class="my-7" />
+    </div>
+}
+else
+{
+    <div class="newinvoice">
+        <MudGrid GutterSize="1">
+            <MudItem xs="12">
+                <MudPaper Class="pa-3" Elevation="1">
 
-                <MudTabs>
-                    <MudTabPanel Text="Details" Icon="@Icons.Material.Rounded.Details">
-                        <InvoiceViewPanel _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails" />
-                    </MudTabPanel>
-                    <MudTabPanel Text="Initiator" Icon="@Icons.Material.Rounded.AirlineSeatReclineNormal">
-                        <InvoiceInitiatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
-                                                _LoggedInEmployeeID="@_LoggedInEmployeeID"
-                                                _LoggedInUserType="@_LoggedInUserType"
-                                                _LoggedInVendorID="@_LoggedInVendorID"
-                                                _CurrentRoleName="@_CurrentRoleName"
-                                                _isInvAssigned="@_isInvAssigned"
-                                                _isInitiator="@_isInitiator" />
-                    </MudTabPanel>
-                    <MudTabPanel Text="Checker" Icon="@Icons.Material.Rounded.PlaylistAddCheckCircle">
-                        <InvoiceCheckerReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
-                                              _LoggedInEmployeeID="@_LoggedInEmployeeID"
-                                              _LoggedInUserType="@_LoggedInUserType"
-                                              _LoggedInVendorID="@_LoggedInVendorID"
-                                              _CurrentRoleName="@_CurrentRoleName"
-                                              _isInvAssigned="@_isInvAssigned"
-                                              _isChecker="@_isChecker" />
-                    </MudTabPanel>
+                    <MudTabs>
+                        <MudTabPanel Text="Details" Icon="@Icons.Material.Rounded.Details">
+                            <InvoiceViewPanel _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Initiator" Icon="@Icons.Material.Rounded.AirlineSeatReclineNormal">
+                            <InvoiceInitiatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                                    _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                                    _LoggedInUserType="@_LoggedInUserType"
+                                                    _LoggedInVendorID="@_LoggedInVendorID"
+                                                    _CurrentRoleName="@_CurrentRoleName"
+                                                    _isInvAssigned="@_isInvAssigned"
+                                                    _isInitiator="@_isInitiator" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Checker" Icon="@Icons.Material.Rounded.PlaylistAddCheckCircle">
+                            <InvoiceCheckerReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                                  _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                                  _LoggedInUserType="@_LoggedInUserType"
+                                                  _LoggedInVendorID="@_LoggedInVendorID"
+                                                  _CurrentRoleName="@_CurrentRoleName"
+                                                  _isInvAssigned="@_isInvAssigned"
+                                                  _isChecker="@_isChecker" />
+                        </MudTabPanel>
 
-                    <MudTabPanel Text="Validator" Icon="@Icons.Material.Rounded.HowToReg">
-                        <InvoiceValidatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
-                                               _LoggedInEmployeeID="@_LoggedInEmployeeID"
-                                               _LoggedInUserType="@_LoggedInUserType"
-                                               _LoggedInVendorID="@_LoggedInVendorID"
-                                               _CurrentRoleName="@_CurrentRoleName"
-                                               _isInvAssigned="@_isInvAssigned"
-                                               _isValidator="@_isValidator" />
-                    </MudTabPanel>
-                    <MudTabPanel Text="Approver" Icon="@Icons.Material.Rounded.ThumbUpOffAlt">
-                        <InvoiceApproverReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
-                                              _LoggedInEmployeeID="@_LoggedInEmployeeID"
-                                              _LoggedInUserType="@_LoggedInUserType"
-                                              _LoggedInVendorID="@_LoggedInVendorID"
-                                              _CurrentRoleName="@_CurrentRoleName"
-                                              _isInvAssigned="@_isInvAssigned"
-                                               _isApprover="@_isApprover" />
-                    </MudTabPanel>
-                    <MudTabPanel Text="Authorizer" Icon="@Icons.Material.Rounded.Security">
-                        <InvoiceAPReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
-                                              _LoggedInEmployeeID="@_LoggedInEmployeeID"
-                                              _LoggedInUserType="@_LoggedInUserType"
-                                              _LoggedInVendorID="@_LoggedInVendorID"
-                                              _CurrentRoleName="@_CurrentRoleName"
-                                              _isInvAssigned="@_isInvAssigned"
-                                               _isApApprover="@_isApApprover" />
-                    </MudTabPanel>
-                    <MudTabPanel Text="Payments" Icon="@Icons.Material.Rounded.Payment">
-                        
-                    </MudTabPanel>
-                </MudTabs>
+                        <MudTabPanel Text="Validator" Icon="@Icons.Material.Rounded.HowToReg">
+                            <InvoiceValidatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                                   _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                                   _LoggedInUserType="@_LoggedInUserType"
+                                                   _LoggedInVendorID="@_LoggedInVendorID"
+                                                   _CurrentRoleName="@_CurrentRoleName"
+                                                   _isInvAssigned="@_isInvAssigned"
+                                                   _isValidator="@_isValidator" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Approver" Icon="@Icons.Material.Rounded.ThumbUpOffAlt">
+                            <InvoiceApproverReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                                  _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                                  _LoggedInUserType="@_LoggedInUserType"
+                                                  _LoggedInVendorID="@_LoggedInVendorID"
+                                                  _CurrentRoleName="@_CurrentRoleName"
+                                                  _isInvAssigned="@_isInvAssigned"
+                                                   _isApprover="@_isApprover" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Authorizer" Icon="@Icons.Material.Rounded.Security">
+                            <InvoiceAPReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
+                                                  _LoggedInEmployeeID="@_LoggedInEmployeeID"
+                                                  _LoggedInUserType="@_LoggedInUserType"
+                                                  _LoggedInVendorID="@_LoggedInVendorID"
+                                                  _CurrentRoleName="@_CurrentRoleName"
+                                                  _isInvAssigned="@_isInvAssigned"
+                                                   _isApApprover="@_isApApprover" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Payments" Icon="@Icons.Material.Rounded.Payment">
+                            
+                        </MudTabPanel>
+                    </MudTabs>
 
-            </MudPaper>
+                </MudPaper>
 
 
-        </MudItem>
-        <!-- Workflow stepper -->
+            </MudItem>
+            <!-- Workflow stepper -->
 
-    </MudGrid>
-</div>
+        </MudGrid>
+    </div>
+}
 
 @code {
     private List<BreadcrumbItem> _items = new()

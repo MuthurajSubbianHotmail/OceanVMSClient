@@ -13,6 +13,7 @@ namespace OceanVMSClient.AuthProviders
         private readonly HttpClient _httpClient;
         private readonly ILocalStorageService _localStorageService;
         private readonly AuthenticationState _anonymous;
+
         public AuthStateProvider(HttpClient httpClient, ILocalStorageService localStorage)
         {
             _httpClient = httpClient;
@@ -132,13 +133,31 @@ namespace OceanVMSClient.AuthProviders
             var authState = Task.FromResult(new AuthenticationState(authenticatedUser));
             NotifyAuthenticationStateChanged(authState);
         }
-
-        public void NotifyUserLogout()
+        public void MarkUserAsAuthenticated(ClaimsPrincipal user)
         {
+            var authState = Task.FromResult(new AuthenticationState(user));
+            NotifyAuthenticationStateChanged(authState);
+        }
+
+        // Replace the two logout/notify methods with corrected implementations
+        public void MarkUserAsLoggedOut()
+        {
+            // Clear any auth header so HttpClient no longer sends a bearer token
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+
+            // _anonymous already is an AuthenticationState; return it directly
             var authState = Task.FromResult(_anonymous);
             NotifyAuthenticationStateChanged(authState);
         }
 
-        
+        public void NotifyUserLogout()
+        {
+            // Defensive: ensure HttpClient header is cleared and notify subscribers
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+            var authState = Task.FromResult(_anonymous);
+            NotifyAuthenticationStateChanged(authState);
+        }
+
+
     }
 }

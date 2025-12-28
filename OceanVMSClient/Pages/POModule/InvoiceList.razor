@@ -31,21 +31,24 @@
                         <MudTextField T="string" Label="Vendor" Placeholder="Vendor"
                                       @bind-Value="vendorName"
                                       DebounceInterval="300"
-                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      OnDebounceIntervalElapsed="@( (string s) => { vendorName = s; return OnSearch(); } )"
                                       Dense="true" Class="filter-control" />
                     </MudItem>
 
                     <MudItem xs="12" sm="2" md="2">
-                        <MudNumericField T="decimal?" Label="Min Total" Placeholder="Min"
-                                         @bind-Value="minInvoiceTotal"
-                                         DebounceInterval="300"
+                        <MudNumericField T="decimal?" Label="Min Total" 
+                            Placeholder="Min"
+                                         InputType="InputType.Number"
+                                         ValueChanged="@( (decimal? v) => { minInvoiceTotal = v; return OnSearch(); } )"
+                                         Clearable="true"
                                          Dense="true"
                                          Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
-                        <MudNumericField T="decimal?" Label="Max Total" Placeholder="Max"
-                                         @bind-Value="maxInvoiceTotal"
-                                         DebounceInterval="300"
+                        <MudNumericField T="decimal?" Label="Max Total" 
+                                         InputType="InputType.Number"
+                                         ValueChanged="@( (decimal? v) => { maxInvoiceTotal = v; return OnSearch(); } )"
+                                         Clearable="true"
                                          Dense="true"
                                          Class="filter-control" />
                     </MudItem>

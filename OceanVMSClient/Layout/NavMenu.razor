@@ -1,9 +1,15 @@
-﻿<MudDrawer @bind-Open="SideBarOpen" ClipMode="DrawerClipMode.Never" Elevation="1" Variant="DrawerVariant.Temporary">
-    <MudDrawerHeader>
-        <MudAvatar Color="Color.Transparent" Size="Size.Medium" Image="assets/RPALogo.png" />
-        <MudText Typo="Typo.h5" Color=Color.Primary Style="margin-top:10px; margin-left:15px">Ocean</MudText>
+﻿<MudDrawer Class="nav-drawer" @bind-Open="SideBarOpen" ClipMode="DrawerClipMode.Never" Elevation="1" Variant="DrawerVariant.Temporary">
+    <MudDrawerHeader Class="nav-drawer-header">
+        <MudAvatar Color="Color.Primary" Size="Size.Medium">
+            <MudImage Src="/assets/oceanlogo.png" />
+        </MudAvatar>
+
+        <div class="nav-header-text">
+            <MudText Typo="Typo.h6" Color="Color.Primary" Class="brand-title">Ocean</MudText>
+        </div>
     </MudDrawerHeader>
-    <MudNavMenu>
+
+    <MudNavMenu Class="nav-menu">
         <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
 
         <MudNavGroup Title="Purchase Order" Icon="@Icons.Material.Filled.DashboardCustomize" Expanded="false">
@@ -11,7 +17,7 @@
                 <Authorized>
                     <MudNavLink Href="po-list" Icon="@Icons.Material.Filled.ShoppingCart">Company</MudNavLink>
                 </Authorized>
-                </AuthorizeView>
+            </AuthorizeView>
             <MudNavLink Href="polist" Icon="@Icons.Material.Filled.ShoppingCart">PO List Paging</MudNavLink>
         </MudNavGroup>
 
@@ -23,7 +29,6 @@
             </AuthorizeView>
             <MudNavLink Href="invoices" Icon="@Icons.Material.Filled.ShoppingCart">Invoice List</MudNavLink>
         </MudNavGroup>
-
     </MudNavMenu>
 </MudDrawer>
 @code {

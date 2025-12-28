@@ -59,6 +59,9 @@ namespace OceanVMSClient.Pages.InviceModule
         // Purchase order details for right-side display
         private PurchaseOrderDto? PurchaseOrderDetails { get; set; }
 
+        // Loading flag (controls progress indicator)
+        private bool isDetailsLoading = true;
+
         private string PoDateText =>
             PurchaseOrderDetails?.SAPPODate is DateTime d ? d.ToString("dd-MMM-yy") : "—";
 
@@ -89,6 +92,7 @@ namespace OceanVMSClient.Pages.InviceModule
         {
             await base.OnParametersSetAsync();
 
+            isDetailsLoading = true;
             try
             {
                 if (!string.IsNullOrWhiteSpace(InvoiceId) && Guid.TryParse(InvoiceId, out var parsed))
@@ -179,6 +183,11 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 Logger.LogError(ex, "Error loading invoice view");
             }
+            finally
+            {
+                isDetailsLoading = false;
+                StateHasChanged();
+            }
         }
 
         protected override async Task OnInitializedAsync()
@@ -194,8 +203,6 @@ namespace OceanVMSClient.Pages.InviceModule
                 // ignore
             }
         }
-
-        
 
         // Map invoice status to workflow stepper index
         private int GetWorkflowStepIndex(string? status)

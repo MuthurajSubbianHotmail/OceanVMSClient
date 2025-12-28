@@ -1,5 +1,8 @@
 ﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
+using MudBlazor;
 using OceanVMSClient.AuthProviders;
 using OceanVMSClient.HttpRepoInterface.Authentication;
 using Shared.DTO;
@@ -15,10 +18,16 @@ namespace OceanVMSClient.HttpRepo.Authentication
         private readonly JsonSerializerOptions _jsonSerializerOptions;
         private readonly AuthenticationStateProvider _authStateProvider;
         private readonly ILocalStorageService _localStorage;
+        private readonly NavigationManager _nav;
+        private readonly ISnackbar _snackbar;
+        private readonly ILogger<AuthenticationService>? _logger;
 
         public AuthenticationService(HttpClient httpClient, 
-            AuthenticationStateProvider authenticationStateProvider, 
-            ILocalStorageService localStorageService)
+            AuthenticationStateProvider authenticationStateProvider,
+            NavigationManager nav,
+            ILocalStorageService localStorageService,
+            ISnackbar snackbar,
+            ILogger<AuthenticationService>? logger = null)
         {
             _httpClient = httpClient;
             _jsonSerializerOptions = new JsonSerializerOptions
@@ -29,6 +38,9 @@ namespace OceanVMSClient.HttpRepo.Authentication
             };
             _authStateProvider = authenticationStateProvider;
             _localStorage = localStorageService;
+            _nav = nav;
+            _snackbar = snackbar;
+            _logger = logger;
         }
 
         public async Task<RegistrationResponseDto> RegisterUser(UserForRegistrationDto userForRegistration)
@@ -105,21 +117,59 @@ namespace OceanVMSClient.HttpRepo.Authentication
 
         public async Task Logout()
         {
-            await _localStorage.RemoveItemAsync("authToken");
-            await _localStorage.RemoveItemAsync("refreshToken");
-            await _localStorage.RemoveItemAsync("userRoles");
-            await _localStorage.RemoveItemAsync("firstName");
-            await _localStorage.RemoveItemAsync("lastName");
-            await _localStorage.RemoveItemAsync("userType");
-            await _localStorage.RemoveItemAsync("fullName");
-            await _localStorage.RemoveItemAsync("empPK");
-            await _localStorage.RemoveItemAsync("vendorPK");
-            await _localStorage.RemoveItemAsync("vendorContactPK");
-            await _localStorage.RemoveItemAsync("vendorName");
+            try
+            {
+                // Keys written during Login -- ensure we remove all of them
+                var keysToRemove = new[]
+                {
+                    "authToken",
+                    "refreshToken",
+                    "access_token",
+                    "id_token",
+                    "userType",
+                    "vendorPK",
+                    "vendorContactPK",
+                    "vendorContactId",
+                    "empPK",
+                    "employeeId",
+                    "vendorId",
+                    "firstName",
+                    "lastName",
+                    "fullName",
+                    "vendorName",
+                    "userRoles"
+                };
 
-            ((AuthStateProvider)_authStateProvider).NotifyUserLogout();
-            _httpClient.DefaultRequestHeaders.Authorization = null;
-            Console.WriteLine("User logged out successfully.");
+                foreach (var key in keysToRemove)
+                {
+                    await _localStorage.RemoveItemAsync(key);
+                }
+
+                // Clear any leftover auth header so HttpClient stops sending the token
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+
+                // Notify AuthenticationStateProvider so UI updates immediately
+                if (_authStateProvider is AuthStateProvider custom)
+                {
+                    custom.MarkUserAsLoggedOut();
+                }
+                else
+                {
+                    // Best-effort fallback to trigger a state update
+                    await _authStateProvider.GetAuthenticationStateAsync();
+                }
+
+                // Force a full page reload so any components reading localStorage directly (or cached UI) update
+                // Navigate to login and force a full reload of the app from the server.
+                _nav.NavigateTo("/login", forceLoad: true);
+
+                _snackbar.Add("You have been logged out.", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Logout failed");
+                _snackbar.Add("Logout failed - please try again.", Severity.Error);
+            }
         }
 
         public async Task<string> RefreshToken()

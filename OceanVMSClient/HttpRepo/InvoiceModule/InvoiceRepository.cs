@@ -217,6 +217,8 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
                 query["SearchTerm"] = parameters.SearchTerm;
             if (parameters.VendorId.HasValue && parameters.VendorId.Value != Guid.Empty)
                 query["VendorId"] = parameters.VendorId.Value.ToString();
+            if (!string.IsNullOrEmpty(parameters.VendorName))
+                query["VendorName"] = parameters.VendorName;
             if (!string.IsNullOrEmpty(parameters.InvoiceRefNo))
                 query["InvoiceRefNo"] = parameters.InvoiceRefNo;
             if (parameters.InvStartDate != default(DateTime))
