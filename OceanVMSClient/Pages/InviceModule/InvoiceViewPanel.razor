@@ -38,17 +38,17 @@
 
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Item Value</MudText>
-                    <MudText Typo="Typo.body1" Class="mb-1">@((_invoiceDto.InvoiceValue).ToString("N2"))</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-1">@FormatCurrency(_invoiceDto?.InvoiceValue)</MudText>
                 </MudItem>
 
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Tax Value</MudText>
-                    <MudText Typo="Typo.body1" Class="mb-1">@((_invoiceDto.InvoiceTaxValue).ToString("N2"))</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-1">@FormatCurrency(_invoiceDto?.InvoiceTaxValue)</MudText>
                 </MudItem>
 
                 <MudItem xs="12">
                     <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Total Value</MudText>
-                    <MudText Typo="Typo.h6" Class="mb-1">@((_invoiceDto.InvoiceTotalValue).ToString("N2"))</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-1">@FormatCurrency(_invoiceDto?.InvoiceTotalValue)</MudText>
                 </MudItem>
 
                 <MudItem xs="12">

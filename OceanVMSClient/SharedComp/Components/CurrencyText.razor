@@ -1,0 +1,13 @@
+﻿@using System.Globalization
+@using OceanVMSClient.SharedComp.Utils
+@namespace OceanVMSClient.SharedComp.Components
+
+<span>@Text</span>
+
+@code {
+    [Parameter] public decimal? Amount { get; set; }
+    [Parameter] public string Symbol { get; set; } = "₹";
+    [Parameter] public CultureInfo? Culture { get; set; }
+
+    private string Text => CurrencyFormatter.Format(Amount, Symbol, Culture);
+}

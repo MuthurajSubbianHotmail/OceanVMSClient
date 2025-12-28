@@ -1,0 +1,49 @@
+﻿<!-- Right: Approval summary card -->
+
+<MudPaper Elevation="2" Class="pa-0">
+    <div style="background:var(--mud-palette-primary); color:white; padding:.75rem 1rem; border-radius:4px 4px 0 0;">
+        <div class="d-flex" style="align-items:center; gap:.5rem;">
+            <MudIcon Icon="@Icons.Material.Filled.AssignmentTurnedIn" />
+            <MudText Typo="Typo.h6" Class="mb-0">Approval Summary</MudText>
+        </div>
+    </div>
+
+    <div style="padding:1rem;">
+        <MudTable Items="ApprovalRows" Bordered="true" Hover="true" Striped="true" Dense="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Role</MudTh>
+                <MudTh>Reviewer</MudTh>
+                <MudTh>Review Status</MudTh>
+                <MudTh Align="Right">Approved</MudTh>
+                <MudTh Align="Right">Withheld</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Role">
+                    <MudText Typo="Typo.subtitle2">@context.Role</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Subtitle</MudText>
+                </MudTd>
+                <MudTd DataLabel="Approver">
+                    <div class="d-flex" style="align-items:center; gap:.5rem;">
+                        <MudAvatar Size="Size.Small" Color="Color.Primary" Text="@GetInitials(context.Name)" />
+                        <MudText Typo="Typo.body2">@(!string.IsNullOrWhiteSpace(context.Name) ? context.Name : "—")</MudText>
+                    </div>
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudText Typo="Typo.body2">@(!string.IsNullOrWhiteSpace(context.Status) ? context.Status : "—")</MudText>
+                </MudTd>
+                
+                <MudTd Align="Right">@FormatAmount(context.Approved)</MudTd>
+                <MudTd Align="Right">@FormatAmount(context.Withheld)</MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        <div class="mt-2 d-flex" style="justify-content:flex-end; gap:.5rem;">
+            <MudText Typo="Typo.caption" Class="mr-2">Totals</MudText>
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">@FormatAmount(ApprovalRows.Sum(r => r.Approved ?? 0))</MudText>
+        </div>
+    </div>
+</MudPaper>
+
+@code {
+
+}

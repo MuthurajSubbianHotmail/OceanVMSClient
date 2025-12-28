@@ -1,6 +1,69 @@
 ﻿@page "/"
-@using OceanVMSClient.Components
+@using OceanVMSClient.Pages.Dashboard
+@using Blazored.LocalStorage
+@using System.Security.Claims
 
 <PageTitle>Home</PageTitle>
-<HomeComp />
 
+@if (!isInitialized)
+{
+    <div class="d-flex justify-center align-center" style="min-height:200px;">
+        Loading...
+    </div>
+}
+else if (string.Equals(userType, "EMPLOYEE", StringComparison.OrdinalIgnoreCase))
+{
+    <ReviewerDashBoard />
+}
+else
+{
+    <VendorDashBoard />
+}
+
+@code {
+    [CascadingParameter] public Task<AuthenticationState> AuthState { get; set; } = default!;
+    [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;
+
+    private string? userType;
+    private bool isInitialized;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserTypeAsync();
+        isInitialized = true;
+    }
+
+    private async Task LoadUserTypeAsync()
+    {
+        try
+        {
+            var authState = await AuthState;
+            var user = authState?.User;
+
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                userType = GetClaimValue(user, "userType");
+            }
+
+            if (string.IsNullOrWhiteSpace(userType))
+            {
+                // fallback to local storage (same key used elsewhere in project)
+                userType = await LocalStorage.GetItemAsync<string>("userType");
+            }
+        }
+        catch
+        {
+            // swallow and allow fallback to vendor view
+            userType = null;
+        }
+    }
+
+    private static string? GetClaimValue(ClaimsPrincipal? user, string claimType)
+    {
+        if (user == null) return null;
+        var claim = user.Claims.FirstOrDefault(c => string.Equals(c.Type, claimType, StringComparison.OrdinalIgnoreCase))
+                    ?? user.Claims.FirstOrDefault(c => c.Type.EndsWith($"/{claimType}", StringComparison.OrdinalIgnoreCase))
+                    ?? user.Claims.FirstOrDefault(c => c.Type.EndsWith(claimType, StringComparison.OrdinalIgnoreCase));
+        return claim?.Value;
+    }
+}

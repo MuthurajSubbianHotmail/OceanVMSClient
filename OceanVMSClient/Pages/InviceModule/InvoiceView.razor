@@ -1,8 +1,18 @@
 ﻿@page "/invoiceview/{InvoiceId:Guid?}"
-@using Shared.DTO.POModule
+
+@using MudBlazor
 
 <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
 <PageHeader Title="Invoice" Class="mb-2" />
+
+<div class="d-flex justify-end mb-2">
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Visibility"
+               OnClick="ShowApprovalSummary">
+        View Review Status
+    </MudButton>
+</div>
 
 @if (isDetailsLoading)
 {

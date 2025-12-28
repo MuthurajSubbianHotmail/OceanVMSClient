@@ -1,0 +1,71 @@
+@using Shared.DTO.POModule
+@using MudBlazor
+
+<MudDialog>
+
+    <DialogContent>
+        <MudGrid GutterSize="1">
+            <MudItem xs="12">
+                <MudText Typo="Typo.subtitle2">Vendor</MudText>
+                <MudText Typo="Typo.body1" Class="mb-1">@VendorName</MudText>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption">PO No</MudText>
+                <MudText Typo="Typo.body2">@PurchaseOrderNumber</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption">PO Balance</MudText>
+                <MudText Typo="Typo.body2">@FormatBalance()</MudText>
+            </MudItem>
+
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption">Invoice Ref</MudText>
+                <MudText Typo="Typo.body2">@Invoice?.InvoiceRefNo</MudText>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.caption">Total</MudText>
+                <MudText Typo="Typo.body2">@FormatAmount(Invoice?.InvoiceTotalValue)</MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudText Typo="Typo.caption">Remarks</MudText>
+                <MudText Typo="Typo.body2">@Invoice?.Remarks ?? "—"</MudText>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Color="Color.Secondary" Variant="Variant.Text" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Confirm">Confirm</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+   
+    [CascadingParameter]
+    public MudDialogInstance MudDialog { get; set; }
+    [Parameter] public InvoiceForCreationDto? Invoice { get; set; }
+    [Parameter] public PurchaseOrderDto? PurchaseOrder { get; set; }
+    [Parameter] public string? VendorName { get; set; }
+    [Parameter] public string? PurchaseOrderNumber { get; set; }
+
+    private void Confirm()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private static string FormatAmount(decimal? value) => value.HasValue ? value.Value.ToString("N2") : "—";
+
+    private string FormatBalance()
+    {
+        if (PurchaseOrder?.InvoiceBalanceValue.HasValue == true)
+            return PurchaseOrder!.InvoiceBalanceValue.Value.ToString("N2");
+        return "—";
+    }
+}

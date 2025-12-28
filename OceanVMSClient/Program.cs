@@ -2,6 +2,7 @@ using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using MudBlazor;
 using MudBlazor.Services;
 using OceanVMSClient;
 using OceanVMSClient.AuthProviders;
@@ -26,8 +27,14 @@ builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddScoped<HttpInterceptorService>();
 
 //MudBlazor Services
-builder.Services.AddMudServices();
-
+builder.Services.AddMudServices(config =>
+    {
+        config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.TopRight;
+        config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
+        config.SnackbarConfiguration.ShowCloseIcon = true;
+        config.SnackbarConfiguration.MaxDisplayedSnackbars = 1;
+    }
+    );
 //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 await builder.Build().RunAsync();

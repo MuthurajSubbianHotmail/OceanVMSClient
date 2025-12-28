@@ -12,17 +12,18 @@
         <!-- Main container -->
         <MudItem xs="12">
             <MudPaper Class="pa-3" Elevation="1">
-                <MudGrid GutterSize="1" AlignItems="Center">
+                <!-- Changed AlignItems to Stretch so left and right columns match height -->
+                <MudGrid GutterSize="1" AlignItems="center" Spacing="1">
                     <!-- Left: Inputs -->
                     <MudItem xs="12" sm="6">
-                        <MudPaper Elevation="0" Class="pa-2">
+                        <MudPaper Elevation="2" Class="pa-2 pb-2 mb-4">
                             <MudText Typo="Typo.h6" Class="mb-1">Invoice Details</MudText>
                             <MudDivider Class="mb-2" />
 
                             <EditForm EditContext="_editContext" OnSubmit="HandleSubmit">
-                                <ValidationSummary />
+                                @* <ValidationSummary /> *@
 
-                                <MudGrid GutterSize="1">
+                                <MudGrid GutterSize="1" Spacing="1">
                                     <MudItem xs="12">
                                         <MudAutocomplete id="VendorName" T="VendorDto"
                                                          Label="Vendor"
@@ -34,8 +35,8 @@
                                                          CoerceText="true"
                                                          Clearable="@(!isVendorProvided)"
                                                          Disabled="@isVendorProvided"
-                                                         Margin="Margin.Dense"/>
-                                         
+                                                         Margin="Margin.Dense" />
+
                                     </MudItem>
 
                                     <MudItem xs="6">
@@ -46,7 +47,7 @@
                                                       @bind-Value="PurchaseOrderNumber"
                                                       Clearable="@(!isPurchaseOrderProvided)"
                                                       Disabled="@isPurchaseOrderProvided"
-                                                      Margin="Margin.Dense"/>
+                                                      Margin="Margin.Dense" />
                                         <ValidationMessage For="@(() => _invoiceForCreationDto.PurchaseOrderId)" />
                                     </MudItem>
 
@@ -107,7 +108,7 @@
                                         <MudTextField Label="Remarks"
                                                       Variant="Variant.Outlined"
                                                       FullWidth="true"
-                                                      Lines="3"
+                                                      Lines="2"
                                                       @bind-Value="_invoiceForCreationDto.Remarks"
                                                       Margin="Margin.Dense" />
                                     </MudItem>
@@ -140,74 +141,68 @@
                             </EditForm>
                         </MudPaper>
                     </MudItem>
-
+                    <MudItem xs="12" sm="6" >
                     <!-- Right: Purchase Order summary (display only) -->
-                    <MudItem xs="12" sm="6">
-                        <MudPaper Elevation="0" Class="pa-2">
-                            <MudText Typo="Typo.h6" Class="mb-1">Purchase Order Summary</MudText>
-                            <MudDivider Class="mb-2" />
 
-                            <MudGrid GutterSize="1">
-                                <MudItem xs="12">
-                                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">SAP PO Date</MudText>
-                                    <MudText Typo="Typo.body1" Class="mb-1">@PoDateText</MudText>
-                                </MudItem>
+                    <MudPaper Elevation="2" Class="pa-2 mb-3">
+                        <MudText Typo="Typo.h6" Class="mb-1">Purchase Order Summary</MudText>
+                        <MudDivider Class="mb-2" />
 
-                                <MudItem xs="12">
-                                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Project</MudText>
-                                    <MudText Typo="Typo.body1" Class="mb-1">@ProjectNameText</MudText>
-                                </MudItem>
+                        <MudGrid GutterSize="1" Spacing="1">
+                            <MudItem xs="12" md="6">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Default">SAP PO No</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Info" Class="mb-1">@PurchaseOrderNumber</MudText>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Default">SAP PO Date</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Info" Class="mb-1">@PoDateText</MudText>
+                            </MudItem>
 
-                                <MudItem xs="12" Class="mt-1">
-                                    <MudCard Elevation="0" Class="pa-2">
-                                        <MudGrid AlignItems="Center" GutterSize="1">
-                                            <MudItem xs="6">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">PO Value</MudText>
-                                                <MudText Typo="Typo.h6">@PoValueText</MudText>
-                                            </MudItem>
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Default">Project</MudText>
+                                <MudText Typo="Typo.body1" Class="mb-1">@ProjectNameText</MudText>
+                            </MudItem>
+                            <MudItem xs="6" md="4">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">PO Value</MudText>
+                                <MudText Typo="Typo.body1">@PoValueText</MudText>
+                            </MudItem>
+                            <MudItem xs="6" md="4">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">PO Tax</MudText>
+                                <MudText Typo="Typo.body1">@PoTaxText</MudText>
+                            </MudItem>
+                            <MudItem xs="6" md="4">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">PO Total</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Info">@PoTotalText</MudText>
+                            </MudItem>
 
-                                            <MudItem xs="6">
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">PO Tax</MudText>
-                                                <MudText Typo="Typo.h6">@PoTaxText</MudText>
-                                            </MudItem>
-
-                                            <MudItem xs="12" Class="mt-1">
-                                                <MudDivider />
-                                                <div class="d-flex justify-space-between mt-1">
-                                                    <div>
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">PO Total</MudText>
-                                                        <MudText Typo="Typo.h5" Color="Color.Primary">@PoTotalText</MudText>
-                                                    </div>
-
-                                                    <div style="text-align:right">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Balance</MudText>
-                                                        <MudText Typo="Typo.h6" Color="Color.Warning">@InvoiceBalanceValueText</MudText>
-                                                    </div>
-                                                </div>
-                                            </MudItem>
-                                        </MudGrid>
-                                    </MudCard>
-                                </MudItem>
-
-                                <MudItem xs="12" Class="mt-1">
-                                    <MudGrid GutterSize="1">
-                                        <MudItem xs="6">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Prev. Invoice Count</MudText>
-                                            <MudText Typo="Typo.body1">@PrevInvoiceCountText</MudText>
-                                        </MudItem>
-                                        <MudItem xs="6">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Prev. Invoice Value</MudText>
-                                            <MudText Typo="Typo.body1">@PrevInvoiceValueText</MudText>
-                                        </MudItem>
-                                    </MudGrid>
-                                </MudItem>
-                            </MudGrid>
-                        </MudPaper>
+                        </MudGrid>
+                    </MudPaper>
+                        <MudDivider Class="my-4" />
+                    <MudPaper Elevation="2" Class="pa-2 mt-1" Style="background-color: #f5f5f5; margin-top:auto;">
+                        <MudGrid GutterSize="1" Spacing="1">
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.h6" Class="mb-1">Previous Invoice Summary</MudText>
+                            </MudItem>
+                            <MudItem xs="6" md="4">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Prev. Invoice Count</MudText>
+                                <MudText Typo="Typo.body1">@PrevInvoiceCountText</MudText>
+                            </MudItem>
+                            <MudItem xs="6" md="4">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Prev. Invoice Value</MudText>
+                                    <MudText Typo="Typo.body1">@PreviousInvoiceValueText</MudText>
+                            </MudItem>
+                            <MudItem xs="12" md="4" Class="mt-1">
+                                <MudText Typo="Typo.caption" Color="Color.Default">Balance</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Warning">@InvoiceBalanceValueText</MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
                     </MudItem>
                 </MudGrid>
             </MudPaper>
         </MudItem>
     </MudGrid>
+    
 </div>
 
 @code {

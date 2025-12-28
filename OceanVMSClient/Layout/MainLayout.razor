@@ -26,11 +26,21 @@
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode"/>
 <MudSnackbarProvider />
-<MudDialogProvider Position="DialogPosition.BottomCenter" CloseButton="true" BackdropClick="false" />
+<MudDialogProvider />
 @code {
     MudTheme MyCustomTheme = new MudTheme()
     {
-        
+        Typography = new Typography()
+        {
+            Body2 = new Body2Typography()
+            {
+                FontFamily = new[] { "Roboto", "Helvetica", "Arial", "sans-serif" },
+                FontSize = "0.5rem",
+                FontWeight = "100",
+                LineHeight = "1",
+                LetterSpacing = ".0075em"
+            }
+        }
     };
 
     private bool _sidebarOpen = false;

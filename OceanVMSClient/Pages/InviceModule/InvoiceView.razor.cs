@@ -43,6 +43,10 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] public IVendorRepository VendorRepository { get; set; } = default!;
         [Inject] public IPurchaseOrderRepository PurchaseOrderRepository { get; set; } = default!;
         [Inject] public IInvoiceApproverRepository invoiceApproverRepository { get; set; }
+
+        // Inject dialog service to show approval summary in a popup
+        [Inject] public IDialogService DialogService { get; set; } = default!;
+
         // Route parameter for the invoice to view
         [Parameter]
         public string? InvoiceId { get; set; }
@@ -202,6 +206,27 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 // ignore
             }
+        }
+
+        // Method called from UI to open approval summary component in a dialog
+        private void ShowApprovalSummary()
+        {
+            var parameters = new DialogParameters
+            {
+                ["_invoiceDto"] = _invoiceDto,
+                ["_PODto"] = PurchaseOrderDetails,
+                ["CurrentTab"] = null
+            };
+
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = true
+            };
+
+            DialogService.Show<InvApprovalSummaryComponent>("Approval Summary", parameters, options);
         }
 
         // Map invoice status to workflow stepper index

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using Shared.DTO.POModule;
+using System.Globalization;
 
 namespace OceanVMSClient.Pages.InviceModule
 {
@@ -29,27 +30,34 @@ namespace OceanVMSClient.Pages.InviceModule
 
         // Purchase order details for right-side display
 
-        private string VendorName => _invoiceDto.VendorName ?? "—";
+        private string VendorName => _invoiceDto?.VendorName ?? "—";
         private string PoDateText =>
             _PODto?.SAPPODate is DateTime d ? d.ToString("dd-MMM-yy") : "—";
 
         private string ProjectNameText => _PODto?.ProjectName ?? "—";
 
-        private string PoValueText => _PODto != null ? _PODto.ItemValue.ToString("N2") : "0.00";
+        // Format amounts with currency symbol and dot decimal separator
+        private static string FormatCurrency(decimal? value)
+        {
+            if (!value.HasValue) return "—";
+            return $"₹{value.Value.ToString("N2", CultureInfo.InvariantCulture)}";
+        }
 
-        private string PoTaxText => _PODto != null ? _PODto.GSTTotal.ToString("N2") : "0.00";
+        private string PoValueText => _PODto != null ? FormatCurrency(_PODto.ItemValue) : "₹0.00";
 
-        private string PoTotalText => _PODto != null ? _PODto.TotalValue.ToString("N2") : "0.00";
+        private string PoTaxText => _PODto != null ? FormatCurrency(_PODto.GSTTotal) : "₹0.00";
+
+        private string PoTotalText => _PODto != null ? FormatCurrency(_PODto.TotalValue) : "₹0.00";
 
         private string PrevInvoiceCountText => _PODto?.PreviousInvoiceCount?.ToString() ?? "0";
 
         private string PrevInvoiceValueText => _PODto != null && _PODto.PreviousInvoiceValue.HasValue
-            ? _PODto.PreviousInvoiceValue.Value.ToString("N2")
-            : "0.00";
+            ? FormatCurrency(_PODto.PreviousInvoiceValue.Value)
+            : "₹0.00";
 
         private string InvoiceBalanceValueText => _PODto != null && _PODto.InvoiceBalanceValue.HasValue
-            ? _PODto.InvoiceBalanceValue.Value.ToString("N2")
-            : "0.00";
+            ? FormatCurrency(_PODto.InvoiceBalanceValue.Value)
+            : "₹0.00";
 
         // Keep same mapping used in InvoiceList child row for chip color
         private Color GetInvoiceChipColor(string? status)

@@ -121,71 +121,7 @@
 
             <!-- Right column: PO & SLA summary -->
             <MudItem xs="12" sm="6">
-                <MudPaper Elevation="0" Class="pa-2">
-                    <MudGrid GutterSize="1" Spacing="2">
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Prev Inv Count</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@PrevInvoiceCountText</MudText>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoiced Amount</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@PrevInvoiceValueText</MudText>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Invoice Balance</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Warning">@InvoiceBalanceValueText</MudText>
-                        </MudItem>
-
-                        <MudDivider />
-
-                        <MudItem xs="12" sm="8">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO No</MudText>
-                            <MudText Typo="Typo.h6" Color="Color.Info">@(_invoiceDto?.SAPPONumber ?? "—")</MudText>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Date</MudText>
-                            <MudText Typo="Typo.h6" Color="Color.Info">@(_invoiceDto?.SAPPODate.ToString("dd-MMM-yyyy") ?? "—")</MudText>
-                        </MudItem>
-
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Value</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@PoValueText</MudText>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Tax</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@PoTaxText</MudText>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">PO Total</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Primary">@PoTotalText</MudText>
-                        </MudItem>
-
-                        <MudDivider />
-
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Assignment Date</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@(_invoiceDto?.CheckerReviewAssigedOn is DateTime d ? d.ToString("dd-MMM-yyyy") : "—")</MudText>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">SLA (Days)</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@(_invoiceDto?.CheckerReviewSLADays ?? "—")</MudText>
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Target Date</MudText>
-                            <MudText Typo="Typo.body1" Color="@GetSLAStatusColor(_invoiceDto?.CheckerReviewSLAStatus)">@(_invoiceDto?.CheckerReviewTargetDate is DateTime td ? td.ToString("dd-MMM-yyyy") : "—")</MudText>
-                        </MudItem>
-
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">SLA Status</MudText>
-                            <MudText Typo="Typo.body1" Color="@GetSLAStatusColor(_invoiceDto?.CheckerReviewSLAStatus)">@(_invoiceDto?.CheckerReviewSLAStatus ?? "—")</MudText>
-                        </MudItem>
-
-                        <MudItem xs="12" sm="4">
-                            <MudText Typo="Typo.subtitle2" Color="_labelColor">Current Status</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Info">@(_invoiceDto?.CheckerReviewStatus ?? "—")</MudText>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
+                <InvStatusComponent _invoiceDto="_invoiceDto" _PODto="_PODto" CurrentTab="accountpayable" />
             </MudItem>
 
             <MudItem xs="12" Class="actions mt-2">

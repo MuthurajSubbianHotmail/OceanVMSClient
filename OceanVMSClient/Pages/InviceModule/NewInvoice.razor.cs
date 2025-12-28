@@ -11,6 +11,8 @@ using OceanVMSClient.HttpRepoInterface.POModule;
 using Shared.DTO.POModule;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
+using MudBlazor;
+using System.Globalization; // added
 
 namespace OceanVMSClient.Pages.InviceModule
 {
@@ -18,7 +20,6 @@ namespace OceanVMSClient.Pages.InviceModule
     {
         [CascadingParameter]
         public Task<AuthenticationState> AuthState { get; set; } = default!;
-
 
         private InvoiceDto _invoiceDto = new InvoiceDto();
         private InvoiceForCreationDto _invoiceForCreationDto = new InvoiceForCreationDto();
@@ -29,6 +30,9 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] public IInvoiceRepository InvoiceRepository { get; set; }
         [Inject] public IVendorRepository VendorRepository { get; set; }
         [Inject] public IPurchaseOrderRepository PurchaseOrderRepository { get; set; }
+
+        // Inject dialog service
+        [Inject] public IDialogService DialogService { get; set; } = default!;
 
         // Route parameters received from the router are strings in some scenarios
         // (avoid InvalidCast when Blazor supplies boxed string). Parse to Guid below.
@@ -66,7 +70,6 @@ namespace OceanVMSClient.Pages.InviceModule
                     {
                         VendorID = _selectedVendor.Id.Value;
                         _invoiceDto.VendorId = VendorID;
-                        //_invoiceForCreationDto.VendorId = VendorID; // ensure DTO has vendor id
                         isVendorProvided = true;
                         VendorName = _selectedVendor.VendorName ?? string.Empty;
                     }
@@ -74,7 +77,6 @@ namespace OceanVMSClient.Pages.InviceModule
                     {
                         VendorID = Guid.Empty;
                         _invoiceDto.VendorId = VendorID;
-                        //_invoiceForCreationDto.VendorId = Guid.Empty;
                         isVendorProvided = false;
                         VendorName = string.Empty;
                     }
@@ -90,21 +92,37 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private string ProjectNameText => PurchaseOrderDetails?.ProjectName ?? "—";
 
-        private string PoValueText => PurchaseOrderDetails != null ? PurchaseOrderDetails.ItemValue.ToString("N2") : "0.00";
+        // Format PO amounts as currency with dot decimal separator and ₹ symbol.
+        // Uses InvariantCulture to ensure '.' as decimal separator and two decimals.
+        private static string FormatCurrencyWithSymbol(decimal value) =>
+            $"₹{value.ToString("N2", CultureInfo.InvariantCulture)}";
 
-        private string PoTaxText => PurchaseOrderDetails != null ? PurchaseOrderDetails.GSTTotal.ToString("N2") : "0.00";
+        private string PoValueText => PurchaseOrderDetails != null
+            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.ItemValue)
+            : "₹0.00";
 
-        private string PoTotalText => PurchaseOrderDetails != null ? PurchaseOrderDetails.TotalValue.ToString("N2") : "0.00";
+        private string PoTaxText => PurchaseOrderDetails != null
+            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.GSTTotal)
+            : "₹0.00";
+
+        private string PoTotalText => PurchaseOrderDetails != null
+            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.TotalValue)
+            : "₹0.00";
 
         private string PrevInvoiceCountText => PurchaseOrderDetails?.PreviousInvoiceCount?.ToString() ?? "0";
 
+        // Previous invoice value with currency symbol
         private string PrevInvoiceValueText => PurchaseOrderDetails != null && PurchaseOrderDetails.PreviousInvoiceValue.HasValue
-            ? PurchaseOrderDetails.PreviousInvoiceValue.Value.ToString("N2")
-            : "0.00";
+            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.PreviousInvoiceValue.Value)
+            : "₹0.00";
 
+        // Invoice balance with currency symbol
         private string InvoiceBalanceValueText => PurchaseOrderDetails != null && PurchaseOrderDetails.InvoiceBalanceValue.HasValue
-            ? PurchaseOrderDetails.InvoiceBalanceValue.Value.ToString("N2")
-            : "0.00";
+            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.InvoiceBalanceValue.Value)
+            : "₹0.00";
+        private string PreviousInvoiceValueText => PurchaseOrderDetails != null && PurchaseOrderDetails.PreviousInvoiceValue.HasValue
+            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.PreviousInvoiceValue.Value)
+            : "₹0.00";
 
         // EditContext + validation store
         private EditContext? _editContext;
@@ -123,7 +141,6 @@ namespace OceanVMSClient.Pages.InviceModule
                     {
                         VendorID = parsedVendorId;
                         _invoiceDto.VendorId = VendorID;
-                        //_invoiceForCreationDto.VendorId = VendorID;
                         isVendorProvided = true;
 
                         var vendor = await VendorRepository.GetVendorById(VendorID);
@@ -231,7 +248,6 @@ namespace OceanVMSClient.Pages.InviceModule
                 {
                     VendorID = Guid.Parse(vendorId.ToString());
                     _invoiceDto.VendorId = VendorID;
-                    //_invoiceForCreationDto.VendorId = VendorID;
                     isVendorProvided = true;
                     var vendor = await VendorRepository.GetVendorById(VendorID);
                     if (vendor != null)
@@ -349,6 +365,25 @@ namespace OceanVMSClient.Pages.InviceModule
         {
             _invoiceForCreationDto.InvoiceValue = value ?? 0m;
             RecalculateInvoiceTotal();
+
+            // immediate validation: ensure total <= invoice balance (if PO present)
+            if (_messageStore != null)
+            {
+                var field = new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceTotalValue));
+                _messageStore.Clear(field);
+
+                if (PurchaseOrderDetails?.InvoiceBalanceValue.HasValue == true)
+                {
+                    var balance = PurchaseOrderDetails.InvoiceBalanceValue.Value;
+                    if (_invoiceForCreationDto.InvoiceTotalValue > balance)
+                    {
+                        _messageStore.Add(field, $"Invoice total cannot exceed PO invoice balance ({balance:N2}).");
+                    }
+                }
+
+                _editContext?.NotifyValidationStateChanged();
+            }
+
             await InvokeAsync(StateHasChanged);
         }
 
@@ -356,6 +391,25 @@ namespace OceanVMSClient.Pages.InviceModule
         {
             _invoiceForCreationDto.InvoiceTaxValue = value ?? 0m;
             RecalculateInvoiceTotal();
+
+            // immediate validation: ensure total <= invoice balance (if PO present)
+            if (_messageStore != null)
+            {
+                var field = new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceTotalValue));
+                _messageStore.Clear(field);
+
+                if (PurchaseOrderDetails?.InvoiceBalanceValue.HasValue == true)
+                {
+                    var balance = PurchaseOrderDetails.InvoiceBalanceValue.Value;
+                    if (_invoiceForCreationDto.InvoiceTotalValue > balance)
+                    {
+                        _messageStore.Add(field, $"Invoice total cannot exceed PO invoice balance ({balance:N2}).");
+                    }
+                }
+
+                _editContext?.NotifyValidationStateChanged();
+            }
+
             await InvokeAsync(StateHasChanged);
         }
 
@@ -433,8 +487,44 @@ namespace OceanVMSClient.Pages.InviceModule
                 return;
             }
 
+            // Show confirmation dialog before creating invoice
+            //var confirmed = await ShowConfirmationDialogAsync();
+            //if (!confirmed)
+            //{
+            //    // user cancelled
+            //    return;
+            //}
+
             await CreateInvoiceAsync();
         }
+
+        // Show a confirmation dialog summarizing key values; returns true if user confirmed
+        //private async Task<bool> ShowConfirmationDialogAsync()
+        //{
+        //    var parameters = new DialogParameters
+        //    {
+        //        ["Invoice"] = _invoiceForCreationDto,
+        //        ["PurchaseOrder"] = PurchaseOrderDetails,
+        //        ["VendorName"] = VendorName,
+        //        ["PurchaseOrderNumber"] = PurchaseOrderNumber
+        //    };
+
+        //    var options = new DialogOptions
+        //    {
+        //        MaxWidth = MaxWidth.Small,
+        //        FullWidth = true,
+        //        CloseButton = true,
+        //        //DisableBackdropClick = true
+        //    };
+
+        //    var dialogRef = DialogService.Show<ConfirmInvoiceDialog>("Confirm Invoice", parameters, options);
+        //    var result = await dialogRef.Result;
+
+        //    // result.Cancelled == false indicates OK; result.Data may contain a boolean
+        //    if (result.Cancelled) return false;
+        //    if (result.Data is bool b) return b;
+        //    return true;
+        //}
 
         // Perform validations and add messages to ValidationMessageStore
         private bool ValidateInputs()
@@ -442,13 +532,6 @@ namespace OceanVMSClient.Pages.InviceModule
             bool isValid = true;
             if (_messageStore == null || _editContext == null)
                 return false;
-
-            //// Vendor required
-            //if (!(_invoiceForCreationDto.VendorId.HasValue && _invoiceForCreationDto.VendorId.Value != Guid.Empty))
-            //{
-            //    _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.VendorId)), "Vendor is required.");
-            //    isValid = false;
-            //}
 
             // PurchaseOrder: either PurchaseOrderId or PurchaseOrderNumber must be present
             if ((_invoiceForCreationDto.PurchaseOrderId == Guid.Empty)
@@ -472,7 +555,16 @@ namespace OceanVMSClient.Pages.InviceModule
                 isValid = false;
             }
 
-            // File size/type already validated on pick; if you require file, add check here.
+            // Ensure invoice total does not exceed PO invoice balance (when PO details available)
+            if (PurchaseOrderDetails?.InvoiceBalanceValue.HasValue == true)
+            {
+                var balance = PurchaseOrderDetails.InvoiceBalanceValue.Value;
+                if (_invoiceForCreationDto.InvoiceTotalValue > balance)
+                {
+                    _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceTotalValue)), $"Invoice total cannot exceed PO invoice balance ({balance:N2}).");
+                    isValid = false;
+                }
+            }
 
             return isValid;
         }
