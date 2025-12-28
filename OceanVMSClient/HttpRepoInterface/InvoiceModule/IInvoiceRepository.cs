@@ -13,9 +13,9 @@ namespace OceanVMSClient.HttpRepoInterface.InvoiceModule
         Task<InvoiceDto> CreateInvoice(InvoiceForCreationDto invoiceForCreation);
 
         // Uploads a file and returns the public URL (server should return the URL as plain string or JSON string)
-        Task<string> UploadInvoiceFile(MultipartFormDataContent content);
+        Task<string> UploadInvoiceAttachmentDocImage(string DocType, MultipartFormDataContent content);
 
-        
+
         Task<InvoiceDto> UpdateInvoiceInitiatorReview(InvInitiatorReviewCompleteDto invInitiatorReviewCompleteDto);
 
         Task<InvoiceDto> UpdateInvoiceCheckerReview(InvCheckerReviewCompleteDto invCheckerReviewCompleteDto);
@@ -24,5 +24,6 @@ namespace OceanVMSClient.HttpRepoInterface.InvoiceModule
 
         Task<InvoiceDto> UpdateInvoiceApproverApproval(InvApproverReviewCompleteDto invApproverReviewCompleteDto);
         Task<InvoiceDto> UpdateInvoiceAPReview(InvAPApproverReviewCompleteDto invAPReviewCompleteDto);
+        Task<string?> UploadInvoiceFile(MultipartFormDataContent content);
     }
 }

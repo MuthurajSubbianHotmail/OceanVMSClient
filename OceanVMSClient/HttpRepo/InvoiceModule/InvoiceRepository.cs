@@ -1,10 +1,12 @@
-﻿using OceanVMSClient.Features;
+﻿using Entities.Models.VendorReg;
+using OceanVMSClient.Features;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
 using Shared.RequestFeatures;
-using System.Text.Json;
-using System.Web;
 using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Web;
 
 namespace OceanVMSClient.HttpRepo.InvoiceModule
 {
@@ -195,7 +197,65 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             return updatedInvoice!;
         }
 
-       
+
+        public async Task<string> UploadInvoiceAttachmentDocImage(string DocType, MultipartFormDataContent content)
+        {
+            var postResult = await _httpClient.PostAsync($"upload/{DocType}", content);
+            var postContent = await postResult.Content.ReadAsStringAsync();
+            if (!postResult.IsSuccessStatusCode)
+            {
+                throw new Exception(postContent);
+            }
+            else
+            {
+                // normalize server response into an absolute URL
+                return NormalizeReturnedUrl(postContent);
+            }
+        }
+
+        private string NormalizeReturnedUrl(string postContent)
+        {
+            if (string.IsNullOrWhiteSpace(postContent))
+                return postContent;
+
+            // If server returned JSON string or object, try to extract URL
+            string candidate = postContent.Trim();
+            try
+            {
+                using var doc = JsonDocument.Parse(candidate);
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.String)
+                {
+                    candidate = root.GetString() ?? candidate;
+                }
+                else if (root.ValueKind == JsonValueKind.Object)
+                {
+                    if (root.TryGetProperty("url", out var urlProp) && urlProp.ValueKind == JsonValueKind.String)
+                        candidate = urlProp.GetString() ?? candidate;
+                    else if (root.TryGetProperty("path", out var pathProp) && pathProp.ValueKind == JsonValueKind.String)
+                        candidate = pathProp.GetString() ?? candidate;
+                }
+            }
+            catch
+            {
+                // not JSON — use raw string
+            }
+
+            // If the returned value is already absolute, return it
+            if (Uri.IsWellFormedUriString(candidate, UriKind.Absolute))
+                return candidate;
+
+            // Otherwise, combine with HttpClient base address if available
+            var baseAddr = _httpClient.BaseAddress?.ToString().TrimEnd('/');
+            if (!string.IsNullOrEmpty(baseAddr))
+            {
+                var combined = $"{baseAddr}/{candidate.TrimStart('/')}";
+                return combined;
+            }
+
+            // fallback: return raw candidate
+            return candidate;
+        }
     }
 
     public static class InvoiceParametersExtensions

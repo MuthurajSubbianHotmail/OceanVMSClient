@@ -31,7 +31,7 @@ else
                         <MudTabPanel Text="Details" Icon="@Icons.Material.Rounded.Details">
                             <InvoiceViewPanel _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails" />
                         </MudTabPanel>
-                        <MudTabPanel Text="Initiator" Icon="@Icons.Material.Rounded.AirlineSeatReclineNormal">
+                        <MudTabPanel Text="Initiator" Icon="@InitiatorIcon" IconColor="@InitiatorIconColor">
                             <InvoiceInitiatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
                                                     _LoggedInEmployeeID="@_LoggedInEmployeeID"
                                                     _LoggedInUserType="@_LoggedInUserType"
@@ -40,7 +40,7 @@ else
                                                     _isInvAssigned="@_isInvAssigned"
                                                     _isInitiator="@_isInitiator" />
                         </MudTabPanel>
-                        <MudTabPanel Text="Checker" Icon="@Icons.Material.Rounded.PlaylistAddCheckCircle">
+                        <MudTabPanel Text="Checker" Icon="@CheckerIcon" IconColor="@CheckerIconColor">
                             <InvoiceCheckerReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
                                                   _LoggedInEmployeeID="@_LoggedInEmployeeID"
                                                   _LoggedInUserType="@_LoggedInUserType"
@@ -50,7 +50,7 @@ else
                                                   _isChecker="@_isChecker" />
                         </MudTabPanel>
 
-                        <MudTabPanel Text="Validator" Icon="@Icons.Material.Rounded.HowToReg">
+                        <MudTabPanel Text="Validator" Icon="@ValidatorIcon" IconColor="@ValidatorIconColor">
                             <InvoiceValidatorReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
                                                    _LoggedInEmployeeID="@_LoggedInEmployeeID"
                                                    _LoggedInUserType="@_LoggedInUserType"
@@ -59,7 +59,7 @@ else
                                                    _isInvAssigned="@_isInvAssigned"
                                                    _isValidator="@_isValidator" />
                         </MudTabPanel>
-                        <MudTabPanel Text="Approver" Icon="@Icons.Material.Rounded.ThumbUpOffAlt">
+                        <MudTabPanel Text="Approver" Icon="@ApproverIcon" IconColor="@ApproverIconColor">
                             <InvoiceApproverReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
                                                   _LoggedInEmployeeID="@_LoggedInEmployeeID"
                                                   _LoggedInUserType="@_LoggedInUserType"
@@ -68,7 +68,7 @@ else
                                                   _isInvAssigned="@_isInvAssigned"
                                                    _isApprover="@_isApprover" />
                         </MudTabPanel>
-                        <MudTabPanel Text="Authorizer" Icon="@Icons.Material.Rounded.Security">
+                        <MudTabPanel Text="Authorizer" Icon="@ApApproverIcon" IconColor="@ApApproverIconColor">
                             <InvoiceAPReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
                                                   _LoggedInEmployeeID="@_LoggedInEmployeeID"
                                                   _LoggedInUserType="@_LoggedInUserType"
@@ -77,7 +77,7 @@ else
                                                   _isInvAssigned="@_isInvAssigned"
                                                    _isApApprover="@_isApApprover" />
                         </MudTabPanel>
-                        <MudTabPanel Text="Payments" Icon="@Icons.Material.Rounded.Payment">
+                        <MudTabPanel Text="Payments" Icon="@PaymentIcon" IconColor="@PaymentIconColor">
                             
                         </MudTabPanel>
                     </MudTabs>

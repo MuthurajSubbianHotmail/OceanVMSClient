@@ -306,7 +306,11 @@ namespace OceanVMSClient.Pages.InviceModule
         }
 
         private string? _uploadedFileUrl; // URL returned by the server after upload
-
+        private Task OnInvoiceUploaded(string? url)
+        {
+            _invoiceForCreationDto.InvoiceFileURL = url ?? string.Empty;
+            return Task.CompletedTask;
+        }
         private async Task CreateInvoiceAsync()
         {
             try

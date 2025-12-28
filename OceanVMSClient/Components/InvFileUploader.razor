@@ -1,0 +1,39 @@
+﻿@using MudBlazor
+
+<div style="display:flex; flex-direction:column; align-items:flex-start; gap:6px;">
+    <InputFile id="@_inputId" OnChange="UploadInvFileDocImage" style="display:none" />
+    <label for="@_inputId" style="margin:0; cursor:pointer;">
+        <MudButton HtmlTag="span"
+                   Variant="Variant.Filled"
+                   Size="Size.Small"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.CloudUpload"
+                   Disabled="@Disabled"
+                   Class="py-1">
+            Upload Invoice
+        </MudButton>
+    </label>
+
+    <!-- status shown below Upload button -->
+    <div style="min-height:24px; display:flex; align-items:center; overflow:hidden; white-space:nowrap;">
+        @if (!string.IsNullOrEmpty(ImgUrl))
+        {
+            <MudLink Href="@ImgUrl"
+                     Target="_blank"
+                     Typo="Typo.body2"
+                     Style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                View Invoice
+            </MudLink>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption"
+                     Color="Color.Secondary"
+                     Style="margin:0; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+
+            </MudText>
+        }
+    </div>
+</div>
+
+<MudText Typo="Typo.caption" Color="Color.Error" Class="mt-1">@UploadError</MudText>

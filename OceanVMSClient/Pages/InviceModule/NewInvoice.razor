@@ -112,29 +112,20 @@
                                                       @bind-Value="_invoiceForCreationDto.Remarks"
                                                       Margin="Margin.Dense" />
                                     </MudItem>
+                                    
                                     <!-- File upload -->
                                     <MudItem xs="6">
-                                        <InputFile OnChange="OnInputFileChange" accept=".pdf,image/*" />
-                                        @if (!string.IsNullOrWhiteSpace(_uploadedFileName))
-                                        {
-                                            <div class="d-flex align-center mt-1">
-                                                <MudText Typo="Typo.body2">@_uploadedFileName (@(Math.Round((_uploadedInvoiceFile?.Length ?? 0) / 1024.0, 1)) KB)</MudText>
-                                                <MudSpacer />
-                                                @if (!string.IsNullOrWhiteSpace(_uploadedFileUrl))
-                                                {
-                                                    <a class="mud-link" href="@_uploadedFileUrl" target="_blank" rel="noopener noreferrer">View uploaded file</a>
-                                                }
-                                                <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" Size="Size.Small" OnClick="ClearFile" Title="Remove file" />
-                                            </div>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(_fileValidationMessage))
-                                        {
-                                            <MudText Typo="Typo.caption" Color="Color.Error">@_fileValidationMessage</MudText>
-                                        }
+                                        <InvFileUploader DocType="Invoice" 
+                                            OnChange="OnInvoiceUploaded"/>
                                     </MudItem>
-                                    <MudItem xs="6" Class="d-flex justify-end">
-                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit" StartIcon="@Icons.Material.Filled.Save">
-                                            Create Invoice
+                                    <MudItem xs="6" Class="d-flex justify-end align-start">
+                                        <MudButton Variant="Variant.Filled"
+                                                   Color="Color.Primary"
+                                                   ButtonType="ButtonType.Submit"
+                                                   StartIcon="@Icons.Material.Filled.Save"
+                                                   Size="Size.Small"
+                                                   Class="py-1">
+                                            Save Invoice
                                         </MudButton>
                                     </MudItem>
                                 </MudGrid>

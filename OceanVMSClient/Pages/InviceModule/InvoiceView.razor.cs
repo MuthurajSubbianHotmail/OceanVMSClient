@@ -174,6 +174,9 @@ namespace OceanVMSClient.Pages.InviceModule
                         "Approver"
                     );
 
+                    // compute tab icons/colors after we have assignment/status info
+                    RefreshTabIcons();
+
                     // create EditContext so UI helpers that expect it can work
                     _editContext = new EditContext(_invoiceDto);
                     StateHasChanged();
@@ -191,20 +194,6 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 isDetailsLoading = false;
                 StateHasChanged();
-            }
-        }
-
-        protected override async Task OnInitializedAsync()
-        {
-            // no-op beyond typical user context; keep for future
-            try
-            {
-                await LoadUserContextAsync();
-
-            }
-            catch
-            {
-                // ignore
             }
         }
 
@@ -316,5 +305,189 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private static Guid? ParseGuid(string? value) => Guid.TryParse(value, out var g) ? g : (Guid?)null;
         #endregion
+
+        // Initiator tab icon + color (computed)
+        private string InitiatorIcon { get; set; } = Icons.Material.Rounded.AirlineSeatReclineNormal;
+        private Color InitiatorIconColor { get; set; } = Color.Success;
+
+        // Checker tab icon + color (computed)
+        private string CheckerIcon { get; set; } = Icons.Material.Rounded.PlaylistAddCheckCircle;
+        private Color CheckerIconColor { get; set; } = Color.Success;
+
+        // Validator tab icon + color (computed)
+        private string ValidatorIcon { get; set; } = Icons.Material.Rounded.AssignmentTurnedIn;
+        private Color ValidatorIconColor { get; set; } = Color.Success;
+
+        // Approver tab icon + color (computed)
+        private string ApproverIcon { get; set; } = Icons.Material.Rounded.HowToReg;
+        private Color ApproverIconColor { get; set; } = Color.Success;
+
+        // Accounts Payable tab icon + color (computed)
+        private string ApApproverIcon { get; set; } = Icons.Material.Rounded.AccountBalanceWallet;
+        private Color ApApproverIconColor { get; set; } = Color.Success;
+
+        //Payment tab icon + color (computed)
+        private string PaymentIcon { get; set; } = Icons.Material.Rounded.Payments;
+        private Color PaymentIconColor { get; set; } = Color.Success;
+
+        private void UpdateInitiatorTabIcon()
+        {
+            // Completed -> CheckCircle (Blue)
+            if (string.Equals(_invoiceDto?.InitiatorReviewStatus, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(_invoiceDto?.InitiatorReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                InitiatorIcon = Icons.Material.Filled.CheckCircle;
+                InitiatorIconColor = Color.Primary; // Blue
+                return;
+            }
+
+            // Not assigned to this role -> Block, Default
+            if (!_isInitiator || !_isInvAssigned)
+            {
+                InitiatorIcon = Icons.Material.Filled.Block;
+                InitiatorIconColor = Color.Default;
+                return;
+            }
+
+            // SLA delayed/escalated -> Alarm / Warning
+            if (string.Equals(_invoiceDto?.InitiatorReviewSLAStatus, "Delayed", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(_invoiceDto?.InitiatorReviewSLAStatus, "Escalated", StringComparison.OrdinalIgnoreCase))
+            {
+                InitiatorIcon = Icons.Material.Filled.AccessAlarm;
+                InitiatorIconColor = Color.Warning;
+                return;
+            }
+
+            // default: within SLA & assigned -> Green airline seat
+            InitiatorIcon = Icons.Material.Rounded.AirlineSeatReclineNormal;
+            InitiatorIconColor = Color.Success;
+        }
+
+        private void UpdateCheckerTabIcon()
+        {
+            if (string.Equals(_invoiceDto?.CheckerReviewStatus, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(_invoiceDto?.CheckerReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                CheckerIcon = Icons.Material.Filled.CheckCircle;
+                CheckerIconColor = Color.Primary;
+                return;
+            }
+
+            if (!_isChecker || !_isInvAssigned)
+            {
+                CheckerIcon = Icons.Material.Filled.Block;
+                CheckerIconColor = Color.Default;
+                return;
+            }
+
+            if (string.Equals(_invoiceDto?.CheckerReviewSLAStatus, "Delayed", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(_invoiceDto?.CheckerReviewSLAStatus, "Escalated", StringComparison.OrdinalIgnoreCase))
+            {
+                CheckerIcon = Icons.Material.Filled.AccessAlarm;
+                CheckerIconColor = Color.Warning;
+                return;
+            }
+
+            CheckerIcon = Icons.Material.Rounded.PlaylistAddCheckCircle;
+            CheckerIconColor = Color.Success;
+        }
+
+        private void UpdateValidatorTabIcon()
+        {
+            if (string.Equals(_invoiceDto?.ValidatorReviewStatus, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(_invoiceDto?.ValidatorReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                ValidatorIcon = Icons.Material.Filled.CheckCircle;
+                ValidatorIconColor = Color.Primary;
+                return;
+            }
+
+            if (!_isValidator || !_isInvAssigned)
+            {
+                ValidatorIcon = Icons.Material.Filled.Block;
+                ValidatorIconColor = Color.Default;
+                return;
+            }
+
+            if (string.Equals(_invoiceDto?.ValidatorReviewSLAStatus, "Delayed", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(_invoiceDto?.ValidatorReviewSLAStatus, "Escalated", StringComparison.OrdinalIgnoreCase))
+            {
+                ValidatorIcon = Icons.Material.Filled.AccessAlarm;
+                ValidatorIconColor = Color.Warning;
+                return;
+            }
+
+            ValidatorIcon = Icons.Material.Rounded.AssignmentTurnedIn;
+            ValidatorIconColor = Color.Success;
+        }
+
+        private void UpdateApprovalTabIcon()
+        {
+            if (string.Equals(_invoiceDto?.ApproverReviewStatus, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(_invoiceDto?.ApproverReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                ApproverIcon = Icons.Material.Filled.CheckCircle;
+                ApproverIconColor = Color.Primary;
+                return;
+            }
+
+            if (!_isApprover || !_isInvAssigned)
+            {
+                ApproverIcon = Icons.Material.Filled.Block;
+                ApproverIconColor = Color.Default;
+                return;
+            }
+
+            if (string.Equals(_invoiceDto?.ApproverReviewSLAStatus, "Delayed", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(_invoiceDto?.ApproverReviewSLAStatus, "Escalated", StringComparison.OrdinalIgnoreCase))
+            {
+                ApproverIcon = Icons.Material.Filled.AccessAlarm;
+                ApproverIconColor = Color.Warning;
+                return;
+            }
+
+            ApproverIcon = Icons.Material.Rounded.HowToReg;
+            ApproverIconColor = Color.Success;
+        }
+
+        private void UpdateAPApproverTabIcon()
+        {
+            if (string.Equals(_invoiceDto?.APReviewStatus, "Completed", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(_invoiceDto?.APReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                ApApproverIcon = Icons.Material.Filled.CheckCircle;
+                ApApproverIconColor = Color.Primary;
+                return;
+            }
+
+            if (!_isApApprover || !_isInvAssigned)
+            {
+                ApApproverIcon = Icons.Material.Filled.Block;
+                ApApproverIconColor = Color.Default;
+                return;
+            }
+
+            if (string.Equals(_invoiceDto?.APReviewSLAStatus, "Delayed", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(_invoiceDto?.APReviewSLAStatus, "Escalated", StringComparison.OrdinalIgnoreCase))
+            {
+                ApApproverIcon = Icons.Material.Filled.AccessAlarm;
+                ApApproverIconColor = Color.Warning;
+                return;
+            }
+
+            ApApproverIcon = Icons.Material.Rounded.AccountBalanceWallet;
+            ApApproverIconColor = Color.Success;
+        }
+
+        // After updating all icons, ensure UI refresh
+        private void RefreshTabIcons()
+        {
+            UpdateInitiatorTabIcon();
+            UpdateCheckerTabIcon();
+            UpdateValidatorTabIcon();
+            UpdateApprovalTabIcon();
+            UpdateAPApproverTabIcon();
+            StateHasChanged();
+        }
     }
 }
