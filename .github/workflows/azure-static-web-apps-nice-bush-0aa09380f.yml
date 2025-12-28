@@ -1,13 +1,17 @@
 name: Build and deploy .NET 8 Blazor WebAssembly to Static Web App OceanVMSCliennt
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
   pull_request:
-    branches: [ master ]
-    types: [ opened, synchronize, reopened, closed ]
-
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+    branches:
+      - master
 env:
-  API_DIRECTORY: ''
   DEPLOYMENT_ENVIRONMENT: preview
 
 jobs:
@@ -16,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
@@ -33,10 +39,21 @@ jobs:
       - name: Build And Deploy to Azure Static Web Apps
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.OceanVMSCliennt_SPN }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: upload
           deployment_environment: ${{ env.DEPLOYMENT_ENVIRONMENT }}
-          app_location: "/" 
-          api_location: ${{ env.API_DIRECTORY }}
+          app_location: "/"
+          api_location: ""
           app_artifact_location: "publish/wwwroot"
+
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close Pull Request
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: close
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
