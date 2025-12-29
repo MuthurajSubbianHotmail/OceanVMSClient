@@ -1,8 +1,10 @@
-﻿using OceanVMSClient.Features;
+﻿using Entities.Models.VendorReg;
+using OceanVMSClient.Features;
 using OceanVMSClient.HttpRepoInterface.VendorRegistration;
 using Shared.DTO.VendorReg;
 using Shared.RequestFeatures;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace OceanVMSClient.HttpRepo.VendorRegistration
 {
@@ -23,6 +25,19 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
             {
                 throw new Exception(content);
             }
+        }
+
+        public async Task<VendorRegistrationFormDto> CreateNewVendorRegistration(VendorRegistrationForm vendorRegistrationform)
+        {
+            var vendorRegistrationJson = new StringContent(JsonSerializer.Serialize(vendorRegistrationform), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("vendorregistrationform", vendorRegistrationJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var createdVendorRegistration = JsonSerializer.Deserialize<VendorRegistrationFormDto>(content, _options);
+            return createdVendorRegistration;
         }
         public async Task DeleteVendorRegServiceAsync(Entities.Models.VendorReg.VendRegService vendorRegService)
         {
@@ -135,6 +150,128 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
                 Items = items,
                 MetaData = metaData
             };
+        }
+
+        public async Task<string> UploadCencelChequeImage(MultipartFormDataContent content)
+        {
+            var postResult = await _httpClient.PostAsync("upload/CancelCheq", content);
+            var postContent = await postResult.Content.ReadAsStringAsync();
+            if (!postResult.IsSuccessStatusCode)
+            {
+                throw new Exception(postContent);
+            }
+            else
+            {
+                //var imageUrl = Path.Combine("https://myoceanapp.azurewebsites.net/", postContent);
+                var imageUrl = postContent;
+                return imageUrl;
+            }
+        }
+
+        public async Task<string> UploadOrgRegDocImage(string DocType, MultipartFormDataContent content)
+        {
+            var postResult = await _httpClient.PostAsync($"upload/{DocType}", content);
+            var postContent = await postResult.Content.ReadAsStringAsync();
+            if (!postResult.IsSuccessStatusCode)
+            {
+                throw new Exception(postContent);
+            }
+            else
+            {
+                // normalize server response into an absolute URL
+                return NormalizeReturnedUrl(postContent);
+            }
+        }
+
+        private string NormalizeReturnedUrl(string postContent)
+        {
+            if (string.IsNullOrWhiteSpace(postContent))
+                return postContent;
+
+            // If server returned JSON string or object, try to extract URL
+            string candidate = postContent.Trim();
+            try
+            {
+                using var doc = JsonDocument.Parse(candidate);
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.String)
+                {
+                    candidate = root.GetString() ?? candidate;
+                }
+                else if (root.ValueKind == JsonValueKind.Object)
+                {
+                    if (root.TryGetProperty("url", out var urlProp) && urlProp.ValueKind == JsonValueKind.String)
+                        candidate = urlProp.GetString() ?? candidate;
+                    else if (root.TryGetProperty("path", out var pathProp) && pathProp.ValueKind == JsonValueKind.String)
+                        candidate = pathProp.GetString() ?? candidate;
+                }
+            }
+            catch
+            {
+                // not JSON — use raw string
+            }
+
+            // If the returned value is already absolute, return it
+            if (Uri.IsWellFormedUriString(candidate, UriKind.Absolute))
+                return candidate;
+
+            // Otherwise, combine with HttpClient base address if available
+            var baseAddr = _httpClient.BaseAddress?.ToString().TrimEnd('/');
+            if (!string.IsNullOrEmpty(baseAddr))
+            {
+                var combined = $"{baseAddr}/{candidate.TrimStart('/')}";
+                return combined;
+            }
+
+            // fallback: return raw candidate
+            return candidate;
+        }
+
+        public async Task<VendorRegistrationForm> GetVendorRegistrationFormByIdAsync(Guid id)
+        {
+            var response = await _httpClient.GetAsync($"vendorregistrationform/{id}");
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+
+            // Ensure required nested object `CompanyOwnership` exists in the JSON payload before deserializing.
+            // Some server responses omit the nested object (only send CompanyOwnershipId/CompanyOwnershipType),
+            // which causes System.Text.Json to throw for `required` properties on the client-side model.
+            try
+            {
+                var node = JsonNode.Parse(content);
+                if (node is JsonObject obj)
+                {
+                    if (obj["CompanyOwnership"] == null)
+                    {
+                        // Try to seed CompanyOwnership from available fields (if present)
+                        Guid ownerId = Guid.Empty;
+                        var ownerIdNode = obj["CompanyOwnershipId"];
+                        if (ownerIdNode != null && Guid.TryParse(ownerIdNode.ToString(), out var parsedId))
+                            ownerId = parsedId;
+
+                        var ownerType = obj["CompanyOwnershipType"]?.ToString() ?? string.Empty;
+
+                        var newOwner = new JsonObject
+                        {
+                            ["Id"] = JsonValue.Create(ownerId),
+                            ["CompanyOwnershipType"] = JsonValue.Create(ownerType)
+                        };
+
+                        obj["CompanyOwnership"] = newOwner;
+                        content = obj.ToJsonString();
+                    }
+                }
+            }
+            catch
+            {
+                // If JSON parsing/manipulation fails, fall back to original content and let the deserializer handle it.
+            }
+
+            var vendorRegistrationForm = JsonSerializer.Deserialize<VendorRegistrationForm>(content, _options);
+            return vendorRegistrationForm!;
         }
     }
 }

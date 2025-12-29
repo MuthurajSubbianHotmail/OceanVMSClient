@@ -1,0 +1,630 @@
+﻿@page "/vendor-registration/new"
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+@using OceanVMSClient.Extensions
+@inject NavigationManager NavigationManager
+
+<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+<PageHeader Title="New Vendor Registration" Class="mb-0" />
+
+<MudCard Class="pa-1" Elevation="1">
+    <MudCardContent>
+        <MudForm @ref="_form" @bind-IsValid="@success" @bind-Errors="@errors">
+            <MudStepper NonLinear="true" ActiveIndex="@_activeStep" ShowResetButton="true">
+                <MudStep Title="Organization Info" Label="Step 1" Icon="@Icons.Material.Filled.Filter1"
+                         @bind-Completed="_completed"
+                         HasError="@(_form?.IsValid == false && _activeStep == 0)">
+
+                    <MudGrid GutterSize="1">
+
+                        <MudItem md="4">
+                            <MudText Typo="Typo.h6" Color="Color.Info">Organization Information</MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudTextField Label="Organization Name"
+                                          Placeholder="Oganization Name"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.OrganizationName"
+                                          HelperTextOnFocus="true"
+                                          ValidationMessage For="@(() => _vendorReg.OrganizationName)"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.OrganizationName)"
+                                          Disabled="@_isReadOnly" />
+
+                            @if (_companyOwnerships?.Any() == true)
+                            {
+                                <MudSelect T="Guid"
+                                           @bind-Value="_vendorReg.CompanyOwnershipId"
+                                           Placeholder="Company Ownership"
+                                           Typo="Typo.subtitle2"
+                                           Label="Company Ownership"
+                                           Variant="Variant.Text"
+                                           FullWidth="true"
+                                           Margin="Margin.Dense"
+                                           Disabled="@_isReadOnly">
+                                    @foreach (var ownership in _companyOwnerships)
+                                    {
+                                        <MudSelectItem Value="@(ownership.Id)">
+                                            @ownership.CompanyOwnershipType
+                                        </MudSelectItem>
+                                    }
+                                </MudSelect>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption">Loading ownerships…</MudText>
+                            }
+
+
+                            <MudSelect T="string"
+                                       Label="Services Offered"
+                                       Placeholder="Services Offered"
+                                       Typo="Typo.subtitle2"
+                                       Variant="Variant.Text"
+                                       FullWidth="true"
+                                       Margin="Margin.Dense"
+                                       @bind-Value="@_vendorReg.VendorType"
+                                       MultiSelection="true"
+                                       @bind-SelectedValues="@_selectedServices"
+                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.VendorType)"
+                                       Disabled="@_isReadOnly">
+                                @foreach (var vType in _vendorServices)
+                                {
+                                    <MudSelectItem Value="@(vType.VendorServiceName)">
+                                        @vType.VendorServiceName
+                                    </MudSelectItem>
+                                }
+
+                            </MudSelect>
+                            <MudTextField T="string"
+                                          Label="Company Phone"
+                                          Placeholder="Phone Number"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          InputType="InputType.Telephone"
+                                          Format="(##) #####-#####"
+                                          @bind-Value="@_vendorReg.CompanyPhoneNo"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.CompanyPhoneNo)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="Company Email"
+                                          Placeholder="Email Id"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          InputType="InputType.Email"
+                                          @bind-Value="@_vendorReg.CompanyEmailID"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.CompanyEmailID)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="Company Website"
+                                          Placeholder="Website"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.WebSite"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.WebSite)"
+                                          Disabled="@_isReadOnly" />
+                        </MudItem>
+                        <MudItem md="4">
+                            <MudText Typo="Typo.h6" Color="Color.Info">Address Details</MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudTextField Label="Address Line 1"
+                                          Placeholder="Steet"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.RegAddress1"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegAddress1)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="Address Line 2"
+                                          Placeholder="Area"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.RegAddress2"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegAddress2)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="Address Line 3"
+                                          Placeholder="Locality/Landmark"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.RegAddress3"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegAddress3)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="City"
+                                          Placeholder="City/Town"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.RegCity"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegCity)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="PIN Code"
+                                          Placeholder="Postal Code"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.RegPIN"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegPIN)"
+                                          Disabled="@_isReadOnly" />
+
+                            <MudTextField Label="State"
+                                          Placeholder="State"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.RegState"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegState)"
+                                          Disabled="@_isReadOnly" />
+
+                            <MudTextField Label="Country"
+                                          Placeholder="Country"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.RegCountry"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegCountry)"
+                                          Disabled="@_isReadOnly" />
+                        </MudItem>
+                        <MudItem md="4">
+                            <MudText Typo="Typo.h6" Color="Color.Info">Responder's' Information</MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudTextField Label="First Name"
+                                          Placeholder="First Name"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.ResponderFName"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderFName)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="Last Name"
+                                          Placeholder="Last Name"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.ResponderLName"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderLName)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="Designation"
+                                          Placeholder="Responders Designation"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          @bind-Value="@_vendorReg.ResponderDesignation"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderDesignation)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="Mobile"
+                                          Placeholder="Responders Mobile Number"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          InputType="InputType.Telephone"
+                                          Format="(##) #####-#####"
+                                          @bind-Value="@_vendorReg.ResponderMobileNo"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderMobileNo)"
+                                          Disabled="@_isReadOnly" />
+                            <MudTextField Label="Email"
+                                          Placeholder="Responders Email ID"
+                                          Typo="Typo.subtitle2"
+                                          Variant="Variant.Text"
+                                          FullWidth="true"
+                                          Margin="Margin.Dense"
+                                          InputType="InputType.Email"
+                                          @bind-Value="@_vendorReg.ResponderEmailId"
+                                          Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderEmailId)"
+                                          Disabled="@_isReadOnly" />
+                        </MudItem>
+
+                    </MudGrid>
+                </MudStep>
+
+
+                <MudStep Title="Registration Details" Label="Step 3" Icon="@Icons.Material.Filled.Filter3" @bind-Completed="_completed">
+                    <MudGrid GutterSize="1" Spacing="1">
+                        <MudItem md="4">
+                            <MudGrid GutterSize="1" AlignItems="Center">
+                                <MudText Typo="Typo.h6" Color="Color.Info">Registration Details</MudText>
+                                <MudDivider Class="mx-2" />
+                                <!-- PAN field (takes most of the width) -->
+                                <MudItem xs="9" md="8" Style="padding-right:8px;">
+
+                                    <MudTextField @bind-Value="_vendorReg.PANNo"
+                                                  Placeholder="PAN Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="PAN No"
+                                                  Margin="Margin.Dense"
+                                                  Required="@_isPANrequired"
+                                                  FullWidth="true" />
+                                </MudItem>
+
+                                <!-- Uploader (aligned to the right of the PAN field) -->
+                                <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <OrgRegisterDocsUploader DocType="PAN" OnChange="OnPANUploaded" />
+                                </MudItem>
+
+                                <!-- TAN -->
+                                <MudItem xs="9" md="8" Style="padding-right:8px;">
+                                    <MudTextField @bind-Value="_vendorReg.TANNo"
+                                                  Placeholder="TAN Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="TAN No"
+                                                  Margin="Margin.Dense"
+                                                  Required="@_isTANRrequired"
+                                                  FullWidth="true" />
+                                </MudItem>
+                                <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <OrgRegisterDocsUploader DocType="TAN" OnChange="OnTANUploaded" />
+                                </MudItem>
+
+                                <!-- GST -->
+                                <MudItem xs="9" md="8" Style="padding-right:8px;">
+                                    <MudTextField @bind-Value="_vendorReg.GSTNO"
+                                                  Placeholder="GST Registration Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="GST No"
+                                                  Margin="Margin.Dense"
+                                                  Required="@_isGSTRequired"
+                                                  FullWidth="true" />
+                                </MudItem>
+                                <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <OrgRegisterDocsUploader DocType="GST" OnChange="OnGSTUploaded" />
+                                </MudItem>
+
+                                <!-- CIN -->
+                                <MudItem xs="9" md="8" Style="padding-right:8px;">
+                                    <MudTextField @bind-Value="_vendorReg.CIN"
+                                                  Placeholder="CIN Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="CIN"
+                                                  Margin="Margin.Dense"
+                                                  Required="@_isCINRequired"
+                                                  FullWidth="true" />
+                                </MudItem>
+                                <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <OrgRegisterDocsUploader DocType="CIN" OnChange="onCINUploaded" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudItem>
+
+                        <!-- Column for AADHAR / UDYAM / PF / ESI with uploader on the right of each field -->
+                        <MudItem md="4">
+                            <MudGrid GutterSize="1" AlignItems="Center">
+                                <MudText Typo="Typo.h6" Color="Color.Info">Registration Details</MudText>
+                                <MudDivider Class="mx-2" />
+                                <MudItem xs="9" md="8" Style="padding-right:8px;">
+
+
+                                    <MudTextField @bind-Value="_vendorReg.AadharNo"
+                                                  Placeholder="AADHAR Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="Aadhar No"
+                                                  Margin="Margin.Dense"
+                                                  Required="@_IsAadharRequired"
+                                                  FullWidth="true" />
+                                </MudItem>
+                                <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <OrgRegisterDocsUploader DocType="AADHAR" OnChange="OnAADHARUploaded" />
+                                </MudItem>
+
+                                <MudItem xs="9" md="8" Style="padding-right:8px;">
+                                    <MudTextField @bind-Value="_vendorReg.UDYAMRegNo"
+                                                  Placeholder="UDYAM Registration Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="UDYAM No"
+                                                  Margin="Margin.Dense"
+                                                  Required="@_isUDYAMRequired"
+                                                  FullWidth="true" />
+                                </MudItem>
+                                <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <OrgRegisterDocsUploader DocType="UDYAM" OnChange="OnUDYAMUploaded" />
+                                </MudItem>
+
+                                <MudItem xs="9" md="8" Style="padding-right:8px;">
+                                    <MudTextField @bind-Value="_vendorReg.PFNo"
+                                                  Placeholder="PF Registration Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="PF Reg No"
+                                                  Margin="Margin.Dense"
+                                                  Required="@_isPFRequired"
+                                                  FullWidth="true" />
+                                </MudItem>
+                                <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <OrgRegisterDocsUploader DocType="PF" OnChange="OnPFUploaded" />
+                                </MudItem>
+
+                                <MudItem xs="9" md="8" Style="padding-right:8px;">
+                                    <MudTextField @bind-Value="_vendorReg.ESIRegNo"
+                                                  Placeholder="ESI Registration Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="ESI Reg No"
+                                                  Margin="Margin.Dense"
+                                                  Required="@_isESIRequired"
+                                                  FullWidth="true" />
+                                </MudItem>
+                                <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <OrgRegisterDocsUploader DocType="ESI" OnChange="OnESIUploaded" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudItem>
+
+                        <MudItem md="4">
+                            <MudGrid GutterSize="1" AlignItems="Center">
+                                <MudText Typo="Typo.h6" Color="Color.Info">Bank Account Details</MudText>
+                                <MudDivider Class="mx-2" />
+                                <MudItem xs="12" md="12" Style="padding-right:8px;">
+                                    <MudTextField @bind-Value="_vendorReg.BankName"
+                                                  Placeholder="Name of the Bank"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="Bank Name"
+                                                  Margin="Margin.Dense"
+                                                  Disabled="@_isReadOnly"
+                                                  Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.BankName)"
+                                                  Style="flex:1;" />
+                                    <MudTextField @bind-Value="_vendorReg.BankBranch"
+                                                  Placeholder="Name of the Bank Branch"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="Bank Branch"
+                                                  Margin="Margin.Dense"
+                                                  Disabled="@_isReadOnly"
+                                                  Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.BankBranch)"
+                                                  Style="flex:1;" />
+                                    <MudTextField @bind-Value="_vendorReg.IFSCCode"
+                                                  Placeholder="IFSC Code"
+                                                  Typo="Typo.subtitle2"
+                                                  Label="IFSC Code"
+                                                  Margin="Margin.Dense"
+                                                  Disabled="@_isReadOnly"
+                                                  Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.IFSCCode)"
+                                                  Style="flex:1;" />
+                                    <MudTextField @bind-Value="_vendorReg.AccountNumber"
+                                                  Label="Account Number"
+                                                  Placeholder="Account Number"
+                                                  Typo="Typo.subtitle2"
+                                                  Margin="Margin.Dense"
+                                                  Disabled="@_isReadOnly"
+                                                  Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.AccountNumber)"
+                                                  Style="flex:1;" />
+                                    <MudTextField @bind-Value="_vendorReg.AccountName"
+                                                  Label="Account Name"
+                                                  Placeholder="Name of the Account Holder/Organizaton"
+                                                  Typo="Typo.subtitle2"
+                                                  Margin="Margin.Dense"
+                                                  Disabled="@_isReadOnly"
+                                                  Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.AccountName)"
+                                                  Style="flex:1;" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="flex:1;">Upload a Cancelled Cheq/Bank Statement </MudText>
+                                    <OrgRegisterDocsUploader DocType="CANCELCHEQ" OnChange="OnCancelCheqUploaded" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudItem>
+
+                    </MudGrid>
+                </MudStep>
+
+                
+                <MudStep Title="Project Reference" Label="Step 5" Icon="@Icons.Material.Filled.Filter5" @bind-Completed="_completed">
+                    <div class="d-flex flex-grow-1 gap:4px" xs="12" sm="6">
+                        <MudPaper Class="flex-row pa-4 ml-2" Width="50%" Height="50%" xs="12" sm="6" Elevation="3">
+                            <MudText Typo="Typo.h6" Color="Color.Info">Project 1</MudText>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <MudTextField @bind-Value="_vendorReg.Experience1Customer"
+                                              Label="Customer Name"
+                                              Placeholder="Name of the Customeer"
+                                              Typo="Typo.subtitle2"
+                                              Margin="Margin.Dense"
+                                              Disabled="@_isReadOnly"
+                                              Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1Customer)"
+                                              Style="flex:1;" />
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <MudTextField @bind-Value="_vendorReg.Experience1Project"
+                                              Label="Project Name"
+                                              Placeholder="Name of the Project"
+                                              Typo="Typo.subtitle2"
+                                              Margin="Margin.Dense"
+                                              Disabled="@_isReadOnly"
+                                              Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1Project)"
+                                              Style="flex:1;" />
+                                <MudTextField @bind-Value="_vendorReg.Experience1City"
+                                              Label="City"
+                                              Placeholder="City where the Projet was done"
+                                              Typo="Typo.subtitle2"
+                                              Margin="Margin.Dense"
+                                              Disabled="@_isReadOnly"
+                                              Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1City)"
+                                              Style="flex:1;" />
+                            </div>
+                            <div style="display:flex; align-items:center; gap:4px;">
+
+                                <MudNumericField @bind-Value="_vendorReg.Experience1ProjectCost"
+                                                 Step="1000"
+                                                 Label="Project Cost"
+                                                 Placeholder="Approximate Cost"
+                                                 Typo="Typo.subtitle2"
+                                                 Margin="Margin.Dense"
+                                                 Disabled="@_isReadOnly"
+                                                 Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1ProjectCost)"
+                                                 Style="flex:1;" />
+                                <MudSelect @bind-Value="_vendorReg.Experience1ProjectStatus"
+                                           Label="Project Status"
+                                           Placeholder="Current Status of Project"
+                                           Typo="Typo.subtitle2"
+                                           Margin="Margin.Dense"
+                                           Disabled="@_isReadOnly"
+                                           Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1ProjectStatus)"
+                                           Style="flex:1;">
+                                    <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
+                                    <MudSelectItem Value="@("In Progress")">In Progress</MudSelectItem>
+                                    <MudSelectItem Value="@("Cancelled")">Not Started</MudSelectItem>
+                                    <MudSelectItem Value="@("Not Started")">Not Started</MudSelectItem>
+                                </MudSelect>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:4px;">
+
+                                <MudDatePicker @bind-date="_vendorReg.Experience1ProjectStartDt"
+                                               Label="Project Start Date"
+                                               Margin="Margin.Dense"
+                                               Disabled="@_isReadOnly"
+                                               Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1ProjectStartDt)"
+                                               Style="flex:1;" />
+                                <MudDatePicker @bind-date="_vendorReg.Experience1ProjectEndDt"
+                                               Label="Project End Date"
+                                               Margin="Margin.Dense"
+                                               Disabled="@_isReadOnly"
+                                               Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1ProjectEndDt)"
+                                               Style="flex:1;" />
+                            </div>
+                        </MudPaper>
+
+
+                        <MudPaper Class="flex-row pa-4 ml-2" Width="50%" Height="50%" xs="12" sm="6" Elevation="3">
+                            <MudText Typo="Typo.h6" Color="Color.Info">Project 2</MudText>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <MudTextField @bind-Value="_vendorReg.Experience2Customer"
+                                              Label="Customer Name"
+                                              Placeholder="Name of the Customeer"
+                                              Typo="Typo.subtitle2"
+                                              Margin="Margin.Dense"
+                                              Disabled="@_isReadOnly"
+                                              Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1Customer)"
+                                              Style="flex:1;" />
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <MudTextField @bind-Value="_vendorReg.Experience2Project"
+                                              Label="Project Name"
+                                              Placeholder="Name of the Project"
+                                              Typo="Typo.subtitle2"
+                                              Margin="Margin.Dense"
+                                              Disabled="@_isReadOnly"
+                                              Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1Project)"
+                                              Style="flex:1;" />
+                                <MudTextField @bind-Value="_vendorReg.Experience2City"
+                                              Label="City"
+                                              Placeholder="City where the Projet was done"
+                                              Typo="Typo.subtitle2"
+                                              Margin="Margin.Dense"
+                                              Disabled="@_isReadOnly"
+                                              Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1City)"
+                                              Style="flex:1;" />
+                            </div>
+                            <div style="display:flex; align-items:center; gap:4px;">
+
+                                <MudNumericField @bind-Value="_vendorReg.Experience2ProjectCost"
+                                                 Step="1000"
+                                                 Label="Project Cost"
+                                                 Placeholder="Approximate Cost"
+                                                 Typo="Typo.subtitle2"
+                                                 Margin="Margin.Dense"
+                                                 Disabled="@_isReadOnly"
+                                                 Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1ProjectCost)"
+                                                 Style="flex:1;" />
+                                <MudSelect @bind-Value="_vendorReg.Experience2ProjectStatus"
+                                           Label="Project Status"
+                                           Placeholder="Current Status of Project"
+                                           Typo="Typo.subtitle2"
+                                           Margin="Margin.Dense"
+                                           Disabled="@_isReadOnly"
+                                           Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1ProjectStatus)"
+                                           Style="flex:1;">
+                                    <MudSelectItem Value="@("Completed")">Completed</MudSelectItem>
+                                    <MudSelectItem Value="@("In Progress")">In Progress</MudSelectItem>
+                                    <MudSelectItem Value="@("Cancelled")">Not Started</MudSelectItem>
+                                    <MudSelectItem Value="@("Not Started")">Not Started</MudSelectItem>
+                                </MudSelect>
+                            </div>
+
+                            <div style="display:flex; align-items:center; gap:4px;">
+
+                                <MudDatePicker @bind-date="_vendorReg.Experience2ProjectStartDt"
+                                               Label="Project Start Date"
+                                               Margin="Margin.Dense"
+                                               Disabled="@_isReadOnly"
+                                               Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1ProjectStartDt)"
+                                               Style="flex:1;" />
+                                <MudDatePicker @bind-date="_vendorReg.Experience2ProjectEndDt"
+                                               Label="Project End Date"
+                                               Margin="Margin.Dense"
+                                               Disabled="@_isReadOnly"
+                                               Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.Experience1ProjectEndDt)"
+                                               Style="flex:1;" />
+                            </div>
+                        </MudPaper>
+
+                    </div>
+
+
+                </MudStep>
+
+                <MudStep Title="Approvals" Label="Step 6" Icon="@Icons.Material.Filled.Filter6" @bind-Completed="_completed">
+
+                    <MudGrid GutterSize="1" AlignItems="Center">
+                        <MudItem xs="6" md="6">
+                            <MudText Typo="Typo.h6" Color="Color.Info">Reviewer Status</MudText>
+                            <MudDivider Class="mx-2"/>
+                            <MudText Typo="Typo.body2">Reviewed By</MudText>
+                            <MudText Typo="Typo.h6">@_vendorReg.Reviewer</MudText>
+                            <MudDivider Class="mx-2"/>
+                            <MudText Typo="Typo.body2">Reviewed On</MudText>
+                            <MudText Typo="Typo.h6">@_vendorReg.ReviewDate</MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudText Typo="Typo.body2">Review Status</MudText>
+                            <MudText Typo="Typo.h6">@_vendorReg.ReviewStatus</MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudText Typo="Typo.body2">Review Comments</MudText>
+                            <MudText Typo="Typo.h6">@_vendorReg.ReviewComments</MudText>
+
+                        </MudItem>
+                        <MudItem xs="6" md="6">
+                            <MudText Typo="Typo.h6" Color="Color.Info">Approval Status</MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudText Typo="Typo.body2">Approved By</MudText>
+                            <MudText Typo="Typo.h6">@_vendorReg.Approver</MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudText Typo="Typo.body2">Approved On</MudText>
+                            <MudText Typo="Typo.h6">@_vendorReg.ApprovalDate    </MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudText Typo="Typo.body2">Approval Status</MudText>
+                            <MudText Typo="Typo.h6">@_vendorReg.ApprovalStatus</MudText>
+                            <MudDivider Class="mx-2" />
+                            <MudText Typo="Typo.body2">Approver Comments</MudText>
+                            <MudText Typo="Typo.h6">@_vendorReg.ApprovalComments</MudText>
+                            
+                        </MudItem>
+                    </MudGrid>
+
+                </MudStep>
+
+
+            </MudStepper>
+        </MudForm>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private List<BreadcrumbItem> _items = new()
+    {
+        new BreadcrumbItem("Home", href: "/", disabled: false),
+        new BreadcrumbItem("Registration List", href: "/vendor-registrations", disabled: false),
+    };
+
+
+}
