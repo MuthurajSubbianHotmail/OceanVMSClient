@@ -4,11 +4,11 @@
     <EditForm EditContext="_editContext">
         <DataAnnotationsValidator />
         <ValidationSummary />
-
+        <MudText>Current Role: @_CurrentRoleName</MudText>
         <MudGrid GutterSize="2" AlignItems="Center" Spacing="1">
             <!-- Left column: reviewer & invoice meta -->
             <MudItem xs="12" sm="6">
-                <MudPaper Elevation="0" Class="pa-2">
+                <MudPaper Elevation="2" Class="pa-2 me-2">
                     <MudGrid GutterSize="1" Spacing="1" AlignItems="Center">
                         <MudItem xs="12" sm="8" Class="field-block">
                             <MudText Typo="Typo.subtitle2" Color="_labelColor">Reviewer</MudText>
@@ -83,7 +83,7 @@
                                           ReadOnly="@(!CanEditApprovedAmount())" />
                         </MudItem>
 
-                        <MudItem xs="12" sm="6" Class="field-block">
+                        <MudItem xs="6" sm="6" Class="field-block">
                             <MudSelect Label="Approval"
                                        Value="_CheckercompleteDto.CheckerReviewStatus"
                                        ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _CheckercompleteDto.CheckerReviewStatus = v))"
@@ -96,6 +96,14 @@
                                 <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
                             </MudSelect>
                         </MudItem>
+                        <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
+                            <InvFileUploader DocType="CheckerAttachment"
+                                             OnChange="OnSupportingFileUploaded"
+                                             Disabled="@(!CanEditApprovedAmount())"
+                                             Label="Supporting Document" />
+
+                        </MudItem>
+
                     </MudGrid>
                 </MudPaper>
             </MudItem>

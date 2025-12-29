@@ -2,15 +2,21 @@
 using Entities.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using OceanVMSClient.Features;
 using OceanVMSClient.HttpRepo.Authentication;
+using OceanVMSClient.HttpRepo.POModule;
 using OceanVMSClient.HttpRepoInterface.PoModule;
+using OceanVMSClient.HttpRepoInterface.POModule;
 using Shared.DTO;
 using Shared.DTO.POModule;
+using System.Globalization;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading;
+using System.Collections.Concurrent;
+
 namespace OceanVMSClient.Pages.POModule
 {
     public partial class POList
@@ -27,10 +33,19 @@ namespace OceanVMSClient.Pages.POModule
         public IPurchaseOrderRepository Repository { get; set; } = default!;
 
         [Inject]
-        public HttpInterceptorService Interceptor { get; set; } = default!;
+        public IInvoiceApproverRepository invoiceApproverRepository { get; set; } = default!; // new
+
+        [Inject]
+        public ISnackbar Snackbar { get; set; } = default!; // new
 
         [Inject]
         private NavigationManager NavigationManager { get; set; } = null!;
+
+        [Inject]
+        private ILogger<POList> Logger { get; set; } = default!; // new
+
+        [Inject]
+        public HttpInterceptorService Interceptor { get; set; } = default!;
 
         #endregion
 
@@ -72,7 +87,87 @@ namespace OceanVMSClient.Pages.POModule
 
         private string? selectedInvoiceStatus = "All";
 
+        // permission cache per PurchaseOrder Id
+        private readonly ConcurrentDictionary<Guid, bool> _canCreateInvoiceMap = new();
         #endregion
+
+        private async Task EvaluateCreatePermissionsForItemsAsync(IEnumerable<PurchaseOrderDto> items)
+        {
+            if (items == null) return;
+
+            var tasks = items.Select(item => EvaluateCreatePermissionForAsync(item));
+            try
+            {
+                await Task.WhenAll(tasks);
+            }
+            catch
+            {
+                // individual failures are handled inside EvaluateCreatePermissionForAsync
+            }
+        }
+
+        private async Task EvaluateCreatePermissionForAsync(PurchaseOrderDto po)
+        {
+            if (po == null || po.Id == Guid.Empty)
+            {
+                return;
+            }
+
+            // Default deny
+            bool allowed = false;
+
+            // If user is Employee -> check approver assignment asynchronously
+            if (string.Equals(_userType, "Employee", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    if (_employeeId == null || _employeeId == Guid.Empty)
+                    {
+                        allowed = false;
+                    }
+                    else
+                    {
+                        var empInitiatorPermission = await invoiceApproverRepository.IsInvoiceApproverAsync(po.ProjectId, _employeeId.Value);
+                        var assignedType = empInitiatorPermission.AssignedType ?? string.Empty;
+
+                        // enforce rule:
+                        // Employee can create only when PO allows initiator upload AND the employee is assigned as Initiator
+                        if (po.AllowInvUploadByInitiator.GetValueOrDefault(false))
+                        {
+                            allowed = assignedType.Equals("Initiator", StringComparison.OrdinalIgnoreCase);
+                        }
+                        else
+                        {
+                            allowed = false;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Error checking invoice approver assignment for PO {PoId}", po.Id);
+                    allowed = false;
+                }
+            }
+            else
+            {
+                // Non-employee users (vendors/admins) are allowed
+                allowed = true;
+            }
+
+            _canCreateInvoiceMap[po.Id] = allowed;
+        }
+
+        private bool GetCanCreateInvoiceForRow(PurchaseOrderDto po)
+        {
+            if (po == null) return false;
+
+            // if not employee, allow
+            if (!string.Equals(_userType, "Employee", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // employee: consult cache (default false)
+            return _canCreateInvoiceMap.TryGetValue(po.Id, out var allowed) && allowed;
+        }
 
         #region Lifecycle
 
@@ -117,9 +212,15 @@ namespace OceanVMSClient.Pages.POModule
                 response = await Repository.GetAllPurchaseOrdersOfApproversAsync(_employeeId ?? Guid.Empty, _purchaseOrderParameters);
             }
 
+            var items = response.Items?.ToList() ?? new List<PurchaseOrderDto>();
+
+            // Evaluate create-invoice permission for each returned PO (populates cache)
+            // Await evaluation so buttons render with correct enabled/disabled state.
+            await EvaluateCreatePermissionsForItemsAsync(items);
+
             return new TableData<PurchaseOrderDto>
             {
-                Items = response.Items?.ToList() ?? new List<PurchaseOrderDto>(),
+                Items = items,
                 TotalItems = response.MetaData?.TotalCount ?? 0
             };
         }
@@ -337,6 +438,12 @@ namespace OceanVMSClient.Pages.POModule
 
             // Navigate to create-invoice page — adjust route as your app expects
             NavigationManager.NavigateTo($"/newinvoice/{vendorId}/{purchaseOrderId}");
+        }
+
+        private static string FormatCurrency(decimal? value)
+        {
+            if (!value.HasValue) return "—";
+            return $"₹{value.Value.ToString("N2", CultureInfo.InvariantCulture)}";
         }
     }
 }

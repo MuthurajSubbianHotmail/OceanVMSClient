@@ -5,6 +5,7 @@ using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
 using System;
 using System.Threading.Tasks;
+
 namespace OceanVMSClient.Pages.InviceModule
 {
     public partial class InvoiceValidatorReview
@@ -42,6 +43,9 @@ namespace OceanVMSClient.Pages.InviceModule
 
         // EditContext used for client-side DataAnnotations validation
         private EditContext? _editContext;
+
+        // Add this field to the class to define the OnSaved EventCallback
+        [Parameter] public EventCallback<InvoiceDto?> OnSaved { get; set; }
 
         #region Display helpers (computed properties)
         private string FormatCurrency(decimal? value) => value?.ToString("C") ?? "-";
@@ -146,6 +150,12 @@ namespace OceanVMSClient.Pages.InviceModule
             _validatorCompleteDto.ValidatorWithheldAmount = total - approved;
 
             StateHasChanged();
+        }
+
+        private Task OnSupportingFileUploaded(string? url)
+        {
+            _validatorCompleteDto.ValidatorReviewAttachment = url ?? string.Empty;
+            return Task.CompletedTask;
         }
         #endregion
 
@@ -254,7 +264,7 @@ namespace OceanVMSClient.Pages.InviceModule
                     }
 
                     // When rejected, approved amount should be zero and withheld equals total
-                    _validatorCompleteDto.ValidatorApprovedAmount    = 0m;
+                    _validatorCompleteDto.ValidatorApprovedAmount = 0m;
                     _validatorCompleteDto.ValidatorWithheldAmount = total;
                 }
 
@@ -269,7 +279,19 @@ namespace OceanVMSClient.Pages.InviceModule
                 var refreshed = await InvoiceRepository.UpdateInvoiceValidatorApproval(_validatorCompleteDto);
                 if (refreshed != null)
                 {
-                    _invoiceDto = refreshed;
+                    // Re-fetch full invoice from server to ensure all display fields (like ValidatorName) are populated
+                    try
+                    {
+                        var full = await InvoiceRepository.GetInvoiceById(refreshed.Id);
+                        _invoiceDto = full ?? refreshed;
+                    }
+                    catch (Exception ex)
+                    {
+                        // If re-fetch fails, fall back to the update response
+                        Logger.LogWarning(ex, "Failed to re-fetch invoice after validator update; using response object.");
+                        _invoiceDto = refreshed;
+                    }
+
                     MapFromInvoiceDto();
                 }
 
@@ -278,6 +300,11 @@ namespace OceanVMSClient.Pages.InviceModule
 
                 Snackbar.Add("Validator review saved successfully.", Severity.Success);
 
+                // Notify parent via EventCallback so parent can refresh data
+                if (OnSaved.HasDelegate)
+                    await OnSaved.InvokeAsync(_invoiceDto);
+
+                // preserve existing legacy handler behaviour if present
                 if (this is IInvoiceValidatorReviewHandlers handlers)
                     await handlers.SaveAsync();
 

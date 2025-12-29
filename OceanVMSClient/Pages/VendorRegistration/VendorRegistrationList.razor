@@ -1,0 +1,71 @@
+﻿@page "/vendor-registrations"
+@using Shared.DTO
+@using Shared.DTO.VendorReg
+@using MudBlazor.Components
+@inject NavigationManager NavigationManager
+
+<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+<PageHeader Title="Vendor Registrations" Class="mb-0" />
+
+<MudPaper Class="pa-4 vendorreg-paper">
+    <MudPaper Elevation="0" Class="pa-3 section">
+        <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
+            <MudItem xs="12">
+                <MudGrid GutterSize="1">
+                    
+                    <MudItem xs="12" sm="3">
+                        <MudTextField T="string" Label="Organization" Placeholder="Organization"
+                                      @bind-Value="organizationName"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      Dense="true" Class="filter-control" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3">
+                        <MudTextField T="string" Label="Responder" Placeholder="Responder"
+                                      @bind-Value="responderName"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      Dense="true" Class="filter-control" />
+                    </MudItem>
+                    <MudItem xs="12" sm="3" Class="d-flex align-end">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ResetFilters">Reset</MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudTable T="VendorRegistrationFormDto"
+              ServerData="GetServerData"
+              Hover="true"
+              Breakpoint="Breakpoint.Sm"
+              @ref="_table"
+              RowsPerPage="15"
+              Class="vendorreg-table mt-3">
+        <HeaderContent>
+            <MudTh>Organization</MudTh>
+            <MudTh>City</MudTh>
+            <MudTh>Ownership</MudTh>
+            <MudTh>Responder</MudTh>
+            <MudTh>Reg Date</MudTh>
+            <MudTh>View</MudTh>
+        </HeaderContent>
+
+        <RowTemplate>
+            <MudTd>@context.OrganizationName</MudTd>
+            <MudTd>@context.RegCity</MudTd>
+            <MudTd>@context.CompanyOwnershipType</MudTd>
+            <MudTd>@($"{context.ResponderFName} {context.ResponderLName}")</MudTd>
+            <MudTd>@(context.RegistrationDate == default ? "—" : context.RegistrationDate.ToString("dd-MMM-yy"))</MudTd>
+
+
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Primary" Size="Size.Small" OnClick="@(() => ViewRegistration(context.Id))" />
+            </MudTd>
+        </RowTemplate>
+
+        <PagerContent>
+            <MudTablePager PageSizeOptions="@_pageSizeOption" RowsPerPageString="Registrations Per Page" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>

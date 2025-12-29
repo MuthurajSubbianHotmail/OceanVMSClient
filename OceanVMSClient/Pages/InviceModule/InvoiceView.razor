@@ -38,7 +38,8 @@ else
                                                     _LoggedInVendorID="@_LoggedInVendorID"
                                                     _CurrentRoleName="@_CurrentRoleName"
                                                     _isInvAssigned="@_isInvAssigned"
-                                                    _isInitiator="@_isInitiator" />
+                                                    _isInitiator="@_isInitiator"
+                                                    OnSaved="@RefreshAsync" />
                         </MudTabPanel>
                         <MudTabPanel Text="Checker" Icon="@CheckerIcon" IconColor="@CheckerIconColor">
                             <InvoiceCheckerReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
@@ -47,7 +48,8 @@ else
                                                   _LoggedInVendorID="@_LoggedInVendorID"
                                                   _CurrentRoleName="@_CurrentRoleName"
                                                   _isInvAssigned="@_isInvAssigned"
-                                                  _isChecker="@_isChecker" />
+                                                  _isChecker="@_isChecker"
+                                                  OnSaved="@RefreshAsync" />
                         </MudTabPanel>
 
                         <MudTabPanel Text="Validator" Icon="@ValidatorIcon" IconColor="@ValidatorIconColor">
@@ -57,7 +59,8 @@ else
                                                    _LoggedInVendorID="@_LoggedInVendorID"
                                                    _CurrentRoleName="@_CurrentRoleName"
                                                    _isInvAssigned="@_isInvAssigned"
-                                                   _isValidator="@_isValidator" />
+                                                   _isValidator="@_isValidator"
+                                                    OnSaved="@RefreshAsync" />
                         </MudTabPanel>
                         <MudTabPanel Text="Approver" Icon="@ApproverIcon" IconColor="@ApproverIconColor">
                             <InvoiceApproverReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
@@ -66,7 +69,8 @@ else
                                                   _LoggedInVendorID="@_LoggedInVendorID"
                                                   _CurrentRoleName="@_CurrentRoleName"
                                                   _isInvAssigned="@_isInvAssigned"
-                                                   _isApprover="@_isApprover" />
+                                                   _isApprover="@_isApprover"
+                                                   OnSaved="@RefreshAsync" />
                         </MudTabPanel>
                         <MudTabPanel Text="Authorizer" Icon="@ApApproverIcon" IconColor="@ApApproverIconColor">
                             <InvoiceAPReview _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails"
@@ -75,7 +79,8 @@ else
                                                   _LoggedInVendorID="@_LoggedInVendorID"
                                                   _CurrentRoleName="@_CurrentRoleName"
                                                   _isInvAssigned="@_isInvAssigned"
-                                                   _isApApprover="@_isApApprover" />
+                                                   _isApApprover="@_isApApprover"
+                                             OnSaved="@RefreshAsync" />
                         </MudTabPanel>
                         <MudTabPanel Text="Payments" Icon="@PaymentIcon" IconColor="@PaymentIconColor">
                             

@@ -17,6 +17,9 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public InvoiceDto? _invoiceDto { get; set; }
         [Parameter] public PurchaseOrderDto? _PODto { get; set; }
 
+        // EventCallback to notify parent that the review was saved
+        [Parameter] public EventCallback<InvoiceDto?> OnSaved { get; set; }
+
         // Internal DTO used when completing checker review
         [Parameter] public InvCheckerReviewCompleteDto _CheckercompleteDto { get; set; } = new();
 
@@ -155,6 +158,12 @@ namespace OceanVMSClient.Pages.InviceModule
 
             StateHasChanged();
         }
+
+        private Task OnSupportingFileUploaded(string? url)
+        {
+            _CheckercompleteDto.CheckerReviewAttachment = url ?? string.Empty;
+            return Task.CompletedTask;
+        }
         #endregion
 
         #region Permissions / read-only
@@ -277,7 +286,19 @@ namespace OceanVMSClient.Pages.InviceModule
                 var refreshed = await InvoiceRepository.UpdateInvoiceCheckerReview(_CheckercompleteDto);
                 if (refreshed != null)
                 {
-                    _invoiceDto = refreshed;
+                    // Re-fetch full invoice from server to ensure all display fields (like CheckerName) are populated
+                    try
+                    {
+                        var full = await InvoiceRepository.GetInvoiceById(refreshed.Id);
+                        _invoiceDto = full ?? refreshed;
+                    }
+                    catch (Exception ex)
+                    {
+                        // If re-fetch fails, fall back to the update response
+                        Logger.LogWarning(ex, "Failed to re-fetch invoice after checker update; using response object.");
+                        _invoiceDto = refreshed;
+                    }
+
                     MapFromInvoiceDto();
                 }
 
@@ -285,6 +306,10 @@ namespace OceanVMSClient.Pages.InviceModule
                 _checkerSaved = true;
 
                 Snackbar.Add("Checker review saved successfully.", Severity.Success);
+
+                // Notify parent via EventCallback so parent can refresh data
+                if (OnSaved.HasDelegate)
+                    await OnSaved.InvokeAsync(_invoiceDto);
 
                 if (this is IInvoiceCheckerReviewHandlers handlers)
                     await handlers.SaveAsync();

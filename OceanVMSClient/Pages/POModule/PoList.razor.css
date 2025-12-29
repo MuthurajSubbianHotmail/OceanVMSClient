@@ -107,3 +107,51 @@
     .po-table thead th { font-size:0.92rem; padding:0.5rem; }
     .child-actions .actions-wrap { justify-content:flex-start; }
 }
+
+/* Ensure both action buttons have identical size/visual alignment.
+   Use strong specificity and !important to override MudBlazor internal sizing. */
+.po-action-btn,
+.po-action-btn.mud-button-root,
+.po-action-btn a,
+.po-action-btn.mud-button-root > .mud-button-root {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    box-sizing: border-box !important;
+
+    /* enforced identical size */
+    min-width: 160px !important;
+    width: 160px !important;
+    max-width: 160px !important;
+    height: 36px !important; /* matches MudBlazor Size.Small */
+    padding: 0 12px !important;
+    white-space: nowrap !important;
+}
+
+/* If an outline variant applies extra inner padding, normalize the inner element too */
+.po-action-btn .mud-button-root,
+.po-action-btn .mud-button {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+}
+
+/* Slight spacing tweak when "ms-2" (bootstrap margin-start) applied */
+.po-action-btn.ms-2 {
+    margin-left: 8px !important;
+}
+
+/* Small screens: let buttons size naturally so they wrap and don't overflow */
+@media (max-width: 600px) {
+    .po-action-btn,
+    .po-action-btn.mud-button-root,
+    .po-action-btn a {
+        min-width: 0 !important;
+        width: auto !important;
+        max-width: none !important;
+        height: auto !important;
+        padding: 6px 10px !important;
+    }
+}
+

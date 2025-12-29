@@ -12,6 +12,9 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public InvoiceDto? _invoiceDto { get; set; }
         [Parameter] public PurchaseOrderDto? _PODto { get; set; }
 
+        // EventCallback to notify parent that the review was saved
+        [Parameter] public EventCallback<InvoiceDto?> OnSaved { get; set; }
+
         // Internal DTO used when completing approver review
         [Parameter] public InvApproverReviewCompleteDto _approverCompleteDto { get; set; } = new();
 
@@ -146,6 +149,11 @@ namespace OceanVMSClient.Pages.InviceModule
 
             StateHasChanged();
         }
+        private Task OnSupportingFileUploaded(string? url)
+        {
+            _approverCompleteDto.ApproverReviewAttachment = url ?? string.Empty;
+            return Task.CompletedTask;
+        }
         #endregion
 
         #region Permissions / read-only
@@ -269,14 +277,30 @@ namespace OceanVMSClient.Pages.InviceModule
                 var refreshed = await InvoiceRepository.UpdateInvoiceApproverApproval(_approverCompleteDto);
                 if (refreshed != null)
                 {
-                    _invoiceDto = refreshed;
+                    // Re-fetch full invoice from server to ensure all display fields (like ApproverName) are populated
+                    try
+                    {
+                        var full = await InvoiceRepository.GetInvoiceById(refreshed.Id);
+                        _invoiceDto = full ?? refreshed;
+                    }
+                    catch (Exception ex)
+                    {
+                        // If re-fetch fails, fall back to the update response
+                        Logger.LogWarning(ex, "Failed to re-fetch invoice after approver update; using response object.");
+                        _invoiceDto = refreshed;
+                    }
+
                     MapFromInvoiceDto();
                 }
 
                 // Lock UI
                 _approverSaved = true;
 
-                Snackbar.Add("Checker review saved successfully.", Severity.Success);
+                Snackbar.Add("Approver review saved successfully.", Severity.Success);
+
+                // Notify parent via EventCallback so parent can refresh data
+                if (OnSaved.HasDelegate)
+                    await OnSaved.InvokeAsync(_invoiceDto);
 
                 if (this is IInvoiceApproverReviewHandlers handlers)
                     await handlers.SaveAsync();
@@ -285,8 +309,8 @@ namespace OceanVMSClient.Pages.InviceModule
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error saving checker review for Invoice ID {InvoiceId}", _invoiceDto?.Id);
-                Snackbar.Add("An error occurred while saving the checker review.", Severity.Error);
+                Logger.LogError(ex, "Error saving approver review for Invoice ID {InvoiceId}", _invoiceDto?.Id);
+                Snackbar.Add("An error occurred while saving the approver review.", Severity.Error);
             }
         }
 

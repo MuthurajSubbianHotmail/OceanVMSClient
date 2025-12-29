@@ -11,6 +11,8 @@ using System;
 using System.Net.Http;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 using OceanVMSClient.HttpRepo.InvoiceModule;
+using OceanVMSClient.HttpRepoInterface.VendorRegistration;
+using OceanVMSClient.HttpRepo.VendorRegistration;
 
 namespace OceanVMSClient.Extensions
 {
@@ -45,6 +47,9 @@ namespace OceanVMSClient.Extensions
             services.AddScoped<IInvoiceApproverRepository, InvoiceApproverRepository>();
             services.AddScoped<IInvoiceRepository, InvoiceRepository>();
             services.AddScoped<IVendorRepository, VendorRepository>();
+            services.AddScoped<IVendorRegistrationRepository, VendorRegistrationRepository>();
+            services.AddScoped<ICompanyOwnershipRepository, CompanyOwnershipRepository>();
+            services.AddScoped<IVendorServiceRepository, VendorServiceRepository>();
             return services;
         }
 

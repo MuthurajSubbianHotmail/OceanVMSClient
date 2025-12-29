@@ -1,85 +1,150 @@
-/* InvoiceList page styles - keep visual language consistent with PO pages */
+/* InvoiceList visual design — mirrors PoList styles for consistent look & feel */
 
+/* Card */
 .invoice-paper {
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,250,0.98));
-    border-radius: 8px;
-    box-shadow: 0 1px 6px rgba(16,24,40,0.06);
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,250,252,0.98));
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(15,23,42,0.06);
     padding: 1rem;
 }
 
+/* Header */
 .invoice-header { display:flex; flex-direction:column; gap:4px; }
-.invoice-title { color:#2b3e6b; font-weight:700; }
-.invoice-subtitle { color:#6b7280; }
+.invoice-number { color:#16213E; font-weight:700; }
+.invoice-meta { color:#6b7280; font-size:0.95rem; }
 
+/* Actions (right) */
+.actions-right { display:flex; justify-content:flex-end; align-items:center; }
+
+/* Section containing filters (uses .section in markup) */
 .section {
     background: transparent;
-    border-left: 3px solid rgba(27,110,194,0.06);
-    padding: 0.5rem;
-    border-radius: 6px;
+    border-left: 4px solid rgba(27,110,194,0.06);
+    padding: 0.75rem;
+    border-radius: 8px;
 }
 
-/* Filter controls */
+/* Compact filter control styling */
 .filter-control { width:100%; }
-.section .mud-input-label { font-size:0.88rem; font-weight:600; color:#6b7280; }
+.section .mud-form-field .mud-input-label,
+.filter-control .mud-input-label {
+    font-size:0.88rem !important;
+    font-weight:600;
+    color:#6b7280;
+}
 
-/* Table */
-.invoice-table { width:100%; border-radius:6px; overflow:visible; }
+/* Inputs: value and placeholder sizing */
+.filter-control .mud-input-root input,
+.filter-control .mud-text-field .mud-input-slot input,
+.filter-control .mud-numeric-field input,
+.filter-control .mud-date-range-picker .mud-input-slot input {
+    font-size:0.95rem !important;
+    color:#111827;
+}
 
+.filter-control input::placeholder,
+.filter-control textarea::placeholder {
+    font-size:0.82rem !important;
+    opacity:0.75;
+    color:#6b7280 !important;
+}
+
+/* Table styling */
+.invoice-table { width:100%; border-radius:8px; overflow:visible; }
+
+/* Header background and sticky behavior */
 .invoice-table thead {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 30;
     background: linear-gradient(90deg, rgba(27,110,194,0.04), rgba(255,255,255,0.98));
     backdrop-filter: blur(2px);
+    box-shadow: 0 1px 0 rgba(15,23,42,0.04);
 }
 
-.invoice-table th,
-.invoice-table td { font-size:0.95rem; padding:0.6rem 0.75rem; vertical-align:middle; }
-.invoice-table tbody tr:hover { background: rgba(27,110,194,0.03); }
-
-/* Emphasize PO Total, Invoice Total and Paid in child row */
-.child-row-paper .child-stat .stat-value {
-    font-weight: 600;
-    font-size: 0.98rem;
-    color: #111827; /* default dark */
+.invoice-table thead th {
+    padding:0.65rem 0.75rem;
+    border-bottom:1px solid rgba(15,23,42,0.06);
+    font-weight:600;
+    color:#0f172a;
+    text-align:left;
 }
 
-/* Specific accents */
-.child-row-paper .child-stat .po-total-value {
-    color: rebeccapurple; /* matches PO emphasis used elsewhere */
-    font-weight: 700;
-    font-size: 1.02rem;
+/* Row & cell */
+.invoice-table td, .invoice-table th { font-size:0.95rem; vertical-align:middle; padding-top:0.6rem; padding-bottom:0.6rem; }
+.invoice-table tbody tr { transition: background .12s ease, transform .06s ease; }
+.invoice-table tbody tr:hover { background: rgba(27,110,194,0.03); transform: translateY(-1px); }
+
+/* Alternating rows */
+.invoice-table tbody tr:nth-child(even) { background: rgba(15,23,42,0.015); }
+
+/* Link styling in cells */
+.cell-link { font-weight:500; font-size:0.95rem; }
+
+/* Emphasis columns */
+.total-col { font-weight:600; color:rebeccapurple; }
+
+/* Child row card */
+.child-row-paper {
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,255,0.98));
+    border-radius:8px;
+    padding:0.75rem;
+    border:1px solid rgba(15,23,42,0.03);
 }
 
-.child-row-paper .child-stat .invoice-total-value {
-    color: #059669; /* success/green */
-    font-weight: 700;
-    font-size: 1.02rem;
+/* Child stats */
+.child-stat { padding:0.5rem; border-radius:6px; text-align:center; background:rgba(255,255,255,0.9); box-shadow: inset 0 0 0 1px rgba(15,23,42,0.02); }
+.stat-value { font-weight:700; color:rebeccapurple; font-size:0.95rem; }
+.stat-label-small { font-size:0.78rem; color:#6b7280; margin-top:0.25rem; }
+
+/* Child actions */
+.child-actions .actions-wrap { display:flex; gap:0.5rem; justify-content:flex-end; align-items:center; }
+
+/* Compact DateRangePicker inside filter-control */
+.filter-control .mud-date-range-picker .mud-input-root {
+    min-height: 34px !important;
+    height: 34px !important;
+    font-size: 0.92rem !important;
+}
+.filter-control .mud-date-range-picker .mud-input-slot input {
+    padding: 6px 8px !important;
+    font-size: 0.9rem !important;
 }
 
-.child-row-paper .child-stat .paid-value {
-    color: #0ea5a4; /* teal */
-    font-weight: 700;
-    font-size: 1.02rem;
+/* Ensure action buttons in child rows are consistent size */
+.invoice-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-width: 160px;
+    width: 160px;
+    height: 36px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    white-space: nowrap;
 }
 
-/* Small visual polish */
-.child-row-paper .child-stat {
-    background: rgba(255,255,255,0.92);
-    border-radius: 6px;
-    padding: 0.5rem;
-    text-align: center;
-    box-shadow: inset 0 0 0 1px rgba(15,23,42,0.02);
-}
-
-.child-row-paper .stat-label-small {
-    font-size: 0.78rem;
-    color: #6b7280;
-    margin-bottom: 0.25rem;
-}
-
-/* Responsive */
-@media (max-width:720px) {
+/* Responsive tweaks */
+@media (max-width: 720px) {
     .invoice-paper { padding:0.75rem; }
-    .section { padding:0.4rem; }
+    .section { padding:0.5rem; }
+    .actions-right { margin-top:0.5rem; justify-content:flex-start; }
+    .invoice-table thead th { font-size:0.92rem; padding:0.5rem; }
+    .child-actions .actions-wrap { justify-content:flex-start; }
+
+    /* Restore slightly larger touch targets on small screens */
+    .filter-control .mud-date-range-picker .mud-input-root,
+    .filter-control .mud-date-range-picker .mud-input-slot input {
+        min-height: 36px !important;
+        height: 36px !important;
+        font-size: 0.95rem !important;
+    }
+
+    .invoice-action-btn {
+        min-width: 0;
+        width: auto;
+        height: auto;
+        padding: 6px 10px;
+    }
 }

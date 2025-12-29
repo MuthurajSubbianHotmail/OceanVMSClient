@@ -4,14 +4,13 @@
 @using OceanVMSClient.Components
 @using Shared.DTO.POModule
 @using MudBlazor.Components
+@using OceanVMSClient.SharedComp.Components
 
 <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
 <PageHeader Title="Purchase Orders" Class="mb-0" />
 
 <MudPaper Class="pa-4 po-paper">
     <!-- Top summary -->
-    
-
     <!-- Filters -->
     <MudPaper Elevation="0" Class="pa-3 po-section">
         <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
@@ -20,6 +19,8 @@
                     <MudItem xs="12" sm="2" md="2">
                         <MudSelect T="string"
                                    Label="Invoice Status"
+                                   Placeholder=""
+                                   Typo="Typo.subtitle2"
                                    Value="selectedInvoiceStatus"
                                    ValueChanged="OnInvoiceStatusChanged"
                                    Dense="true"
@@ -33,18 +34,19 @@
 
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="string"
+                                      Typo="Typo.subtitle2"
                                       Label="SAP PO No"
                                       Placeholder="SAP PO No"
                                       OnDebounceIntervalElapsed="@( (string s) => { sapPONo = s; return OnSearch(); } )"
                                       DebounceInterval="500"
                                       Dense="true"
-                                      Adornment="Adornment.Start"
-                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      
                                       Class="filter-control" />
                     </MudItem>
 
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="string"
+                                      Typo="Typo.subtitle2"
                                       Label="Vendor"
                                       Placeholder="Vendor Name"
                                       OnDebounceIntervalElapsed="@( (string s) => { vendorName = s; return OnSearch(); } )"
@@ -55,7 +57,8 @@
                                       Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
-                        <MudNumericField T="decimal?"
+                        <MudTextField T="decimal?"
+                                      Typo="Typo.subtitle2"
                                          Label="Min Total"
                                          InputType="InputType.Number"
                                          ValueChanged="@( (decimal? v) => { minTotalValue = v; return OnSearch(); } )"
@@ -65,36 +68,37 @@
                                          Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
-                        <MudNumericField T="decimal?"
-                                         Label="Max Total"
-                                         InputType="InputType.Number"
-                                         ValueChanged="@( (decimal? v) => { maxTotalValue = v; return OnSearch(); } )"
-                                         Placeholder="Max"
-                                         Clearable="true"
+                        <MudTextField T="decimal?"
+                                      Typo="Typo.subtitle2"
+                                      Label="Max Total"
+                                      InputType="InputType.Number"
+                                      ValueChanged="@( (decimal? v) => { maxTotalValue = v; return OnSearch(); } )"
+                                      Placeholder="Max"
+                                      Clearable="true"
                                          Dense="true"
                                          Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
-                    <MudDateRangePicker @ref="_dateRangePicker"
-                                        DateRangeChanged="OnDateRangeSearch"
-                                        DateFormat="dd-MMM-yy"
-                                        TitleDateFormat="MMMM dd"
-                                        Margin="Margin.Dense"
-                                        Variant="Variant.Outlined"
-                                        Dense="true"
-                                        Label="PO Date"
-                                        Clearable="true"
-                                        AutoClose="true"
-                                        Class="filter-control">
-                        <PickerActions>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearDateRange">Clear</MudButton>
-                        </PickerActions>
-                    </MudDateRangePicker>
-            </MudItem>
+                        <MudDateRangePicker @ref="_dateRangePicker"
+                                            DateRangeChanged="OnDateRangeSearch"
+                                            DateFormat="dd-MMM-yy"
+                                            TitleDateFormat="MMMM dd"
+                                            Margin="Margin.Dense"
+                                            Variant="Variant.Text"
+                                            Dense="true"
+                                            Label="PO Date"
+                                            Clearable="true"
+                                            AutoClose="true"
+                                            Class="filter-control">
+                            <PickerActions>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearDateRange">Clear</MudButton>
+                            </PickerActions>
+                        </MudDateRangePicker>
+                    </MudItem>
                 </MudGrid>
             </MudItem>
 
-            
+
         </MudGrid>
     </MudPaper>
 
@@ -106,6 +110,7 @@
               RightAlignSmall="true"
               @ref="_table"
               RowsPerPage="15"
+               Virtualize =" true"
               Class="po-table mt-3">
         <HeaderContent>
             <MudTh Class="col-type">Type</MudTh>
@@ -121,27 +126,47 @@
 
         <RowTemplate>
             <MudTd>
-                <MudText Typo="Typo.body2" Class="cell-text">@context.PoTypeName</MudText>
+                <MudText Typo="Typo.subtitle2" Class="cell-text">@context.PoTypeName</MudText>
             </MudTd>
             <MudTd>
-                <MudLink Typo="Typo.body2" Class="cell-link" Href="@($"ViewPurchaseOrder/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
+                <MudLink Typo="Typo.subtitle2" Class="cell-link" Href="@($"ViewPurchaseOrder/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
                     @context.SAPPONumber
                 </MudLink>
             </MudTd>
-            <MudTd DataLabel="PODate">@FormatDate(context.SAPPODate)</MudTd>
-            <MudTd DataLabel="Vendor">@context.VendorName</MudTd>
-            <MudTd Align="Align.Right">@context.ItemValue.ToString("N2")</MudTd>
-            <MudTd Align="Align.Right">@context.GSTTotal.ToString("N2")</MudTd>
-            <MudTd Align="Align.Right" Class="total-col">@context.TotalValue.ToString("N2")</MudTd>
+            <MudTd DataLabel="PODate">
+                <MudText Typo="Typo.subtitle2">
+                    @FormatDate(context.SAPPODate)
+                </MudText>
+            </MudTd>
+            <MudTd DataLabel="Vendor">
+                <MudText Typo="Typo.subtitle2">
+                    @context.VendorName
+                </MudText>
+            </MudTd>
+            <MudTd Align="Align.Right">
+                <MudText Typo="Typo.subtitle2">
+                    <CurrencyText Amount="@context.ItemValue" />
+                </MudText>
+            </MudTd>
+            <MudTd Align="Align.Right">
+                <MudText Typo="Typo.subtitle2">
+                    <CurrencyText Amount="@context.GSTTotal" />
+                </MudText>
+            </MudTd>
+            <MudTd Align="Align.Right" Class="total-col">
+                <MudText Typo="Typo.subtitle2">
+                    <CurrencyText Amount="@context.TotalValue" />
+                </MudText>
+            </MudTd>
             <MudTd>
                 <MudChip T="string" Size="Size.Small" Color="@GetInvoiceChipColor(context.InvoiceStatus)" Variant="Variant.Filled">@context.InvoiceStatus</MudChip>
             </MudTd>
             <MudTd>
                 <MudIconButton OnClick="@(() => ToggleRow(context.Id))"
                                Icon="@(IsRowExpanded(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Outlined.ArrowDropDown)"
-                               Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               Size="Size.Small" />
+                               Variant="Variant.Text"
+                               Color="Color.Info"
+                               Size="Size.Large" />
             </MudTd>
         </RowTemplate>
 
@@ -149,66 +174,94 @@
             @if (IsRowExpanded(row.Id))
             {
                 <MudTd ColSpan="9" Class="child-row-td">
-                    <MudPaper Class="pa-3 child-row-paper" Elevation="0">
+                    <MudPaper Class="pa-3 child-row-paper" Elevation="1">
                         <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
-                            <MudItem xs="12" sm="8">
-                                <MudText Typo="Typo.subtitle1" Color="Color.Primary">Additional Details</MudText>
-                                <MudDivider Class="my-2" />
-                                <MudGrid>
-                                    <MudItem xs="12" sm="6">
-                                        <div class="field-pair">
-                                            <div class="field-label">Project</div>
-                                            <div class="field-value">@row.ProjectName</div>
-                                        </div>
-                                    </MudItem>
-                                    <MudItem xs="12" sm="6">
-                                        <div class="field-pair">
-                                            <div class="field-label">Supplier</div>
-                                            <div class="field-value">@row.VendorName</div>
-                                        </div>
-                                    </MudItem>
-                                </MudGrid>
+                            <MudItem xs="4" sm="4">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">PO Details</MudText>
+                                <MudDivider Class="my-1" />
 
-                                <MudGrid Class="mt-2">
-                                    <MudItem xs="6" sm="3">
-                                        <div class="child-stat">
-                                            <div class="stat-value">@row.PreviousInvoiceCount</div>
-                                            <div class="stat-label-small">Invoices</div>
-                                        </div>
-                                    </MudItem>
-                                    <MudItem xs="6" sm="3">
-                                        <div class="child-stat">
-                                            <div class="stat-value">@($"{row.PreviousInvoiceValue:N2}")</div>
-                                            <div class="stat-label-small">Invoiced</div>
-                                        </div>
-                                    </MudItem>
-                                    <MudItem xs="6" sm="3">
-                                        <div class="child-stat">
-                                            <div class="stat-value">@($"{row.InvoiceBalanceValue:N2}")</div>
-                                            <div class="stat-label-small">Pending</div>
-                                        </div>
-                                    </MudItem>
-                                    <MudItem xs="6" sm="3">
-                                        <div class="child-stat">
-                                            <div class="stat-value">@($"{row.PaidValue:N2}")</div>
-                                            <div class="stat-label-small">Paid</div>
-                                        </div>
-                                    </MudItem>
-                                </MudGrid>
+                                <MudItem>
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">
+                                        Project
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Info">
+                                        @row.ProjectName
+                                    </MudText>
+
+                                </MudItem>
+                                <MudDivider Class="my-1" />
+                                <MudItem>
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">
+                                        Supplier
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Info">
+                                        @row.VendorName
+                                    </MudText>
+                                </MudItem>
                             </MudItem>
 
-                            <MudItem xs="12" sm="4" Class="child-actions">
-                                <div class="actions-wrap">
-                                    <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" 
-                                    StartIcon="@Icons.Material.Filled.Add"
-                                               OnClick="@(() => newInvoice(row.VendorId, row.Id))">
+                            <MudItem xs="6" sm="6">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Invoice Details</MudText>
+                                <MudDivider Class="my-1" />
+                                <MudGrid GutterSize="1">
+                                    <MudItem xs="6" sm="6">
+                                        
+                                        <MudItem>
+                                            
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">
+                                                Invoice Count
+                                            </MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Info">
+                                                @row.PreviousInvoiceCount
+                                            </MudText>
+                                        </MudItem>
+                                        <MudDivider Class="my-1" />
+                                        <MudItem>
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">
+                                                Previous Invoices
+                                            </MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Info">
+                                                <CurrencyText Amount="@row.PreviousInvoiceValue" />
+                                            </MudText>
+                                        </MudItem>
+                                    </MudItem>
+
+                                    <MudItem xs="6" sm="6">
+                                        <MudItem>
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">
+                                                Invoice Balance
+                                            </MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Info">
+                                                <CurrencyText Amount="@row.InvoiceBalanceValue" />
+                                            </MudText>
+                                        </MudItem>
+                                        <MudDivider Class="my-1" />
+                                    </MudItem>
+                                </MudGrid>
+
+                            </MudItem>
+
+                            <MudItem xs="2" sm="2">
+                                <MudItem Class="d-flex justify-content-end">
+                                    <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Add"
+                                               OnClick="@(() => newInvoice(row.VendorId, row.Id))"
+                                               Disabled="@(!GetCanCreateInvoiceForRow(row) || isDetailsLoading || isActionInProgress)"
+                                               Style="width: 200px;">
                                         Create Invoice
                                     </MudButton>
-                                    <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Visibility" Class="ml-2" Href="@($"ViewInvoices/{row.Id}")">
+                                </MudItem>
+                                <MudDivider Class="my-1" />
+                                <MudItem Class="d-flex justify-content-end">
+                                    <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Visibility"
+                                               Style="width: 200px;"
+                                               Href="@($"ViewInvoices/{row.Id}")">
                                         View Invoices
                                     </MudButton>
-                                </div>
+                                </MudItem>
                             </MudItem>
+
                         </MudGrid>
                     </MudPaper>
                 </MudTd>
@@ -221,6 +274,8 @@
     </MudTable>
 </MudPaper>
 
+
+
 @code {
     private List<BreadcrumbItem> _items = new()
     {
@@ -228,6 +283,11 @@
         new BreadcrumbItem("Purchase Orders", href: "/POList", disabled: false),
     };
 
+    // Add these fields to fix CS0103 errors
+    private bool CanCreateInvoice { get; set; } = true;
+    private bool isDetailsLoading { get; set; } = false;
+    private bool isActionInProgress { get; set; } = false;
+
     // Add this method to fix CS0103
-    
+
 }

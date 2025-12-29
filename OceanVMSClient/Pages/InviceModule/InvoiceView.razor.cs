@@ -99,6 +99,7 @@ namespace OceanVMSClient.Pages.InviceModule
             isDetailsLoading = true;
             try
             {
+                await LoadUserContextAsync();
                 if (!string.IsNullOrWhiteSpace(InvoiceId) && Guid.TryParse(InvoiceId, out var parsed))
                 {
                     InvoiceGuid = parsed;
@@ -308,27 +309,27 @@ namespace OceanVMSClient.Pages.InviceModule
 
         // Initiator tab icon + color (computed)
         private string InitiatorIcon { get; set; } = Icons.Material.Rounded.AirlineSeatReclineNormal;
-        private Color InitiatorIconColor { get; set; } = Color.Success;
+        private Color InitiatorIconColor { get; set; } = Color.Default;
 
         // Checker tab icon + color (computed)
         private string CheckerIcon { get; set; } = Icons.Material.Rounded.PlaylistAddCheckCircle;
-        private Color CheckerIconColor { get; set; } = Color.Success;
+        private Color CheckerIconColor { get; set; } = Color.Default;
 
         // Validator tab icon + color (computed)
         private string ValidatorIcon { get; set; } = Icons.Material.Rounded.AssignmentTurnedIn;
-        private Color ValidatorIconColor { get; set; } = Color.Success;
+        private Color ValidatorIconColor { get; set; } = Color.Default;
 
         // Approver tab icon + color (computed)
         private string ApproverIcon { get; set; } = Icons.Material.Rounded.HowToReg;
-        private Color ApproverIconColor { get; set; } = Color.Success;
+        private Color ApproverIconColor { get; set; } = Color.Default;
 
         // Accounts Payable tab icon + color (computed)
         private string ApApproverIcon { get; set; } = Icons.Material.Rounded.AccountBalanceWallet;
-        private Color ApApproverIconColor { get; set; } = Color.Success;
+        private Color ApApproverIconColor { get; set; } = Color.Default;
 
         //Payment tab icon + color (computed)
         private string PaymentIcon { get; set; } = Icons.Material.Rounded.Payments;
-        private Color PaymentIconColor { get; set; } = Color.Success;
+        private Color PaymentIconColor { get; set; } = Color.Default;
 
         private void UpdateInitiatorTabIcon()
         {
@@ -342,7 +343,8 @@ namespace OceanVMSClient.Pages.InviceModule
             }
 
             // Not assigned to this role -> Block, Default
-            if (!_isInitiator || !_isInvAssigned)
+            // Fix for CS0266 and CS8602: Use GetValueOrDefault() to safely handle nullable bool
+            if (!_invoiceDto.IsInitiatorReviewRequired.GetValueOrDefault())
             {
                 InitiatorIcon = Icons.Material.Filled.Block;
                 InitiatorIconColor = Color.Default;
@@ -357,10 +359,15 @@ namespace OceanVMSClient.Pages.InviceModule
                 InitiatorIconColor = Color.Warning;
                 return;
             }
-
+            if (string.Equals(_invoiceDto?.InvoiceStatus, "with initiator", StringComparison.OrdinalIgnoreCase))
+            {
+                ApproverIcon = Icons.Material.Rounded.AirlineSeatReclineNormal;
+                ApproverIconColor = Color.Secondary;
+                return;
+            }
             // default: within SLA & assigned -> Green airline seat
             InitiatorIcon = Icons.Material.Rounded.AirlineSeatReclineNormal;
-            InitiatorIconColor = Color.Success;
+            InitiatorIconColor = Color.Default;
         }
 
         private void UpdateCheckerTabIcon()
@@ -373,7 +380,7 @@ namespace OceanVMSClient.Pages.InviceModule
                 return;
             }
 
-            if (!_isChecker || !_isInvAssigned)
+            if (!_invoiceDto.IsCheckerReviewRequired.GetValueOrDefault())
             {
                 CheckerIcon = Icons.Material.Filled.Block;
                 CheckerIconColor = Color.Default;
@@ -387,7 +394,12 @@ namespace OceanVMSClient.Pages.InviceModule
                 CheckerIconColor = Color.Warning;
                 return;
             }
-
+            if (string.Equals(_invoiceDto?.InvoiceStatus, "with checker", StringComparison.OrdinalIgnoreCase))
+            {
+                ApproverIcon = Icons.Material.Rounded.PlaylistAddCheckCircle;
+                ApproverIconColor = Color.Secondary;
+                return;
+            }
             CheckerIcon = Icons.Material.Rounded.PlaylistAddCheckCircle;
             CheckerIconColor = Color.Success;
         }
@@ -402,7 +414,7 @@ namespace OceanVMSClient.Pages.InviceModule
                 return;
             }
 
-            if (!_isValidator || !_isInvAssigned)
+            if (!_invoiceDto.IsValidatorReviewRequired.GetValueOrDefault())
             {
                 ValidatorIcon = Icons.Material.Filled.Block;
                 ValidatorIconColor = Color.Default;
@@ -416,9 +428,14 @@ namespace OceanVMSClient.Pages.InviceModule
                 ValidatorIconColor = Color.Warning;
                 return;
             }
-
+            if (string.Equals(_invoiceDto?.InvoiceStatus, "with validator", StringComparison.OrdinalIgnoreCase))
+            {
+                ApproverIcon = Icons.Material.Rounded.AssignmentTurnedIn;
+                ApproverIconColor = Color.Secondary;
+                return;
+            }
             ValidatorIcon = Icons.Material.Rounded.AssignmentTurnedIn;
-            ValidatorIconColor = Color.Success;
+            ValidatorIconColor = Color.Default;
         }
 
         private void UpdateApprovalTabIcon()
@@ -431,13 +448,14 @@ namespace OceanVMSClient.Pages.InviceModule
                 return;
             }
 
-            if (!_isApprover || !_isInvAssigned)
+            if (!_invoiceDto.IsApproverReviewRequired.GetValueOrDefault())
             {
                 ApproverIcon = Icons.Material.Filled.Block;
                 ApproverIconColor = Color.Default;
                 return;
             }
 
+            
             if (string.Equals(_invoiceDto?.ApproverReviewSLAStatus, "Delayed", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(_invoiceDto?.ApproverReviewSLAStatus, "Escalated", StringComparison.OrdinalIgnoreCase))
             {
@@ -445,9 +463,14 @@ namespace OceanVMSClient.Pages.InviceModule
                 ApproverIconColor = Color.Warning;
                 return;
             }
-
+            if (string.Equals(_invoiceDto?.InvoiceStatus, "with approver", StringComparison.OrdinalIgnoreCase))
+            {
+                ApproverIcon = Icons.Material.Rounded.HowToReg;
+                ApproverIconColor = Color.Secondary;
+                return;
+            }
             ApproverIcon = Icons.Material.Rounded.HowToReg;
-            ApproverIconColor = Color.Success;
+            ApproverIconColor = Color.Default;
         }
 
         private void UpdateAPApproverTabIcon()
@@ -460,12 +483,12 @@ namespace OceanVMSClient.Pages.InviceModule
                 return;
             }
 
-            if (!_isApApprover || !_isInvAssigned)
-            {
-                ApApproverIcon = Icons.Material.Filled.Block;
-                ApApproverIconColor = Color.Default;
-                return;
-            }
+            //if (!_isApApprover || !_isInvAssigned)
+            //{
+            //    ApApproverIcon = Icons.Material.Filled.Block;
+            //    ApApproverIconColor = Color.Default;
+            //    return;
+            //}
 
             if (string.Equals(_invoiceDto?.APReviewSLAStatus, "Delayed", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(_invoiceDto?.APReviewSLAStatus, "Escalated", StringComparison.OrdinalIgnoreCase))
@@ -474,9 +497,14 @@ namespace OceanVMSClient.Pages.InviceModule
                 ApApproverIconColor = Color.Warning;
                 return;
             }
-
+            if (string.Equals(_invoiceDto?.InvoiceStatus, "with validator", StringComparison.OrdinalIgnoreCase))
+            {
+                ApproverIcon = Icons.Material.Rounded.AccountBalanceWallet;
+                ApproverIconColor = Color.Secondary;
+                return;
+            }
             ApApproverIcon = Icons.Material.Rounded.AccountBalanceWallet;
-            ApApproverIconColor = Color.Success;
+            ApApproverIconColor = Color.Default;
         }
 
         // After updating all icons, ensure UI refresh
@@ -488,6 +516,104 @@ namespace OceanVMSClient.Pages.InviceModule
             UpdateApprovalTabIcon();
             UpdateAPApproverTabIcon();
             StateHasChanged();
+        }
+
+        // Added field + OnInitializedAsync override to ensure user context loads
+        private bool _userContextLoaded = false;
+
+        protected override async Task OnInitializedAsync()
+        {
+            await base.OnInitializedAsync();
+
+            if (_userContextLoaded)
+                return;
+
+            try
+            {
+                await LoadUserContextAsync();
+                _userContextLoaded = true;
+                // Optional: if you want tab icons to reflect user context before invoice loads
+                RefreshTabIcons();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "LoadUserContextAsync failed during OnInitializedAsync");
+            }
+        }
+
+        // Add this public method to InvoiceView so child can request a refresh.
+        // Place near other helpers in the partial class.
+
+        public async Task RefreshAsync(InvoiceDto? refreshedInvoice)
+        {
+            try
+            {
+                if (refreshedInvoice != null)
+                {
+                    _invoiceDto = refreshedInvoice;
+                }
+                else if (InvoiceGuid != Guid.Empty)
+                {
+                    _invoiceDto = await InvoiceRepository.GetInvoiceById(InvoiceGuid) ?? new InvoiceDto();
+                }
+
+                // Refresh dependent data (PO, assignment, role flags) if needed
+                if (_invoiceDto.PurchaseOrderId != null && _invoiceDto.PurchaseOrderId != Guid.Empty)
+                {
+                    try
+                    {
+                        PurchaseOrderDetails = await PurchaseOrderRepository.GetPurchaseOrderById(_invoiceDto.PurchaseOrderId);
+                        PurchaseOrderNumber = PurchaseOrderDetails?.SAPPONumber ?? string.Empty;
+                        PurchaseOrderDate = PurchaseOrderDetails?.SAPPODate ?? DateTime.Today;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to reload purchase order during refresh for invoice {InvoiceId}", InvoiceGuid);
+                    }
+                }
+
+                // Re-evaluate assignment/role state (best-effort, keeps UI consistent)
+                if (PurchaseOrderDetails != null && _employeeId.HasValue)
+                {
+                    var empInitiatorPermission = await invoiceApproverRepository.IsInvoiceApproverAsync(PurchaseOrderDetails.ProjectId, _employeeId.Value);
+                    _CurrentRoleName = empInitiatorPermission.AssignedType ?? string.Empty;
+                    _isInvAssigned = empInitiatorPermission.IsAssigned;
+                }
+                else
+                {
+                    _CurrentRoleName = string.Empty;
+                    _isInvAssigned = false;
+                }
+
+                _isInitiator = await PurchaseOrderRepository.IsEmployeeAssignedforRoleAsync(
+                    _invoiceDto.PurchaseOrderId != Guid.Empty ? _invoiceDto.PurchaseOrderId : Guid.Empty,
+                    _employeeId ?? Guid.Empty,
+                    "Initiator"
+                );
+                _isChecker = await PurchaseOrderRepository.IsEmployeeAssignedforRoleAsync(
+                    _invoiceDto.PurchaseOrderId != Guid.Empty ? _invoiceDto.PurchaseOrderId : Guid.Empty,
+                    _employeeId ?? Guid.Empty,
+                    "Checker"
+                );
+                _isValidator = await PurchaseOrderRepository.IsEmployeeAssignedforRoleAsync(
+                    _invoiceDto.PurchaseOrderId != Guid.Empty ? _invoiceDto.PurchaseOrderId : Guid.Empty,
+                    _employeeId ?? Guid.Empty,
+                    "Validator"
+                );
+                _isApprover = await PurchaseOrderRepository.IsEmployeeAssignedforRoleAsync(
+                    _invoiceDto.PurchaseOrderId != Guid.Empty ? _invoiceDto.PurchaseOrderId : Guid.Empty,
+                    _employeeId ?? Guid.Empty,
+                    "Approver"
+                );
+
+                // recompute tab icons and UI
+                RefreshTabIcons();
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error refreshing invoice view after child save");
+            }
         }
     }
 }

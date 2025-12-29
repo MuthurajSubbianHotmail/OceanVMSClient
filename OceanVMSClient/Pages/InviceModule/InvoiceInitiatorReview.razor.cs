@@ -14,6 +14,8 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public InvoiceDto? _invoiceDto { get; set; }
         [Parameter] public PurchaseOrderDto? _PODto { get; set; }
         
+        // EventCallback to notify parent that the review was saved
+        [Parameter] public EventCallback<InvoiceDto?> OnSaved { get; set; }
 
         // Internal DTO used when completing Initiator review
         [Parameter] public InvInitiatorReviewCompleteDto _InitiatorCompleteDto { get; set; } = new();
@@ -147,6 +149,12 @@ namespace OceanVMSClient.Pages.InviceModule
 
             StateHasChanged();
         }
+
+        private Task OnSupportingFileUploaded(string? url)
+        {
+            _InitiatorCompleteDto.InitiatorReviewAttachment = url ?? string.Empty;
+            return Task.CompletedTask;
+        }
         #endregion
 
         #region Permissions / read-only
@@ -276,8 +284,13 @@ namespace OceanVMSClient.Pages.InviceModule
                 // Lock UI
                 _initiatorSaved = true;
 
-                Snackbar.Add("Checker review saved successfully.", Severity.Success);
+                Snackbar.Add("Initiator review saved successfully.", Severity.Success);
 
+                // Notify parent via EventCallback so parent can refresh data
+                if (OnSaved.HasDelegate)
+                    await OnSaved.InvokeAsync(_invoiceDto);
+
+                // legacy / optional handler support (keeps previous behavior if used)
                 if (this is IInvoiceCheckerReviewHandlers handlers)
                     await handlers.SaveAsync();
 

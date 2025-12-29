@@ -24,7 +24,8 @@ namespace OceanVMSClient.Components
         public string DocType { get; set; } = string.Empty;
         [Parameter]
         public bool Disabled { get; set; } = false;
-
+        [Parameter]
+        public string Label { get; set; } = "Upload Document";
         [Inject]
         public IInvoiceRepository Repository { get; set; } = default!;
 

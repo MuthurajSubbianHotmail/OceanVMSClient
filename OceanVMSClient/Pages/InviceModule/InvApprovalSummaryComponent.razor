@@ -32,14 +32,18 @@
                     <MudText Typo="Typo.body2">@(!string.IsNullOrWhiteSpace(context.Status) ? context.Status : "—")</MudText>
                 </MudTd>
                 
-                <MudTd Align="Right">@FormatAmount(context.Approved)</MudTd>
-                <MudTd Align="Right">@FormatAmount(context.Withheld)</MudTd>
+                <MudTd Align="Right">
+                    <CurrencyText Amount="context.Approved" />
+                </MudTd>
+                <MudTd Align="Right">
+                    <CurrencyText Amount="context.Withheld" />
+                </MudTd>
             </RowTemplate>
         </MudTable>
 
         <div class="mt-2 d-flex" style="justify-content:flex-end; gap:.5rem;">
-            <MudText Typo="Typo.caption" Class="mr-2">Totals</MudText>
-            <MudText Typo="Typo.subtitle2" Color="Color.Primary">@FormatAmount(ApprovalRows.Sum(r => r.Approved ?? 0))</MudText>
+            @* <MudText Typo="Typo.caption" Class="mr-2">Totals</MudText>
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">@FormatAmount(ApprovalRows.Sum(r => r.Approved ?? 0))</MudText> *@
         </div>
     </div>
 </MudPaper>

@@ -193,7 +193,7 @@ namespace OceanVMSClient.Pages.POModule
             : "0.00";
 
         private string PaidValueText => PurchaseOrderDetails != null ? PurchaseOrderDetails.PaidValue.ToString("N2") : "0.00";
-        public bool allowUploadByInitiator => PurchaseOrderDetails != null && PurchaseOrderDetails.AllowInvUploadBysetiator == true;
+        public bool allowUploadByInitiator => PurchaseOrderDetails != null && PurchaseOrderDetails.AllowInvUploadByInitiator == true;
 
         // Returns a MudBlazor Color based on the current invoice status
         private Color GetInvoiceChipColor()

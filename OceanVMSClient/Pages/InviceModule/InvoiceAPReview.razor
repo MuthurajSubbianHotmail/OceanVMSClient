@@ -8,19 +8,19 @@
         <MudGrid GutterSize="2" AlignItems="Center" Spacing="1">
             <!-- Left column: reviewer & invoice meta -->
             <MudItem xs="12" sm="6">
-                <MudPaper Elevation="0" Class="pa-2">
+                <MudPaper Elevation="2" Class="pa-2 me-2">
                     <MudGrid GutterSize="1" Spacing="1" AlignItems="Center">
                         <MudItem xs="12" sm="8" Class="field-block">
                             <MudText Typo="Typo.subtitle2" Color="_labelColor">Reviewer</MudText>
                             <MudText Typo="Typo.body1" Color="Color.Info" Class="mb-1">
-                                @(_invoiceDto?.CheckerName ?? "—")
+                                @(_invoiceDto?.APReviewerName ?? "—")
                             </MudText>
                         </MudItem>
 
                         <MudItem xs="12" sm="4" Class="field-block">
                             <MudText Typo="Typo.subtitle2" Color="_labelColor">Review Date</MudText>
                             <MudText Typo="Typo.body1" Color="Color.Info">
-                                @(_invoiceDto?.CheckerReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                @(_invoiceDto?.APReviewerDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
                             </MudText>
                         </MudItem>
 
@@ -83,7 +83,7 @@
                                           ReadOnly="!CanEditApprovedAmount()" />
                         </MudItem>
 
-                        <MudItem xs="12" sm="6" Class="field-block">
+                        <MudItem xs="6" sm="6" Class="field-block">
                             <MudSelect Label="Approval"
                                        Value="_apApproverCompleteDto.APReviewStatus"
                                        ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _apApproverCompleteDto.APReviewStatus = v))"
@@ -96,6 +96,7 @@
                                 <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
                             </MudSelect>
                         </MudItem>
+                        
                     </MudGrid>
                 </MudPaper>
             </MudItem>
