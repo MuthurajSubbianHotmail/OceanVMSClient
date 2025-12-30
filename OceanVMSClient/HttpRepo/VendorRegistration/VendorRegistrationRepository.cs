@@ -27,9 +27,9 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
             }
         }
 
-        public async Task<VendorRegistrationFormDto> CreateNewVendorRegistration(VendorRegistrationForm vendorRegistrationform)
+        public async Task<VendorRegistrationFormDto> CreateNewVendorRegistration(VendorRegistrationFormCreateDto vendorRegistrationFormCreateDto)
         {
-            var vendorRegistrationJson = new StringContent(JsonSerializer.Serialize(vendorRegistrationform), System.Text.Encoding.UTF8, "application/json");
+            var vendorRegistrationJson = new StringContent(JsonSerializer.Serialize(vendorRegistrationFormCreateDto), System.Text.Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync("vendorregistrationform", vendorRegistrationJson);
             var content = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)

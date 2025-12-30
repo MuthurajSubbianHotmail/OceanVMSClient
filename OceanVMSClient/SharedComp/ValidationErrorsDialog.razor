@@ -1,0 +1,37 @@
+@namespace OceanVMSClient.SharedComp
+@using MudBlazor
+@using System.Linq
+@using MudBlazor.Services
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Validation Errors</MudText>
+        @if (ValidationErrors != null && ValidationErrors.Any())
+        {
+            <MudList T="string">
+                @foreach (var error in ValidationErrors)
+                {
+                    <MudListItem>
+                        <MudText Color="Color.Error">@error</MudText>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        else
+        {
+            <MudText>No validation errors.</MudText>
+        }
+          
+    </DialogContent>
+    
+</MudDialog>
+
+
+@code {
+    [Inject]
+    IDialogService DialogService { get; set; }
+    
+    [Parameter]
+    public List<string> ValidationErrors { get; set; }
+   
+}

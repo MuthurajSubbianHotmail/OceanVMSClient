@@ -33,6 +33,9 @@ builder.Services.AddMudServices(config =>
         config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
         config.SnackbarConfiguration.ShowCloseIcon = true;
         config.SnackbarConfiguration.MaxDisplayedSnackbars = 1;
+        config.SnackbarConfiguration.PreventDuplicates = true;
+        config.SnackbarConfiguration.VisibleStateDuration = 1000;
+        config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomLeft;
     }
     );
 //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
