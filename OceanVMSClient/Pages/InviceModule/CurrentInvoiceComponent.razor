@@ -1,7 +1,7 @@
 ﻿@using SharedComp.Components
 @using OceanVMSClient.SharedComp.Utils
 
-<MudGrid>
+<MudGrid GutterSize="2" AlignItems="Center" Spacing="1">
     <MudItem xs="12" sm="8" Class="field-block">
         <MudText Typo="Typo.subtitle2" Color="Color.Primary">Inv No</MudText>
         <MudText Typo="Typo.body2" Color="Color.Info">@(InvoiceRefNo ?? "—")</MudText>

@@ -24,9 +24,9 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] private ILogger<InvoiceAPReview> Logger { get; set; } = default!;
 
         // Cascading parameters (UI theme / user context)
-        [CascadingParameter] public Margin _margin { get; set; } = Margin.Dense;
-        [CascadingParameter] public Variant _variant { get; set; } = Variant.Text;
-        [CascadingParameter] public Color _labelColor { get; set; } = Color.Default;
+        //[CascadingParameter] public Margin _margin { get; set; } = Margin.Dense;
+        //[CascadingParameter] public Variant _variant { get; set; } = Variant.Text;
+        //[CascadingParameter] public Color _labelColor { get; set; } = Color.Default;
         [CascadingParameter] public Color _valueColor { get; set; } = Color.Default;
         [CascadingParameter] public Typo _labelTypo { get; set; } = Typo.subtitle2;
         [CascadingParameter] public Typo _valueTypo { get; set; } = Typo.body2;

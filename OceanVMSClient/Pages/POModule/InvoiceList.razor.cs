@@ -32,7 +32,7 @@ namespace OceanVMSClient.Pages.POModule
         private MudDateRangePicker? _date_range_picker;
         private readonly HashSet<Guid> _expandedRows = new();
         private bool IsRowExpanded(Guid id) => _expandedRows.Contains(id);
-
+        private string invoiceViewPage = string.Empty;
         // user context
         private string? _userType;
         private Guid? _vendorId;
@@ -53,6 +53,14 @@ namespace OceanVMSClient.Pages.POModule
             try
             {
                 await LoadUserContextAsync();
+                if (string.Equals(_userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
+                {
+                    invoiceViewPage = "invoiceviewvendor";
+                }
+                else
+                {
+                    invoiceViewPage = "invoiceview";
+                }
             }
             catch
             {

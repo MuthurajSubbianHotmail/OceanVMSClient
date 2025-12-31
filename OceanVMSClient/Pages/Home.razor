@@ -15,10 +15,11 @@ else if (string.Equals(userType, "EMPLOYEE", StringComparison.OrdinalIgnoreCase)
 {
     <ReviewerDashBoard />
 }
-else
+else if (string.Equals(userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
 {
     <VendorDashBoard />
 }
+
 
 @code {
     [CascadingParameter] public Task<AuthenticationState> AuthState { get; set; } = default!;

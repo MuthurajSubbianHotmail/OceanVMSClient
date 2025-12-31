@@ -38,6 +38,8 @@
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Approved Amount"
+                                          Placeholder=""
+                                          Typo="Typo.caption"
                                           Value="_approverCompleteDto.ApproverApprovedAmount"
                                           ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnApproverApprovedAmountChanged))"
                                           Variant="@_variant"
@@ -51,6 +53,8 @@
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Withheld Amount"
+                                          Placeholder=""
+                                          Typo="Typo.caption"
                                           Value="_approverCompleteDto.ApproverWithheldAmount"
                                           Variant="@_variant"
                                           Adornment="Adornment.Start"
@@ -62,6 +66,8 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Withheld Reason"
+                                          Placeholder="Withheld Reason"
+                                          Typo="Typo.caption"
                                           Value="_approverCompleteDto.ApproverWithheldReason"
                                           ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _approverCompleteDto.ApproverWithheldReason = v))"
                                           Variant="@_variant"
@@ -73,6 +79,8 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Remarks"
+                                          Placeholder="Remarks"
+                                          Typo="Typo.caption"
                                           Value="_approverCompleteDto.ApproverReviewComment"
                                           ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _approverCompleteDto.ApproverReviewComment = v))"
                                           Variant="@_variant"
@@ -85,6 +93,7 @@
 
                         <MudItem xs="6" sm="6" Class="field-block">
                             <MudSelect Label="Approval"
+                                        Typo="Typo.caption"
                                        Value="_approverCompleteDto.ApproverReviewStatus"
                                        ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _approverCompleteDto.ApproverReviewStatus = v))"
                                        Variant="@_variant"
@@ -101,6 +110,19 @@
                                              OnChange="OnSupportingFileUploaded"
                                              Disabled="@(!CanEditApprovedAmount())"
                                              Label="Supporting Document" />
+
+                        </MudItem>
+                        <MudItem xs="6" sm="6" Class="field-block" />
+
+                        <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
+                            <MudLink Href="@_invoiceDto.ApproverReviewAttachment">
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Download"
+                                           Disabled="@string.IsNullOrEmpty(_invoiceDto?.ApproverReviewAttachment)">
+                                    Download Attachment
+                                </MudButton>
+                            </MudLink>
 
                         </MudItem>
                     </MudGrid>
@@ -130,6 +152,8 @@
         </MudGrid>
     </EditForm>
 </MudPaper>
-
 @code {
+    private Variant _variant = Variant.Outlined;
+    private Margin _margin = Margin.Dense;
+    private Color _labelColor = Color.Info;
 }

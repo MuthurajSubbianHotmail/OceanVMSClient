@@ -1,6 +1,6 @@
 ﻿<MudDrawer Class="nav-drawer" @bind-Open="SideBarOpen" ClipMode="DrawerClipMode.Never" Elevation="1" Variant="DrawerVariant.Temporary">
     <MudDrawerHeader Class="nav-drawer-header">
-        <MudAvatar Color="Color.Primary" Size="Size.Medium">
+        <MudAvatar Color="Color.Transparent" Size="Size.Medium">
             <MudImage Src="/assets/oceanlogo.png" />
         </MudAvatar>
 
@@ -29,11 +29,12 @@
             </AuthorizeView>
             <MudNavLink Href="invoices" Icon="@Icons.Material.Filled.ShoppingCart">Invoice List</MudNavLink>
         </MudNavGroup>
-        
+
         <MudNavGroup Title="Vendors" Icon="@Icons.Material.Filled.Person" Expanded="false">
-            
+
             <MudNavLink Href="vendor-registrations" Icon="@Icons.Material.Filled.Person4">Vendor Registrations</MudNavLink>
-            <MudNavLink Href="vendor-registration/new" Icon="@Icons.Material.Filled.Person4">New Vendor Registration</MudNavLink>
+            <MudNavLink Href=@($"vendor-registration/{Guid.Empty}") Icon="@Icons.Material.Filled.Person4">New Vendor Registration</MudNavLink>
+
         </MudNavGroup>
     </MudNavMenu>
 </MudDrawer>

@@ -1,7 +1,8 @@
-﻿@page "/vendor-registration/new"
+﻿@page "/vendor-registration/{VendorRegistrationFormId:guid}"
 @using MudBlazor
 @using System.ComponentModel.DataAnnotations
 @using OceanVMSClient.Extensions
+@using System.Globalization
 
 <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
 <PageHeader Title="New Vendor Registration" Class="mb-0" />
@@ -10,12 +11,8 @@
     <MudCardContent>
         <!-- EditForm: perform validation manually in the handler so we can show dialog-only -->
         <EditForm EditContext="_editContext" OnSubmit="HandleSubmit">
-            @* Do not include DataAnnotationsValidator or ValidationSummary here;
-               validation will be run manually and displayed in a dialog. *@
-
-            <!-- sequential stepper: bind ActiveIndex two-way to `ActiveStep` property -->
             <MudStepper NonLinear="true" @bind-ActiveIndex="ActiveStep" ShowResetButton="true" ShowButtons="true">
-                <MudStep Title="Organization Info" Label="Step 1" Icon="@Icons.Material.Filled.Filter1" 
+                <MudStep Title="Organization Info" Label="Step 1" Icon="@Icons.Material.Filled.Filter1"
                          @bind-Completed="_completed">
                     <!-- Make items equal height -->
                     <MudGrid GutterSize="1" AlignItems="center" Spacing="0">
@@ -28,7 +25,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Organization Name"
                                                       Placeholder="Oganization Name"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -37,18 +34,20 @@
                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.OrganizationName)"
                                                       Disabled="@_isReadOnly" />
                                     </MudItem>
-                                    <MudItem xs="12">
+                                    <MudItem xs="8">
                                         @if (_companyOwnerships?.Any() == true)
                                         {
                                             <MudSelect T="string"
+                                                       @bind-Value="@_vendorReg.CompanyOwnershipType"
+                                                       SelectedValuesChanged="OnCompanyOwnershipChanged"
                                                        Placeholder="Company Ownership"
-                                                       Typo="Typo.subtitle2"
+                                                       Typo="@_inputTypo"
                                                        Label="Company Ownership"
                                                        Variant="Variant.Text"
                                                        FullWidth="true"
                                                        Margin="Margin.Dense"
-                                                       Disabled="@_isReadOnly"
-                                                       ValueChanged="OnCompanyOwnershipChanged">
+                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.CompanyOwnershipType)"
+                                                       Disabled="@_isReadOnly">
                                                 @foreach (var ownership in _companyOwnerships)
                                                 {
                                                     <MudSelectItem Value="@(ownership.CompanyOwnershipType)">
@@ -63,11 +62,16 @@
                                         }
 
                                     </MudItem>
+                                    <MudItem xs="4">
+                                        <MudSwitch @bind-Value="_vendorReg.IsMSMERegistered" Color="Color.Primary" Disabled="@_isReadOnly" >
+                                                <MudText Typo="Typo.caption">Is MSME Registered?</MudText>
+                                            </MudSwitch>
+                                    </MudItem>
                                     <MudItem xs="12">
                                         <MudSelect T="string"
                                                    Label="Services Offered"
                                                    Placeholder="Services Offered"
-                                                   Typo="Typo.subtitle2"
+                                                   Typo="@_inputTypo"
                                                    Variant="Variant.Text"
                                                    FullWidth="true"
                                                    Margin="Margin.Dense"
@@ -90,8 +94,8 @@
 
                                         <MudTextField T="string"
                                                       Label="Company Phone"
-                                                      Placeholder="Phone Number"
-                                                      Typo="Typo.subtitle2"
+                                                      Placeholder="(##) #####-#####"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -104,7 +108,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Company Email"
                                                       Placeholder="Email Id"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -118,7 +122,7 @@
 
                                         <MudTextField Label="Company Website"
                                                       Placeholder="Website"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -139,7 +143,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Address Line 1"
                                                       Placeholder="Steet"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -150,7 +154,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Address Line 2"
                                                       Placeholder="Area"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -161,7 +165,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Address Line 3"
                                                       Placeholder="Locality/Landmark"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -172,7 +176,7 @@
                                     <MudItem xs="6" class="pe-1">
                                         <MudTextField Label="City"
                                                       Placeholder="City/Town"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -205,7 +209,7 @@
                                     <MudItem xs="6">
                                         <MudTextField Label="Country"
                                                       Placeholder="Country"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -226,7 +230,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="First Name"
                                                       Placeholder="First Name"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -237,7 +241,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Last Name"
                                                       Placeholder="Last Name"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -248,7 +252,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Designation"
                                                       Placeholder="Responders Designation"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -259,7 +263,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Mobile"
                                                       Placeholder="Responders Mobile Number"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -272,7 +276,7 @@
                                     <MudItem xs="12">
                                         <MudTextField Label="Email"
                                                       Placeholder="Responders Email ID"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Variant="Variant.Text"
                                                       FullWidth="true"
                                                       Margin="Margin.Dense"
@@ -289,7 +293,7 @@
                 </MudStep>
 
 
-                <MudStep Title="Registration Details" Label="Step 2" Icon="@Icons.Material.Filled.Filter2"  >
+                <MudStep Title="Registration Details" Label="Step 2" Icon="@Icons.Material.Filled.Filter2">
                     <MudGrid GutterSize="1" Spacing="1">
                         <MudItem md="4">
                             <MudPaper Height="100%" Elevation="1" Class="pa-2 h-150" Style="border:1px solid var(--mud-palette-lines-default); border-radius:6px;">
@@ -298,7 +302,7 @@
                                 <MudGrid GutterSize="1" AlignItems="Center" Spacing="1">
 
                                     <!-- PAN field (takes most of the width) -->
-                                    <MudItem xs="9" md="8" Style="padding-right:4px;">
+                                    <MudItem xs="10" md="10" Style="padding-right:4px;">
 
                                         <MudTextField @bind-Value="_vendorReg.PANNo"
                                                       Placeholder="PAN Number"
@@ -306,12 +310,16 @@
                                                       Label="PAN No"
                                                       Margin="Margin.Dense"
                                                       Required="@_isPANrequired"
-                                                      FullWidth="true" />
+                                                      FullWidth="true"
+                                                      Disabled="@_isReadOnly" />
                                     </MudItem>
 
                                     <!-- Uploader (aligned to the right of the PAN field) -->
-                                    <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
-                                        <OrgRegisterDocsUploader DocType="PAN" OnChange="OnPANUploaded" />
+                                    <MudItem xs="2" md="2" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                        <OrgRegisterDocsUploader 
+                                            DocType="PAN" 
+                                            OnChange="OnPANUploaded"
+                                            ImgUrl="_vendorReg.PANDocURL"/>
                                     </MudItem>
 
                                     <!-- TAN -->
@@ -366,7 +374,7 @@
                                 <MudDivider Class="mx-2" />
                                 <MudGrid GutterSize="1" AlignItems="Center" Spacing="1">
 
-                                    <MudItem xs="9" md="8" Style="padding-right:4px;">
+                                    <MudItem xs="8" md="8" Style="padding-right:4px;">
 
 
                                         <MudTextField @bind-Value="_vendorReg.AadharNo"
@@ -377,14 +385,10 @@
                                                       Required="@_IsAadharRequired"
                                                       FullWidth="true" />
                                     </MudItem>
-                                    <MudItem xs="3" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
+                                    <MudItem xs="4" md="4" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="AADHAR" OnChange="OnAADHARUploaded" />
                                     </MudItem>
-                                    <MudItem xs="12" md="12" Style="padding-right:4px;">
-                                        <MudSwitch @bind-Value="_vendorReg.IsMSMERegistered" Color="Color.Primary">
-                                            <MudText Typo="Typo.subtitle2">Is MSME Registered?</MudText>
-                                        </MudSwitch>
-                                    </MudItem>
+                                    
                                     <MudItem xs="9" md="8" Style="padding-right:4px;">
                                         <MudTextField @bind-Value="_vendorReg.UDYAMRegNo"
                                                       Placeholder="UDYAM Registration Number"
@@ -485,7 +489,7 @@
                 </MudStep>
 
 
-                <MudStep Title="Project Reference" Label="Step 3" Icon="@Icons.Material.Filled.Filter3"  >
+                <MudStep Title="Project Reference" Label="Step 3" Icon="@Icons.Material.Filled.Filter3">
                     <MudGrid GutterSize="1" AlignItems="Center" Spacing="1" Class="mb-2">
                         <MudItem xs="6">
                             <MudPaper Height="100%" Elevation="1" Class="pa-2 h-150" Style="border:1px solid var(--mud-palette-lines-default); border-radius:6px;">
@@ -654,40 +658,122 @@
 
                 </MudStep>
 
-                <MudStep Title="Approvals" Label="Step 4" Icon="@Icons.Material.Filled.Filter4" >
-
+                <MudStep Title="Approvals" Label="Step 4" Icon="@Icons.Material.Filled.Filter4">
                     <MudGrid GutterSize="1" AlignItems="Center">
                         <MudItem xs="6" md="6">
-                            <MudText Typo="Typo.h6" Color="Color.Info">Reviewer Status</MudText>
-                            <MudDivider Class="mx-2" />
-                            <MudText Typo="Typo.body2">Reviewed By</MudText>
-                            <MudText Typo="Typo.h6">@_vendorReg.Reviewer</MudText>
-                            <MudDivider Class="mx-2" />
-                            <MudText Typo="Typo.body2">Reviewed On</MudText>
-                            <MudText Typo="Typo.h6">@_vendorReg.ReviewDate</MudText>
-                            <MudDivider Class="mx-2" />
-                            <MudText Typo="Typo.body2">Review Status</MudText>
-                            <MudText Typo="Typo.h6">@_vendorReg.ReviewStatus</MudText>
-                            <MudDivider Class="mx-2" />
-                            <MudText Typo="Typo.body2">Review Comments</MudText>
-                            <MudText Typo="Typo.h6">@_vendorReg.ReviewComments</MudText>
+                            <MudPaper Elevation="2" Class="pa-2">
 
+                            <MudGrid Spacing="1" GutterSize="1" AlignItems="Center">
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.h6" Color="Color.Info">Reviewer Status</MudText>
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                    <MudDivider Class="my-2" />
+                                </MudItem>
+
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">Reviewer</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Info">@(_vendorReg?.ReviewerName ?? "-")</MudText>
+                                </MudItem>
+
+                                <MudItem xs="4">
+                                    <MudText Typo="Typo.body2">Reviewed On</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Info">
+                                            @(_vendorReg?.ReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                        </MudText>
+                                </MudItem>
+
+                                <MudItem xs="12" md="12">
+                                    <MudText Typo="Typo.body2">Review Status</MudText>
+
+                                    <MudSelect Label="Review Status"
+                                               Value="_vendorReg.ReviewerStatus"
+                                               ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnReviewerStatusChanged))"
+                                               Variant="Variant.Text"
+                                               Margin="Margin.Dense"
+                                               Class="short-field"
+                                               Disabled="@_isReviewLocked">
+                                        <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                        <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+                                        <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
+                                    </MudSelect>
+                                </MudItem>
+
+                                <MudItem xs="12" md="12">
+                                    <MudText Typo="Typo.body2">Review Comments</MudText>
+                                    <MudTextField Typo="Typo.subtitle2"
+                                                  @bind-Value="_vendorReg.ReviewComments"
+                                                   />
+                                </MudItem>
+
+                                <MudItem xs="12" Class="d-flex justify-end">
+                                    <MudButton ButtonType="ButtonType.Button" 
+                                    Variant="Variant.Filled" Color="Color.Primary"
+                                                   Disabled="@_isReviewLocked"
+                                    OnClick="LockReview">
+                                        <MudText Typo="Typo.caption">Submit Review</MudText>
+                                    </MudButton>
+                                </MudItem>
+                            </MudGrid>
+
+                            </MudPaper>
                         </MudItem>
                         <MudItem xs="6" md="6">
-                            <MudText Typo="Typo.h6" Color="Color.Info">Approval Status</MudText>
-                            <MudDivider Class="mx-2" />
-                            <MudText Typo="Typo.body2">Approved By</MudText>
-                            <MudText Typo="Typo.h6">@_vendorReg.Approver</MudText>
-                            <MudDivider Class="mx-2" />
-                            <MudText Typo="Typo.body2">Approved On</MudText>
-                            <MudText Typo="Typo.h6">@_vendorReg.ApprovalDate    </MudText>
-                            <MudDivider Class="mx-2" />
-                            <MudText Typo="Typo.body2">Approval Status</MudText>
-                            <MudText Typo="Typo.h6">@_vendorReg.ApprovalStatus</MudText>
-                            <MudDivider Class="mx-2" />
-                            <MudText Typo="Typo.body2">Approver Comments</MudText>
-                            <MudText Typo="Typo.h6">@_vendorReg.ApprovalComments</MudText>
+                            <MudPaper Elevation="2" Class="pa-2">
+                            <MudGrid Spacing="1" GutterSize="1" AlignItems="Center">
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.h6" Color="Color.Info">Approval Status</MudText>
+                                </MudItem>
 
+                                <MudItem xs="12">
+                                    <MudDivider Class="my-2" />
+                                </MudItem>
+
+                                <!-- These two items are now direct children of a MudGrid so they render as two columns side-by-side -->
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">Approver</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Info">@(_vendorReg?.ApproverName ?? "-")</MudText>
+                                </MudItem>
+
+                                <MudItem xs="4">
+                                    <MudText Typo="Typo.body2">Approved On</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Info">
+                                            @(_vendorReg?.ApprovalDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                        </MudText>
+                                </MudItem>
+
+                                <MudItem xs="12" md="12">
+                                    <MudText Typo="Typo.body2">Approval Status</MudText>
+
+                                    <MudSelect Label="Approval Status"
+                                               Value="_vendorReg.ApproverStatus"
+                                               ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnApproverStatusChanged))"
+                                               Variant="Variant.Text"
+                                               Margin="Margin.Dense"
+                                               Class="short-field"
+                                               Disabled="@_isApproverLocked">
+                                        <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                        <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+                                        <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
+                                    </MudSelect>
+                                </MudItem>
+
+                                <MudItem xs="12" md="12">
+                                    <MudText Typo="Typo.body2">Approval Comments</MudText>
+                                    <MudTextField Typo="Typo.subtitle1" @bind-Value="_vendorReg.ApprovalComments"  />
+                                </MudItem>
+
+                                <MudItem xs="12" Class="d-flex justify-end">
+                                    <MudButton ButtonType="ButtonType.Button" Variant="Variant.Filled" 
+                                    Color="Color.Primary"
+                                                   Disabled="@_isApproverLocked"
+                                    OnClick="LockApproval">
+                                        <MudText Typo="Typo.caption">Submit Approval</MudText>
+                                    </MudButton>
+                                </MudItem>
+                            </MudGrid>
+                            </MudPaper>
                         </MudItem>
                     </MudGrid>
 
@@ -732,4 +818,24 @@
         new BreadcrumbItem("Home", href: "/", disabled: false),
         new BreadcrumbItem("Registration List", href: "/vendor-registrations", disabled: false),
     };
+
+    private Typo _inputTypo = Typo.caption;
+    // Add a property to convert between enum and string for binding
+    private string? _reviewStatusString
+    {
+        get => _vendorReg.ReviewStatus?.ToString();
+        set
+        {
+            if (Enum.TryParse<Entities.Models.VendorReg.ReviewStatus>(value, out var result))
+                _vendorReg.ReviewStatus = result;
+            else
+                _vendorReg.ReviewStatus = null;
+        }
+    }
+
+    private void OnReviewStatusChanged(string? value)
+    {
+        _reviewStatusString = value;
+        StateHasChanged();
+    }
 }

@@ -13,23 +13,53 @@
             <MudItem xs="12">
                 <MudGrid GutterSize="1">
                     
-                    <MudItem xs="12" sm="3">
+                    <MudItem xs="12" sm="2">
                         <MudTextField T="string" Label="Organization" Placeholder="Organization"
                                       @bind-Value="organizationName"
                                       DebounceInterval="300"
                                       OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
                                       Dense="true" Class="filter-control" />
                     </MudItem>
-                    <MudItem xs="12" sm="3">
-                        <MudTextField T="string" Label="Responder" Placeholder="Responder"
-                                      @bind-Value="responderName"
+                    <MudItem xs="12" sm="2">
+                        <MudTextField T="string" Label="First Name" Placeholder="First Name"
+                                      @bind-Value="responderFName"
                                       DebounceInterval="300"
                                       OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
                                       Dense="true" Class="filter-control" />
                     </MudItem>
-                    <MudItem xs="12" sm="3" Class="d-flex align-end">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ResetFilters">Reset</MudButton>
+                    <MudItem xs="12" sm="2">
+                        <MudTextField T="string" Label="Last Name" Placeholder="Last Name"
+                                      @bind-Value="responderLName"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      Dense="true" Class="filter-control" />
                     </MudItem>
+                    <MudItem xs="12" sm="2">
+                        <MudTextField T="string" Label="GST No" Placeholder="GST No"
+                                      @bind-Value="gstno"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      Dense="true" Class="filter-control" />
+                    </MudItem>
+                    <MudItem xs="12" sm="2">
+                        <MudSelect T="string" Label="Reviewer Status" @bind-Value="reviewerStatus" Dense="true" 
+                        Class="filter-control" onselect="@( (string v) => { reviewerStatus = v; return OnSearch(); } )">
+                            <MudSelectItem T="string" Value="@("All")">All</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Pending")">Pending</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Approved")">Approved</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Rejected")">Rejected</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="2">
+                        <MudSelect T="string" Label="Approver Status" @bind-Value="approverStatus" Dense="true"
+                                   Class="filter-control" onselect="@( (string v) => { approverStatus = v; return OnSearch(); } )">
+                            <MudSelectItem T="string" Value="@("All")">All</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Pending")">Pending</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Approved")">Approved</MudSelectItem>
+                            <MudSelectItem T="string" Value="@("Rejected")">Rejected</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    
                 </MudGrid>
             </MudItem>
         </MudGrid>
@@ -46,8 +76,11 @@
             <MudTh>Organization</MudTh>
             <MudTh>City</MudTh>
             <MudTh>Ownership</MudTh>
+            <MudTh>GST No</MudTh>
             <MudTh>Responder</MudTh>
             <MudTh>Reg Date</MudTh>
+            <MudTh>Review Status</MudTh>
+            <MudTh>Approval Status</MudTh>
             <MudTh>View</MudTh>
         </HeaderContent>
 
@@ -55,12 +88,20 @@
             <MudTd>@context.OrganizationName</MudTd>
             <MudTd>@context.RegCity</MudTd>
             <MudTd>@context.CompanyOwnershipType</MudTd>
+            <MudTd>@context.GSTNO</MudTd>
             <MudTd>@($"{context.ResponderFName} {context.ResponderLName}")</MudTd>
             <MudTd>@(context.RegistrationDate == default ? "—" : context.RegistrationDate.ToString("dd-MMM-yy"))</MudTd>
 
 
             <MudTd>
-                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Primary" Size="Size.Small" OnClick="@(() => ViewRegistration(context.Id))" />
+                <MudChip T="string" Size="Size.Small" Color="@GetReviewStatusColor(context.ReviewerStatus)" Variant="Variant.Filled">
+                    @context.ReviewerStatus
+                </MudChip>
+            </MudTd>
+            <MudTd>
+                <MudChip T="string" Size="Size.Small" Color="@GetReviewStatusColor(context.ApproverStatus)" Variant="Variant.Filled">
+                    @context.ApproverStatus
+                </MudChip>
             </MudTd>
         </RowTemplate>
 
@@ -69,3 +110,21 @@
         </PagerContent>
     </MudTable>
 </MudPaper>
+
+@code {
+    // Existing fields and methods...
+
+    private Color GetReviewStatusColor(string reviewStatus)
+    {
+        return reviewStatus switch
+        {
+            "Pending" => Color.Warning,
+            "Reviewed" => Color.Info,
+            "Rejected" => Color.Error,
+            "Approved" => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    // If you also need GetApprovalStatusColor, ensure it's defined similarly.
+}

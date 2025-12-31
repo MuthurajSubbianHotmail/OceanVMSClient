@@ -39,6 +39,19 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
             var createdVendorRegistration = JsonSerializer.Deserialize<VendorRegistrationFormDto>(content, _options);
             return createdVendorRegistration;
         }
+
+        public async Task<VendorRegistrationFormDto> UpdateVendorRegistration(Guid vendorRegistrationFormId, VendorRegistrationFormUpdateDto vendorRegistrationFormUpdateDto)
+        {
+            var vendorRegistrationJson = new StringContent(JsonSerializer.Serialize(vendorRegistrationFormUpdateDto), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"vendorregistrationform/{vendorRegistrationFormId}", vendorRegistrationJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var updatedVendorRegistration = JsonSerializer.Deserialize<VendorRegistrationFormDto>(content, _options);
+            return updatedVendorRegistration;
+        }
         public async Task DeleteVendorRegServiceAsync(Entities.Models.VendorReg.VendRegService vendorRegService)
         {
             var response = await _httpClient.DeleteAsync($"vendorregservices/{vendorRegService.Id}");
@@ -99,8 +112,10 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
                     queryParams.Add(add("SearchTerm", vendorRegistrationFormParameters.SearchTerm));
                 if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.OrganizationName))
                     queryParams.Add(add("OrganizationName", vendorRegistrationFormParameters.OrganizationName));
-                if (vendorRegistrationFormParameters.ReviewStatus.HasValue)
-                    queryParams.Add(add("ReviewStatus", vendorRegistrationFormParameters.ReviewStatus.Value.ToString()));
+                if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.ReviewerStatus))
+                    queryParams.Add(add("ReviewerStatus", vendorRegistrationFormParameters.ReviewerStatus));
+                if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.ApproverStatus))
+                    queryParams.Add(add("ApproverStatus", vendorRegistrationFormParameters.ApproverStatus));
                 if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.GSTNO))
                     queryParams.Add(add("GSTNO", vendorRegistrationFormParameters.GSTNO));
                 if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.PANNo))
@@ -227,7 +242,7 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
             return candidate;
         }
 
-        public async Task<VendorRegistrationForm> GetVendorRegistrationFormByIdAsync(Guid id)
+        public async Task<VendorRegistrationFormDto> GetVendorRegistrationFormByIdAsync(Guid id)
         {
             var response = await _httpClient.GetAsync($"vendorregistrationform/{id}");
             var content = await response.Content.ReadAsStringAsync();
@@ -270,8 +285,32 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
                 // If JSON parsing/manipulation fails, fall back to original content and let the deserializer handle it.
             }
 
-            var vendorRegistrationForm = JsonSerializer.Deserialize<VendorRegistrationForm>(content, _options);
+            var vendorRegistrationForm = JsonSerializer.Deserialize<VendorRegistrationFormDto>(content, _options);
             return vendorRegistrationForm!;
+        }
+
+        public async Task<string> ApproveVendorRegistrationFormAsync(Guid vendorRegistrationFormId, VendorRegistrationFormApprovalDto approvalDto)
+        {
+            var approvalJson = new StringContent(JsonSerializer.Serialize(approvalDto), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"vendorregistrationform/approve/{vendorRegistrationFormId}", approvalJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            return response.IsSuccessStatusCode.ToString();
+        }
+
+        public async Task<string> ReviewVendorRegistrationFormAsync(Guid vendorRegistrationFormId, VendorRegistrationFormReviewDto reviewDto)
+        {
+            var reviewJson = new StringContent(JsonSerializer.Serialize(reviewDto), System.Text.Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"vendorregistrationform/review/{vendorRegistrationFormId}", reviewJson);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            return response.IsSuccessStatusCode.ToString();
         }
     }
 }

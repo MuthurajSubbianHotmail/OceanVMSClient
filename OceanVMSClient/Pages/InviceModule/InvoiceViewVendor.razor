@@ -1,0 +1,41 @@
+﻿@page "/invoiceviewvendor/{InvoiceId:Guid?}"
+
+@using MudBlazor
+
+<PageHeader Title="Invoice" Class="mb-2" />
+
+<div class="d-flex justify-end mb-2">
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Visibility"
+               OnClick="ShowApprovalSummary">
+        View Review Status
+    </MudButton>
+</div>
+
+@if (isDetailsLoading)
+{
+    <div style="display:flex; align-items:center; justify-content:center; min-height:120px;">
+        <MudProgressLinear Color="Color.Primary" Striped="true" Size="Size.Large" Value="75" Class="my-7" />
+    </div>
+}
+else
+{
+    <div class="newinvoice">
+        <MudGrid GutterSize="1">
+            <MudItem xs="12">
+                <MudPaper Class="pa-3" Elevation="1">
+
+                            <InvoiceViewPanel _invoiceDto="@_invoiceDto" _PODto="@PurchaseOrderDetails" />
+
+                </MudPaper>
+
+
+            </MudItem>
+            <!-- Workflow stepper -->
+
+        </MudGrid>
+    </div>
+}
+
+

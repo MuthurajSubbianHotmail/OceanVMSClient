@@ -65,8 +65,8 @@
 
     <NotAuthorized>
         <div style="display:inline-flex; gap:.5rem; align-items:center;">
-            <MudLink Href="Login" Color="Color.Inherit">LogIn</MudLink>
-            <MudLink Href="vendor-registration/new" Color="Color.Inherit">Register</MudLink>
+            <MudLink Href="/Login" Color="Color.Inherit">LogIn</MudLink>
+            <MudLink Href=@($"/vendor-registration/{Guid.Empty.ToString()}") Color="Color.Inherit">Register</MudLink>
         </div>
     </NotAuthorized>
 </AuthorizeView>

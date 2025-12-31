@@ -38,6 +38,8 @@
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Approved Amount"
+                                          Placeholder=""
+                                          Typo="Typo.caption"
                                           Value="_apApproverCompleteDto.APApprovedAmount"
                                           ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnApproverApprovedAmountChanged))"
                                           Variant="@_variant"
@@ -51,6 +53,8 @@
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Withheld Amount"
+                                          Placeholder=""
+                                          Typo="Typo.caption"
                                           Value="_apApproverCompleteDto.APWithheldAmount"
                                           Variant="@_variant"
                                           Adornment="Adornment.Start"
@@ -62,6 +66,8 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Withheld Reason"
+                                          Placeholder="Withheld Reason"
+                                          Typo="Typo.caption"
                                           Value="_apApproverCompleteDto.APWithheldReason"
                                           ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _apApproverCompleteDto.APWithheldReason = v))"
                                           Variant="@_variant"
@@ -73,6 +79,8 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Remarks"
+                                          Placeholder="Remarks"
+                                          Typo="Typo.caption"
                                           Value="_apApproverCompleteDto.APReviewComments"
                                           ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _apApproverCompleteDto.APReviewComments = v))"
                                           Variant="@_variant"
@@ -85,6 +93,7 @@
 
                         <MudItem xs="6" sm="6" Class="field-block">
                             <MudSelect Label="Approval"
+                                Typo="Typo.caption"
                                        Value="_apApproverCompleteDto.APReviewStatus"
                                        ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _apApproverCompleteDto.APReviewStatus = v))"
                                        Variant="@_variant"
@@ -126,4 +135,7 @@
 </MudPaper>
 
 @code {
+    private Variant _variant = Variant.Outlined;
+    private Margin _margin = Margin.Dense;
+    private Color _labelColor = Color.Info;
 }

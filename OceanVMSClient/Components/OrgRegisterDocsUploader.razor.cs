@@ -12,7 +12,7 @@ namespace OceanVMSClient.Components
 
         // unique id per component instance to avoid collisions
         private readonly string _inputId = $"orgreg_{Guid.NewGuid():N}";
-
+        [Parameter]
         public string ImgUrl { get; set; } = string.Empty;
 
         // Parent receives uploaded URL here

@@ -36,7 +36,12 @@ namespace OceanVMSClient.Pages.VendorRegistration
 
         private string? registrationNo;
         private string? organizationName;
-        private string? responderName;
+        private string? responderFName;
+        private string? responderLName;
+        private string? reviewerStatus;
+        private string? approverStatus;
+        private string? cityName;
+        private string? gstno;
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
         private ReviewStatus? reviewStatus;
@@ -61,20 +66,24 @@ namespace OceanVMSClient.Pages.VendorRegistration
         {
             try
             {
+                // normalize "All" filter to null so the server doesn't receive "All" as a value
+                string? reviewerFilter = string.IsNullOrWhiteSpace(reviewerStatus) || string.Equals(reviewerStatus, "All", StringComparison.OrdinalIgnoreCase)
+                    ? null
+                    : reviewerStatus;
+                string? approverFilter = string.IsNullOrWhiteSpace(approverStatus) || string.Equals(approverStatus, "All", StringComparison.OrdinalIgnoreCase)
+                    ? null
+                    : approverStatus    ;
+
                 var parameters = new VendorRegistrationFormParameters
                 {
                     PageNumber = state.Page + 1,
                     PageSize = state.PageSize,
                     OrganizationName = string.IsNullOrWhiteSpace(organizationName) ? null : organizationName,
-                    ResponderFName = string.IsNullOrWhiteSpace(responderName) ? null : responderName,
-                    ResponderLName = string.IsNullOrWhiteSpace(responderName) ? null : responderName,
-                    // Fix for CS0266 and CS8629:
-                    ReviewStatus = reviewStatus.HasValue
-                        ? (Entities.Models.VendorReg.ReviewStatus?)((Entities.Models.VendorReg.ReviewStatus)(int)reviewStatus.Value)
-                        : null,
-                    ApprovalStatus = approvalStatus.HasValue
-                        ? (Entities.Models.VendorReg.ReviewStatus?)((Entities.Models.VendorReg.ReviewStatus)(int)approvalStatus.Value)
-                        : null
+                    ResponderFName = string.IsNullOrWhiteSpace(responderFName) ? null : responderFName,
+                    ResponderLName = string.IsNullOrWhiteSpace(responderLName) ? null : responderLName,
+                    ReviewerStatus = reviewerFilter,
+                    ApproverStatus = approverFilter,
+                    GSTNO = string.IsNullOrWhiteSpace(gstno) ? null : gstno
                 };
 
                 var response = await Repository.GetAllVendorRegistration(parameters);
@@ -94,7 +103,21 @@ namespace OceanVMSClient.Pages.VendorRegistration
                 return new TableData<VendorRegistrationFormDto> { Items = new List<VendorRegistrationFormDto>(), TotalItems = 0 };
             }
         }
-
+        public void OnValueChanged(object sender, EventArgs e)
+        {
+            if (sender is MudSelect<string> select)
+            {
+                if (select.Label == "Reviewer Status")
+                {
+                    reviewerStatus = select.Value;
+                }
+                else if (select.Label == "Approver Status")
+                {
+                    approverStatus = select.Value;
+                }
+            }
+            _ = OnSearch();
+        }
         private Task OnSearch()
         {
             if (_table != null) return _table.ReloadServerData();

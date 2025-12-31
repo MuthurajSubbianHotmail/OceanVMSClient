@@ -344,7 +344,7 @@ namespace OceanVMSClient.Pages.InviceModule
                 var createdInvoice = await InvoiceRepository.CreateInvoice(_invoiceForCreationDto);
                 if (createdInvoice != null)
                 {
-                    NavigationManager.NavigateTo($"/InvoiceModule/InvoiceDetails/{createdInvoice.Id}");
+                    NavigationManager.NavigateTo($"/invoices");
                 }
                 else
                 {

@@ -5,7 +5,7 @@
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        <MudGrid GutterSize="2" AlignItems="Center" Spacing="1">
+        <MudGrid GutterSize="2" AlignItems="Center" Spacing="0">
             <!-- Left column: reviewer & invoice meta -->
             <MudItem xs="12" sm="6">
                 <MudPaper Elevation="2" Class="pa-2 me-2">
@@ -38,6 +38,8 @@
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Approved Amount"
+                                          Placeholder=""
+                                          Typo="Typo.caption"
                                           Value="_InitiatorCompleteDto.InitiatorApprovedAmount"
                                           ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnInitiatorApprovedAmountChanged))"
                                           Variant="@_variant"
@@ -52,6 +54,8 @@
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Withheld Amount"
+                                          Placeholder=""
+                                          Typo="Typo.caption"
                                           Value="_InitiatorCompleteDto.InitiatorWithheldAmount"
                                           Variant="@_variant"
                                           Adornment="Adornment.Start"
@@ -63,6 +67,8 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Withheld Reason"
+                                          Placeholder=""
+                                          Typo="Typo.caption"
                                           Value="_InitiatorCompleteDto.InitiatorWithheldReason"
                                           ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _InitiatorCompleteDto.InitiatorWithheldReason = v))"
                                           Variant="@_variant"
@@ -74,6 +80,8 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Remarks"
+                                          Placeholder=""
+                                          Typo="Typo.caption"
                                           Value="_InitiatorCompleteDto.InitiatorReviewComment"
                                           ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _InitiatorCompleteDto.InitiatorReviewComment = v))"
                                           Variant="@_variant"
@@ -87,6 +95,7 @@
                         <MudItem xs="6" sm="6" Class="field-block">
                             <MudSelect Label="Approval"
                                        Value="_InitiatorCompleteDto.InitiatorReviewStatus"
+                                       Typo="Typo.caption"
                                        ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _InitiatorCompleteDto.InitiatorReviewStatus = v))"
                                        Variant="@_variant"
                                        Margin="Margin.Dense"
@@ -102,6 +111,19 @@
                                              OnChange="OnSupportingFileUploaded"
                                              Disabled="@(!CanEditApprovedAmount())"
                                              Label="Supporting Document" />
+
+                        </MudItem>
+                        <MudItem xs="6" sm="6" Class="field-block"/>
+                            
+                        <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
+                            <MudLink Href="@_invoiceDto.InitiatorReviewAttachment" >
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Download"
+                                           Disabled="@string.IsNullOrEmpty(_invoiceDto?.InitiatorReviewAttachment)">
+                                    Download Attachment
+                                </MudButton>    
+                            </MudLink>
 
                         </MudItem>
 
