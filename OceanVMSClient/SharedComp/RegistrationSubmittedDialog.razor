@@ -1,0 +1,64 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@namespace OceanVMSClient.SharedComp
+@using MudBlazor.Services
+<MudPaper Class="pa-4" Elevation="1" Style="max-width:420px;">
+    <div class="d-flex align-center">
+        <MudAvatar Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Class="me-3" />
+        <div>
+            <MudText Typo="Typo.h6">Registration Submitted</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mt-1">
+                Thank you — your registration for
+                <strong>@(VendorName ?? "the organization")</strong>
+                has been submitted successfully.
+            </MudText>
+        </div>
+    </div>
+
+    <MudDivider Class="my-3" />
+
+    <div class="mb-2">
+        <MudText Typo="Typo.subtitle2" Color="Color.Default">Account information</MudText>
+        <MudText Typo="Typo.body2" Class="mt-1">
+            A new user account has been created using the responder's email:
+            <strong>@(ResponderEmail ?? "—")</strong>.
+        </MudText>
+        <MudText Typo="Typo.body2" Class="mt-1">
+            A temporary password has been generated and sent to that email. Please click the link in that email to validate your email address, then sign in and change the password.
+        </MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+            If you don't see the email, check your spam folder or contact support.
+        </MudText>
+    </div>
+
+    <MudDivider Class="my-3" />
+
+    <div class="d-flex justify-end mt-2">
+        <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="Close">Close</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ViewDetails" Class="ms-2">
+            View Details
+        </MudButton>
+    </div>
+</MudPaper>
+
+@code {
+    [Inject] IDialogService DialogService { get; set; } = default!;
+
+    [Parameter] public string? VendorName { get; set; }
+    [Parameter] public Guid? RegistrationId { get; set; }
+
+    // New parameter to display the responder email / user id
+    [Parameter] public string? ResponderEmail { get; set; }
+
+    private void Close()
+    {
+        // Close the dialog (Cancel)
+        //MudDialog?.Cancel();
+    }
+
+    private void ViewDetails()
+    {
+        // Return the registration id as the dialog result so the caller can navigate
+        //MudDialog?.Close(DialogResult.Ok(RegistrationId));
+    }
+}

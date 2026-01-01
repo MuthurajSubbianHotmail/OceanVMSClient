@@ -14,6 +14,8 @@ namespace OceanVMSClient.Components
         private readonly string _inputId = $"orgreg_{Guid.NewGuid():N}";
         [Parameter]
         public string ImgUrl { get; set; } = string.Empty;
+        [Parameter]
+        public bool IsRequired { get; set; } = false;
 
         // Parent receives uploaded URL here
         [Parameter]
@@ -31,7 +33,8 @@ namespace OceanVMSClient.Components
         private const long MaxFileBytes = 5 * 1024 * 1024; // 5 MB
         [Inject]
         public ISnackbar Snackbar { get; set; } = default!;
-
+        private Color labelColor { get; set; } = Color.Default;
+        private string uploadText { get; set; } = string.Empty;
         // single-file handler - uses this.DocType provided by parent
         private async Task UploadOrgRegDocImage(InputFileChangeEventArgs e)
         {
@@ -73,11 +76,36 @@ namespace OceanVMSClient.Components
                 ImgUrl = url;
                 await OnChange.InvokeAsync(ImgUrl);
                 Snackbar.Add($"{DocType} document uploaded successfully.", Severity.Success);
+                UpdateLabelColor();
+                StateHasChanged();
             }
             catch (Exception ex)
             {
                 UploadError = $"Upload error: {ex.Message}";
             }
+        }
+
+        // Called when parent parameters change (captures changes to ImgUrl or IsRequired)
+        protected override Task OnParametersSetAsync()
+        {
+            UpdateLabelColor();
+            return base.OnParametersSetAsync();
+        }
+
+        // Ensure label color reflects current ImgUrl / IsRequired state
+        private void UpdateLabelColor()
+        {
+            if (string.IsNullOrWhiteSpace(ImgUrl))
+            {
+                labelColor = IsRequired ? Color.Secondary : Color.Default;
+            }
+            else
+            {
+                labelColor = Color.Default;
+            }
+
+            // If IsRequired == false => empty string, otherwise "Upload <DocType>"
+            uploadText = IsRequired ? $"Upload {DocType}" : string.Empty;
         }
     }
 }
