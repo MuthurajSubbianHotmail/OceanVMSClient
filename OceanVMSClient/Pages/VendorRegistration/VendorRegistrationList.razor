@@ -103,6 +103,12 @@
                     @context.ApproverStatus
                 </MudChip>
             </MudTd>
+            <MudTd>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                           OnClick="@(() => NavigationManager.NavigateTo($"/register-vendor/{context.Id}"))">
+                    View
+                </MudButton>
+            </MudTd>
         </RowTemplate>
 
         <PagerContent>
