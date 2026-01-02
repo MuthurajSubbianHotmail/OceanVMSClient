@@ -29,3 +29,5 @@ local.settings.json
 # OS
 Thumbs.db
 .DS_Store
+/OceanVMSClient/Pages/RegisterVendors/RegisterVendor.razor.Dtos.cs
+/OceanVMSClient/Pages/RegisterVendors/RegisterVendor.razor.Validation.cs
