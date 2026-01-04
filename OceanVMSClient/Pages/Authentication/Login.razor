@@ -42,7 +42,7 @@
                                 <path d="M7 11V8a5 5 0 0110 0v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                             </svg>
                         </span>
-
+                       
                         <InputText id="password"
                                    class="form-control border-start-0"
                                    type="@PasswordInputType"
@@ -75,17 +75,17 @@
                         <InputCheckbox id="remember" class="form-check-input" @bind-Value="rememberMe" />
                         <label class="form-check-label" for="remember">Remember me</label>
                     </div>
-                    <a class="small" href="#">Forgot password?</a>
+                    <a class="small" href="/forgot-password">Forgot password?</a>
                 </div>
 
                 <div class="d-grid">
                     <button class="btn btn-primary btn-lg" type="submit" disabled="@isSubmitting">
                         @if (isSubmitting)
                         {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true">
-                                Signing in...
-                            </span>
-                                                }
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="me-2" Color="Color.Inherit" />
+                            <span>Signing in...</span>
+                            
+                        }
                         else
                         {
                             <span>Sign in</span>

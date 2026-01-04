@@ -8,7 +8,7 @@
 <PageHeader Title="Invoices" Class="mb-0" />
 
 <MudPaper Class="pa-4 invoice-paper">
-    <MudPaper Elevation="0" Class="pa-3 section">
+    <MudPaper Elevation="1" Class="pa-3 section">
         <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
             <MudItem xs="12" md="12">
                 <MudGrid GutterSize="1">
@@ -16,7 +16,7 @@
                         <MudTextField T="string" Label="Invoice Ref No" 
                                         Placeholder="Ref No"
                                       @bind-Value="invoiceRefNo"
-                                      Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                                       DebounceInterval="300"
                                       OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
                                       Dense="true" Class="filter-control" />
@@ -24,7 +24,7 @@
 
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="string" Label="SAP PO No"
-                                      Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                             Placeholder="SAP PO No"
                                       @bind-Value="sapPoNo"
                                       DebounceInterval="300"
@@ -33,7 +33,7 @@
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="string" Label="Vendor"
-                                      Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                             Placeholder="Vendor"
                                       @bind-Value="vendorName"
                                       DebounceInterval="300"
@@ -43,7 +43,7 @@
 
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="decimal?"
-                                         Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                             Label="Min Total"
                                          Placeholder="Min"
                                          InputType="InputType.Number"
@@ -55,7 +55,7 @@
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="decimal?" Label="Max Total"
                                          Placeholder="Max"
-                                         Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                                          InputType="InputType.Number"
                                          ValueChanged="@( (decimal? v) => { maxInvoiceTotal = v; return OnSearch(); } )"
                                          Clearable="true"
@@ -90,63 +90,63 @@
               Breakpoint="Breakpoint.Sm"
               @ref="_table"
               RowsPerPage="15"
-              Dense="false"
+              Dense="true"
               Virtualize="true"
               Class="invoice-table mt-2">
         <HeaderContent>
-            <MudTh>Invoice Ref</MudTh>
-            <MudTh>Invoice Date</MudTh>
+            <MudTh>Invoice.Ref</MudTh>
+            <MudTh>Inv.Date</MudTh>
             <MudTh>Vendor</MudTh>
-            <MudTh>SAP PO No</MudTh>
-            <MudTh Align="Align.Right">PO Date</MudTh>
-            <MudTh Align="Align.Right">PO Total</MudTh>
-            <MudTh Align="Align.Right">Invoice Total</MudTh>
-            <MudTh>Invoice Status</MudTh>
-            <MudTh>Payment Status</MudTh>
-            <MudTh></MudTh>
+            <MudTh>SAP.PO.No</MudTh>
+            <MudTh Align="Align.Right">PO.Date</MudTh>
+            <MudTh Align="Align.Right">PO.Total</MudTh>
+            <MudTh Align="Align.Right">Invoice.Total</MudTh>
+            <MudTh>Inv.Status</MudTh>
+            <MudTh>Payment.Status</MudTh>
+            <MudTh>More</MudTh>
         </HeaderContent>
 
         <RowTemplate>
             <MudTd>
-                <MudLink Typo="Typo.subtitle2" Href="@($"{invoiceViewPage}/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
+                <MudLink Typo="Typo.caption" Href="@($"{invoiceViewPage}/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
                     @context.InvoiceRefNo
                 </MudLink>
             </MudTd>
             <MudTd>
-                <MudText Typo="Typo.subtitle2">
+                <MudText Typo="Typo.caption">
                     @FormatDate(context.InvoiceDate)
                 </MudText>
 
             </MudTd>
             <MudTd>@context.VendorName</MudTd>
             <MudTd>
-                <MudLink Typo="Typo.subtitle2" Href="@($"ViewPurchaseOrder/{context.PurchaseOrderId}")" Color="Color.Primary" Underline="Underline.Hover">
+                <MudLink Typo="Typo.caption" Href="@($"ViewPurchaseOrder/{context.PurchaseOrderId}")" Color="Color.Primary" Underline="Underline.Hover">
                     @context.SAPPONumber
                 </MudLink>
             </MudTd>
             <MudTd Align="Align.Right">
-                <MudText Typo="Typo.subtitle2">
+                <MudText Typo="Typo.caption">
                     @FormatDate(context.SAPPODate)
                 </MudText>
             </MudTd>
             <MudTd Align="Align.Right">
-                <MudText Typo="Typo.subtitle2">
+                <MudText Typo="Typo.caption">
                     <CurrencyText Amount="context.POTotalValue" />
                 </MudText>
             </MudTd>
             <MudTd Align="Align.Right">
-                <MudText Typo="Typo.subtitle2">
+                <MudText Typo="Typo.caption">
                     <CurrencyText Amount="context.InvoiceTotalValue" />
                 </MudText>
 
             </MudTd>
             <MudTd>
-                <MudChip T="string" Size="Size.Small" Color="@GetInvoiceChipColor(context.InvoiceStatus)" Variant="Variant.Filled">
+                <MudChip T="string" Size="Size.Small" Typo="Typo.caption" Color="@GetInvoiceChipColor(context.InvoiceStatus)" Variant="Variant.Filled">
                     @context.InvoiceStatus
                 </MudChip>
             </MudTd>
             <MudTd>
-                <MudText Typo="Typo.subtitle2">
+                <MudText Typo="Typo.caption">
                     @context.PaymentStatus
                 </MudText>
 

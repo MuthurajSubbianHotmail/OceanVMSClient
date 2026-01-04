@@ -21,29 +21,35 @@ namespace OceanVMSClient.Pages.RegisterVendors
 {
     public partial class RegisterVendor
     {
+        // Parameters
         [Parameter] public Guid VendorRegistrationFormId { get; set; }
 
-        //Common Services
+        // Injected services
         [Inject] public ISnackbar Snackbar { get; set; } = default!;
         [Inject] public IDialogService DialogService { get; set; } = default!;
         [Inject] public NavigationManager NavigationManager { get; set; } = default!;
-        [Inject] public ILogger<NewVendorRegistration> Logger { get; set; } = default!;
+        [Inject] public ILogger<RegisterVendor> Logger { get; set; } = default!;
 
-        //Repositories
+        // Repositories
         [Inject] public required IVendorRegistrationRepository VendorRegistrationFormRepository { get; set; }
         [Inject] public ICompanyOwnershipRepository CompanyOwnershipRepository { get; set; } = default!;
         [Inject] public IVendorServiceRepository VendorServiceRepository { get; set; } = default!;
 
-        // local storage for ClaimsHelper fallback
+        // Local storage (fallback for claims)
         [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;
 
-        // Claims / auth state (provided by host)
+        // Cascading parameters
         [CascadingParameter] public Task<AuthenticationState> AuthState { get; set; } = default!;
 
-        // suppress CS8618 - will be assigned in OnInitializedAsync
+        // EditContext and validation store
         private EditContext _editContext = null!;
+        private ValidationMessageStore? _messageStore;
+        private EventHandler<FieldChangedEventArgs>? _clearHandler;
 
-        // UI helpers moved from razor to avoid duplicate symbols
+        // JSON logging options
+        private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
+
+        // UI helpers
         private List<BreadcrumbItem> _items = new()
         {
             new BreadcrumbItem("Home", href: "/", disabled: false),
@@ -53,7 +59,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private Margin _inputMargin = Margin.Dense;
         private Variant _inputVariant = Variant.Text;
 
-        // user context
+        // User context
         private string? _userType;
         private Guid? _vendorId;
         private Guid? _vendorContactId;
@@ -61,6 +67,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private string? _userRole;
 
         // UI state
+        private bool _isLoading;
         private int _activeStep;
         private bool _completed;
         private bool _isSaving;
@@ -69,15 +76,12 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private bool _isApprover = false;
         private bool _isReviewLocked = true;
         private bool _isApproverLocked = false;
-
         private string _reviewStatus = "Pending";
         private string _approvalStatus = "Pending";
         private string _formEditMode = "Create";
         private bool _submitDisabled = false;
 
-        //Private Variable Which need to be Edited
-
-        //Private Variables for field requirement checks
+        // Dynamic requirement flags
         private bool _isAadharRequired;
         private bool _isPANRequired;
         private bool _isTANRequired;
@@ -87,7 +91,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private bool _isPFRequired;
         private bool _isESIRequired;
         private bool _IsMSMERegistered;
-        private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
+
+        // Model & lookups
         private VendorRegistrationFormDto _vendorReg = new()
         {
             Id = Guid.NewGuid(),
@@ -101,13 +106,15 @@ namespace OceanVMSClient.Pages.RegisterVendors
             CompanyOwnershipId = new Guid("D1E4C053-49B6-410C-BC78-2D54A9991870"),
             CompanyOwnershipType = string.Empty
         };
+
+        private VendorRegistrationFormReviewDto? _vendorReviewDto;
+        private VendorRegistrationFormApprovalDto? _vendorApprovalDto;
         private List<CompanyOwnership> _companyOwnerships { get; set; } = new();
         private List<VendorService> _vendorServices { get; set; } = new();
-
         private IEnumerable<string> _selectedServices { get; set; } = new HashSet<string>();
         private string _selectedCompanyOwnershipType = string.Empty;
 
-        // Fields for Registration Details 1 (PAN/TAN/GST/CIN)
+        // Section field lists
         private readonly List<string> _registrationSection1Fields = new()
         {
             nameof(VendorRegistrationFormDto.PANNo),
@@ -115,9 +122,6 @@ namespace OceanVMSClient.Pages.RegisterVendors
             nameof(VendorRegistrationFormDto.GSTNO),
             nameof(VendorRegistrationFormDto.CIN)
         };
-        private bool _isRegistrationSection1Valid = true;
-
-        // Fields for Registration Details 2 (Aadhar/UDYAM/PF/ESI)
         private readonly List<string> _registrationSection2Fields = new()
         {
             nameof(VendorRegistrationFormDto.AadharNo),
@@ -125,9 +129,6 @@ namespace OceanVMSClient.Pages.RegisterVendors
             nameof(VendorRegistrationFormDto.PFNo),
             nameof(VendorRegistrationFormDto.ESIRegNo)
         };
-        private bool _isRegistrationSection2Valid = true;
-
-        // Fields for Bank Account section
         private readonly List<string> _bankAccountSectionFields = new()
         {
             nameof(VendorRegistrationFormDto.BankName),
@@ -136,11 +137,14 @@ namespace OceanVMSClient.Pages.RegisterVendors
             nameof(VendorRegistrationFormDto.AccountNumber),
             nameof(VendorRegistrationFormDto.AccountName)
         };
-        private bool _isBankAccountSectionValid = true;
 
-        // Add this private field to the class
-        private EventHandler<FieldChangedEventArgs>? _clearHandler;
-        private ValidationMessageStore? _messageStore;
+        // Section validity flags
+        private bool _isRegistrationSection1Valid = true;
+        private bool _isRegistrationSection2Valid = true;
+        private bool _isBankAccountSectionValid = true;
+        private bool _isOrganizationSectionValid = true;
+        private bool _isAddressSectionValid = true;
+        private bool _isContactSectionValid = true;
 
         public RegisterVendor()
         {
@@ -148,6 +152,176 @@ namespace OceanVMSClient.Pages.RegisterVendors
             // calls to fail because the RenderHandle isn't assigned yet.
         }
 
+        // Lifecycle
+        protected override async Task OnInitializedAsync()
+        {
+            _isLoading = true;
+            try
+            {
+                InitializeEditContext(_vendorReg);
+
+                await LoadUserContextAsync();
+                _isApprover = !string.IsNullOrWhiteSpace(_userRole) && _userRole.IndexOf("Vendor Approver", StringComparison.OrdinalIgnoreCase) >= 0;
+                _isReviewer = !string.IsNullOrWhiteSpace(_userRole) && _userRole.IndexOf("Vendor Validator", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                try
+                {
+                    await LoadLookupsAsync();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "LoadLookupsAsync failed during initialization");
+                }
+                // after lookups are loaded (or after copying loaded model)
+                if (_vendorReg.CompanyOwnershipId != Guid.Empty && _companyOwnerships?.Any() == true)
+                {
+                    var sel = _companyOwnerships.FirstOrDefault(c => c.Id == _vendorReg.CompanyOwnershipId);
+                    if (sel != null)
+                        _vendorReg.CompanyOwnershipType = sel.CompanyOwnershipType;
+                }
+                if (VendorRegistrationFormId != Guid.Empty)
+                {
+                    try
+                    {
+                        var loaded = await VendorRegistrationFormRepository.GetVendorRegistrationFormByIdAsync(VendorRegistrationFormId);
+                        if (loaded != null)
+                        {
+                            CopyModelValues(loaded, _vendorReg);
+
+                            // Set selected services for multi-select UI
+                            if (!string.IsNullOrWhiteSpace(_vendorReg.VendorServices))
+                            {
+                                var selected = _vendorReg.VendorServices
+                                    .Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => s.Trim())
+                                    .Where(s => !string.IsNullOrEmpty(s))
+                                    .Distinct()
+                                    .ToList();
+
+                                // assign only the vendortypes present on the model
+                                _selectedServices = selected;
+                            }
+                            //Lock/unlock dynamic required fields based on loaded data
+                            LockUlockForm();
+                            // Notify EditContext that fields changed so components re-evaluate binding/validation
+                            foreach (var prop in typeof(VendorRegistrationFormDto).GetProperties().Where(p => p.CanRead))
+                            {
+                                _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, prop.Name));
+                            }
+                            _formEditMode = "Edit";
+                            // Re-evaluate section validity after copying values
+                            UpdateOrganizationSectionValidity();
+                            UpdateAddresSectionValidity();
+                            UpdateContactSectionValidity();
+                            UpdateRegistrationSection1Validity();
+                            UpdateRegistrationSection2Validity();
+                            UpdateBankAccountSectionValidity();
+
+                            // Ensure UI updates on renderer thread
+
+
+                            await InvokeAsync(StateHasChanged);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Failed to load vendor registration during initialization");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to load vendor registration during initialization");
+                throw;
+            }
+            finally
+            {
+                _isLoading = false;
+                // ensure UI refresh when loading completes
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+
+
+        private void LockUlockForm()
+        {
+            try
+            {
+                // safe defaults: lock everything
+                _isReadOnly = true;
+                _isReviewLocked = true;
+                _isApproverLocked = true;
+
+                if (string.IsNullOrWhiteSpace(_userRole))
+                    return;
+
+                var role = _userRole.Trim();
+
+                // Resolve current user (sync because called from init)
+                var authState = AuthState?.GetAwaiter().GetResult();
+                var user = authState?.User;
+                var username = user?.Identity?.Name
+                               ?? user?.FindFirst("username")?.Value
+                               ?? user?.FindFirst("email")?.Value
+                               ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                               ?? string.Empty;
+
+                var isResponder = !string.IsNullOrWhiteSpace(username)
+                                  && string.Equals(username.Trim(), (_vendorReg.ResponderEmailId ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase);
+
+                var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
+                var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
+
+                // Vendor responder: editable only if approver hasn't approved
+                if (role.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (isResponder)
+                        _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                    else
+                        _isReadOnly = true;
+                }
+                else
+                {
+                    // Non-vendor users should not edit vendor data
+                    _isReadOnly = true;
+                }
+
+                // Reviewer role: can act on review only when reviewerStatus == "Pending"
+                if (_isReviewer)
+                {
+                    _isReviewLocked = !string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+                    // reviewers should not be able to change approval
+                    _isApproverLocked = true;
+                }
+
+                // Approver role rules:
+                // - If reviewer has explicitly rejected => approver CANNOT approve (locked)
+                // - Otherwise (no reviewer decision or reviewer approved), approver may act when approverStatus == "Pending"
+                if (_isApprover)
+                {
+                    if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isApproverLocked = true;
+                    }
+                    else
+                    {
+                        _isApproverLocked = !string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    // keep review fields locked for approver users
+                    _isReviewLocked = true;
+                }
+            }
+            catch
+            {
+                // conservative fallback
+                _isReadOnly = true;
+                _isReviewLocked = true;
+                _isApproverLocked = true;
+            }
+        }
+        // EditContext initialization
         private void InitializeEditContext(VendorRegistrationFormDto model)
         {
             // unsubscribe previous handlers (if any)
@@ -208,6 +382,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 UpdateBankAccountSectionValidity();
         }
 
+        // Lookups
         private async Task LoadLookupsAsync()
         {
             try
@@ -224,61 +399,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 Snackbar.Add("Failed to load lookup data.", Severity.Error);
             }
         }
-        protected override async Task OnInitializedAsync()
-        {
-            // Initialize EditContext on the renderer lifecycle (not in ctor) so it can register handlers safely.
-            InitializeEditContext(_vendorReg);
 
-            await LoadUserContextAsync();
-
-            // Load lookups first (they don't replace the EditContext/model)
-            try
-            {
-                await LoadLookupsAsync();
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning(ex, "LoadLookupsAsync failed during initialization");
-            }
-
-            // If we need to load an existing registration from server, DO NOT replace `_vendorReg`
-            // (replacing it causes Blazor event handler id mismatches). Instead copy values into
-            // the existing instance and notify the EditContext of changes.
-            if (VendorRegistrationFormId != Guid.Empty)
-            {
-                try
-                {
-                    var loaded = await VendorRegistrationFormRepository.GetVendorRegistrationFormByIdAsync(VendorRegistrationFormId);
-                    if (loaded != null)
-                    {
-                        CopyModelValues(loaded, _vendorReg);
-
-                        // Notify EditContext that fields changed so components re-evaluate binding/validation
-                        foreach (var prop in typeof(VendorRegistrationFormDto).GetProperties().Where(p => p.CanRead))
-                        {
-                            _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, prop.Name));
-                        }
-
-                        // Re-evaluate section validity after copying values
-                        UpdateOrganizationSectionValidity();
-                        UpdateAddresSectionValidity();
-                        UpdateContactSectionValidity();
-                        UpdateRegistrationSection1Validity();
-                        UpdateRegistrationSection2Validity();
-                        UpdateBankAccountSectionValidity();
-
-                        // Ensure UI updates on renderer thread
-                        await InvokeAsync(StateHasChanged);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Failed to load vendor registration during initialization");
-                }
-            }
-        }
-
-        // Helper: copy public property values from source to target without changing the object reference.
+        // Simple property copy helper
         private static void CopyModelValues(VendorRegistrationFormDto source, VendorRegistrationFormDto target)
         {
             if (source == null || target == null) return;
@@ -308,25 +430,38 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-
-        // Section validation support
+        // Validation: repeated lists used across validation helpers
         private readonly List<string> _organizationSectionFields = new()
-            {
-                nameof(VendorRegistrationFormDto.OrganizationName),
-                nameof(VendorRegistrationFormDto.CompanyOwnershipType),
-                nameof(VendorRegistrationFormDto.VendorServices),
-                nameof(VendorRegistrationFormDto.CompanyPhoneNo),
-                nameof(VendorRegistrationFormDto.CompanyEmailID)
-            };
-        private bool _isOrganizationSectionValid = true;
+        {
+            nameof(VendorRegistrationFormDto.OrganizationName),
+            nameof(VendorRegistrationFormDto.CompanyOwnershipType),
+            nameof(VendorRegistrationFormDto.VendorServices),
+            nameof(VendorRegistrationFormDto.CompanyPhoneNo),
+            nameof(VendorRegistrationFormDto.CompanyEmailID)
+        };
+        private readonly List<string> _addresSection_fields_for_decl = new()
+        {
+            nameof(VendorRegistrationFormDto.RegAddress1),
+            nameof(VendorRegistrationFormDto.RegCity)
+        };
 
+        // Note: keep the original private lists with their prior names — use the earlier declared _addresSectionFields below for logic.
+        private readonly List<string> _addresSectionFields = new()
+        {
+            nameof(VendorRegistrationFormDto.RegAddress1),
+            nameof(VendorRegistrationFormDto.RegCity)
+        };
 
+        private readonly List<string> _contactSectionFields = new()
+        {
+            nameof(VendorRegistrationFormDto.ResponderFName),
+            nameof(VendorRegistrationFormDto.ResponderLName),
+            nameof(VendorRegistrationFormDto.ResponderDesignation),
+            nameof(VendorRegistrationFormDto.ResponderMobileNo),
+            nameof(VendorRegistrationFormDto.ResponderEmailId)
+        };
 
-
-        // Simplified organization section validity: require that each field in `_organizationSectionFields`
-        // is present and non-empty. If all required fields are filled the section is valid.
-        //
-        // This replaces the previous, more complex validation logic with a straightforward check.
+        // Validation helpers (organization)
         private void UpdateOrganizationSectionValidity()
         {
             if (_editContext == null || _vendorReg == null)
@@ -420,14 +555,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-        // Simplified address-section validity: require that each field in `_addresSectionFields`
-        // is present and non-empty. This replaces the previous complex validation logic.
-        private readonly List<string> _addresSectionFields = new()
-        {
-            nameof(VendorRegistrationFormDto.RegAddress1),
-            nameof(VendorRegistrationFormDto.RegCity),
-        };
-        private bool _isAddressSectionValid = true;
+        // Validation: address section
         private void UpdateAddresSectionValidity()
         {
             if (_editContext == null || _vendorReg == null)
@@ -489,15 +617,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-        private readonly List<string> _contactSectionFields = new()
-        {
-            nameof(VendorRegistrationFormDto.ResponderFName),
-            nameof(VendorRegistrationFormDto.ResponderLName),
-            nameof(VendorRegistrationFormDto.ResponderDesignation),
-            nameof(VendorRegistrationFormDto.ResponderMobileNo),
-            nameof(VendorRegistrationFormDto.ResponderEmailId)
-        };
-        private bool _isContactSectionValid = true;
+        // Validation: contact section
         private void UpdateContactSectionValidity()
         {
             if (_editContext == null || _vendorReg == null)
@@ -559,6 +679,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _ = InvokeAsync(StateHasChanged);
             }
         }
+
+        // Registration section 1
         private void UpdateRegistrationSection1Validity()
         {
             if (_editContext == null || _vendorReg == null)
@@ -649,6 +771,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _ = InvokeAsync(StateHasChanged);
             }
         }
+
+        // Registration section 2
         private void UpdateRegistrationSection2Validity()
         {
             if (_editContext == null || _vendorReg == null)
@@ -717,6 +841,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
+        // Bank account validation
         private void UpdateBankAccountSectionValidity()
         {
             if (_editContext == null || _vendorReg == null)
@@ -743,17 +868,6 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     var context = new ValidationContext(_vendorReg) { MemberName = propName };
                     Validator.TryValidateProperty(value, context, results);
 
-                    //if (results.Any())
-                    //{
-                    //    anyInvalid = true;
-                    //    // add current validation messages so EditContext/validation UI shows them
-                    //    foreach (var res in results)
-                    //    {
-                    //        //_messageStore?.Add(fieldId, res.ErrorMessage ?? string.Empty);
-                    //    }
-                    //    continue;
-                    //}
-
                     var isRequired = prop.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any()
                                      || propName == nameof(VendorRegistrationFormDto.BankName)
                                      || propName == nameof(VendorRegistrationFormDto.BankBranch)
@@ -767,7 +881,6 @@ namespace OceanVMSClient.Pages.RegisterVendors
                         if (string.IsNullOrWhiteSpace((string?)value))
                         {
                             anyInvalid = true;
-                            //_messageStore?.Add(fieldId, "This field is required.");
                             continue;
                         }
                     }
@@ -785,21 +898,25 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
+        // Upload handlers
         private async Task OnPANUploaded(string? url)
         {
             _vendorReg.PANCardURL = url ?? string.Empty;
             await Task.CompletedTask;
         }
+
         private async Task OnTANUploaded(string? url)
         {
             _vendorReg.TANCertURL = url ?? string.Empty;
             await Task.CompletedTask;
         }
+
         private async Task OnGSTUploaded(string? url)
         {
             _vendorReg.GSTRegistrationCertURL = url ?? string.Empty;
             await Task.CompletedTask;
         }
+
         private async Task OnCINUploaded(string? url)
         {
             _vendorReg.CINCertURL = url ?? string.Empty;
@@ -829,15 +946,44 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _vendorReg.ESIRegCertURL = url ?? string.Empty;
             await Task.CompletedTask;
         }
+
         private async Task OnCancelChequeUploaded(string? url)
         {
             _vendorReg.CancelledChequeURL = url ?? string.Empty;
             await Task.CompletedTask;
         }
-        private async Task OnCompanyOwnershipChanged()
+
+        // Company ownership change
+        //private async Task OnCompanyOwnershipChanged()
+        //{
+        //    var companyOwnershipType = _vendorReg.CompanyOwnershipType?.Trim() ?? string.Empty;
+        //    var match = _companyOwnerships.FirstOrDefault(c => string.Equals(c.CompanyOwnershipType, companyOwnershipType, StringComparison.OrdinalIgnoreCase));
+        //    if (match != null)
+        //    {
+        //        _vendorReg.CompanyOwnershipId = match.Id;
+        //        _vendorReg.CompanyOwnershipType = match.CompanyOwnershipType;
+        //        ApplyCompanyOwnershipRequirements(match.Id);
+        //    }
+        //    else
+        //    {
+        //        _vendorReg.CompanyOwnershipId = Guid.Empty;
+        //    }
+
+        //    StateHasChanged();
+        //    await Task.CompletedTask;
+        //}
+        // Replace the existing parameterless method with this:
+        private async Task OnCompanyOwnershipChanged(string? selectedType)
         {
-            var companyOwnershipType = _vendorReg.CompanyOwnershipType?.Trim() ?? string.Empty;
-            var match = _companyOwnerships.FirstOrDefault(c => string.Equals(c.CompanyOwnershipType, companyOwnershipType, StringComparison.OrdinalIgnoreCase));
+            var companyOwnershipType = (selectedType ?? string.Empty).Trim();
+
+            // keep the model in sync so the select displays correctly
+            _vendorReg.CompanyOwnershipType = companyOwnershipType;
+            _selectedCompanyOwnershipType = companyOwnershipType;
+
+            var match = _companyOwnerships.FirstOrDefault(c =>
+                string.Equals(c.CompanyOwnershipType?.Trim(), companyOwnershipType, StringComparison.OrdinalIgnoreCase));
+
             if (match != null)
             {
                 _vendorReg.CompanyOwnershipId = match.Id;
@@ -849,8 +995,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _vendorReg.CompanyOwnershipId = Guid.Empty;
             }
 
-            StateHasChanged();
-            await Task.CompletedTask;
+            await InvokeAsync(StateHasChanged);
         }
         private void ApplyCompanyOwnershipRequirements(Guid id)
         {
@@ -886,7 +1031,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             await Task.CompletedTask;
         }
 
-        // Add this helper near other validation helpers in the partial class
+        // Per-field validation helper
         private Task ValidateField(string propertyName)
         {
             if (_editContext == null || _vendorReg == null)
@@ -960,6 +1105,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             return Task.CompletedTask;
         }
+
+        // Email & phone blur validators
         private Task ValidateEmailOnBlur(string CalledFrom)
         {
             if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
@@ -998,7 +1145,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _editContext.NotifyValidationStateChanged();
 
             // update section boolean as well
-            if(CalledFrom == "Contact")
+            if (CalledFrom == "Contact")
                 UpdateContactSectionValidity();
             else if (CalledFrom == "Organization")
                 UpdateOrganizationSectionValidity();
@@ -1042,9 +1189,11 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 UpdateOrganizationSectionValidity();
             else if (CalledFrom == "Contact")
                 UpdateContactSectionValidity();
-            
+
             return Task.CompletedTask;
         }
+
+        // Submit handler and validation
         private async Task HandleSubmit(EditContext editContext)
         {
             var validationResults = new List<ValidationResult>();
@@ -1117,6 +1266,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 DialogService.Show<ValidationErrorsDialog>("Validation errors", parameters, options);
                 return;
             }
+
             var confirmed = await DialogService.ShowMessageBox(
                 "Confirm save",
                 "Are you sure you want to save this vendor registration?",
@@ -1135,22 +1285,127 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
+        private async Task LockReview()
+        {
+            if (_vendorReg == null)
+            {
+                Snackbar.Add("Vendor registration is not loaded.", Severity.Error);
+                Logger.LogWarning("LockReview called but _vendorReg was null.");
+                return;
+            }
 
+            _vendorReviewDto ??= new VendorRegistrationFormReviewDto();
+            _vendorReviewDto.ReviewerId = _employeeId ?? Guid.Empty;
+            _vendorReviewDto.ReviewDate = DateTime.UtcNow;
+            _vendorReviewDto.ReviewerStatus = _vendorReg.ReviewerStatus;
+            _vendorReviewDto.ReviewComments = _vendorReg.ReviewComments;
+
+            LogPayload("Creating vendor review", _vendorReviewDto);
+
+            try
+            {
+                var reviewResult = await VendorRegistrationFormRepository.ReviewVendorRegistrationFormAsync(_vendorReg.Id, _vendorReviewDto);
+                if (reviewResult != null)
+                {
+                    Snackbar.Add("Vendor registration reviewed.", Severity.Success);
+                    NavigationManager.NavigateTo($"/vendor-registrations");
+                }
+                else
+                {
+                    Snackbar.Add("Review failed: server returned no data.", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error calling ReviewVendorRegistrationFormAsync");
+                Snackbar.Add($"Review failed: {ex.Message}", Severity.Error);
+            }
+        }
+
+        private async Task LockApproval()
+        {
+            if (_vendorReg == null)
+            {
+                Snackbar.Add("Vendor registration is not loaded.", Severity.Error);
+                Logger.LogWarning("LockApproval called but _vendorReg was null.");
+                return;
+            }
+
+            _vendorApprovalDto ??= new VendorRegistrationFormApprovalDto();
+            _vendorApprovalDto.ApproverId = _employeeId ?? Guid.Empty;
+            _vendorApprovalDto.ApprovalDate = DateTime.UtcNow;
+            _vendorApprovalDto.ApproverStatus = _vendorReg.ApproverStatus;
+            _vendorApprovalDto.ApprovalComments = _vendorReg.ApprovalComments;
+
+            LogPayload("Creating vendor approval", _vendorApprovalDto);
+
+            try
+            {
+                var approvalResult = await VendorRegistrationFormRepository.ApproveVendorRegistrationFormAsync(_vendorReg.Id, _vendorApprovalDto);
+                if (approvalResult != null)
+                {
+                    Snackbar.Add("Vendor registration approved.", Severity.Success);
+                    NavigationManager.NavigateTo($"/vendor-registrations");
+                }
+                else
+                {
+                    Snackbar.Add("Approval failed: server returned no data.", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error calling ApproveVendorRegistrationFormAsync");
+                Snackbar.Add($"Approval failed: {ex.Message}", Severity.Error);
+            }
+        }
+        private Task OnReviewerStatusChanged(string? value)
+        {
+            _vendorReg.ReviewerStatus = value;
+
+            var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
+            var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
+
+            _isReviewLocked = !(_isReviewer && string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase));
+            _isApproverLocked = !(
+                _isApprover
+                && string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase)
+            );
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        private Task OnApproverStatusChanged(string? value)
+        {
+            _vendorReg.ApproverStatus = value;
+
+            var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
+            if (!string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+                _isApproverLocked = true;
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        }
+        // Cancel navigation
         private void OnCancel() => NavigationManager.NavigateTo($"/vendor-registrations/{_vendorReg.Id}");
 
-        // Build DTOs with a shared helper to avoid repetitive assignments
+        // DTO builders
         private VendorRegistrationFormCreateDto BuildCreateDto()
         {
             var dto = new VendorRegistrationFormCreateDto();
             ApplyCommonProperties(dto);
             return dto;
         }
+
         private VendorRegistrationFormUpdateDto BuildUpdateDto()
         {
             var dto = new VendorRegistrationFormUpdateDto();
             ApplyCommonProperties(dto);
             return dto;
         }
+
+        // Map model to DTO (shared)
         private void ApplyCommonProperties(dynamic dto)
         {
             // copy common properties from _vendorReg into dto using dynamic to reduce repetition
@@ -1201,8 +1456,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
             dto.Experience1ProjectCost = 0; // will be null if not set in form
             dto.Experience2ProjectCost = 0;
             dto.Experience3ProjectCost = 0;
-
         }
+
+        // Logging helper
         private void LogPayload(string action, object payload)
         {
             try
@@ -1216,7 +1472,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-       
+        // Create / Update calls
         private async Task CreateVendorRegistrationAsync()
         {
             if (_isSaving) return;
@@ -1314,6 +1570,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _isSaving = false;
             }
         }
+
+        // User context loader
         private async Task LoadUserContextAsync()
         {
             var authState = await AuthState;

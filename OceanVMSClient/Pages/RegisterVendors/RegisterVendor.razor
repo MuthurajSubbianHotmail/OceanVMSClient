@@ -1,14 +1,28 @@
 ﻿@page "/register-vendor/{VendorRegistrationFormId:guid}"
 @using OceanVMSClient.Extensions
-@* <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" /> *@
-<PageHeader Title="New Vendor Registration" Class="mb-0" />
+<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+@if (VendorRegistrationFormId == Guid.Empty)
+{
+    <PageHeader Title="New Vendor Registration" Class="mb-0" />
+}
+else
+{
+    <PageHeader Title="Edit Vendor Registration" Class="mb-0" />
+}
+
 <MudCard>
     <MudCardContent>
+        @if (_isLoading)
+        {
+            <div style="display:flex; align-items:center; justify-content:center; min-height:120px;">
+                <MudProgressLinear Color="Color.Primary" Striped="true" Size="Size.Large" Value="75" Class="my-7" />
+            </div>
+        }
         <EditForm EditContext="_editContext" OnSubmit="HandleSubmit">
             <DataAnnotationsValidator />
             <MudTabs>
                 <MudTabPanel Text="Organization Info" Icon="@Icons.Material.Rounded.Apartment">
-                    <MudGrid GutterSize="1" Spacing="0">
+                    <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
                         <MudItem id="Organization Name And Address" xs="4" md="4">
                             <MudPaper Height="100%" Elevation="1" Class="pa-2 mr-2">
 
@@ -37,13 +51,43 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="true"
                                                       For="@(() => _vendorReg.OrganizationName)" />
                                     </MudItem>
                                     <MudItem id="Ownershp Type" xs="8" md="8">
                                         @if (_companyOwnerships?.Any() == true)
                                         {
-                                            <MudSelect T="string"
+                                            <MudItem id="Ownershp Type" xs="8" md="8">
+                                                @if (_companyOwnerships?.Any() == true)
+                                                {
+                                                    <MudSelect T="string"
+                                                               Value="_vendorReg.CompanyOwnershipType"
+                                                               ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnCompanyOwnershipChanged))"
+                                                               Placeholder="Company Ownership"
+                                                               Typo="@_inputTypo"
+                                                               Dense="true"
+                                                               Label="Company Ownership"
+                                                               Variant="Variant.Text"
+                                                               FullWidth="true"
+                                                               Margin="Margin.Dense"
+                                                               Required="true"
+                                                               ReadOnly="@_isReadOnly"
+                                                               For="@(() => _vendorReg.CompanyOwnershipType)">
+                                                        @foreach (var ownership in _companyOwnerships)
+                                                        {
+                                                            <MudSelectItem Value="@(ownership.CompanyOwnershipType)">
+                                                                @ownership.CompanyOwnershipType
+                                                            </MudSelectItem>
+                                                        }
+                                                    </MudSelect>
+                                                }
+                                                else
+                                                {
+                                                    <MudText Typo="Typo.caption">Loading ownerships…</MudText>
+                                                }
+                                            </MudItem>
+                                            @* <MudSelect T="string"
                                                        @bind-Value="@_vendorReg.CompanyOwnershipType"
                                                        SelectedValuesChanged="OnCompanyOwnershipChanged"
                                                        Placeholder="Company Ownership"
@@ -54,7 +98,7 @@
                                                        FullWidth="true"
                                                        Margin="Margin.Dense"
                                                        Required="true"
-                                                       Disabled="@_isReadOnly"
+                                                       ReadOnly="@_isReadOnly"
                                                        For="@(() => _vendorReg.CompanyOwnershipType)">
                                                 @foreach (var ownership in _companyOwnerships)
                                                 {
@@ -62,7 +106,7 @@
                                                         @ownership.CompanyOwnershipType
                                                     </MudSelectItem>
                                                 }
-                                            </MudSelect>
+                                            </MudSelect> *@
                                         }
                                         else
                                         {
@@ -70,13 +114,16 @@
                                         }
                                     </MudItem>
                                     <MudItem id="MSME Switch" xs="4">
-                                        <MudSwitch Color="Color.Primary" T="bool" Value="_IsMSMERegistered" ValueChanged="@(HandleMSMESelectedChange)">
+                                        <MudSwitch Color="Color.Primary" T="bool"
+                                                   Value="_IsMSMERegistered"
+                                                   ReadOnly="@_isReadOnly"
+                                                   ValueChanged="@(HandleMSMESelectedChange)">
                                             <MudText Typo="Typo.caption">Is MSME?</MudText>
                                         </MudSwitch>
                                     </MudItem>
 
 
-                                   
+
                                     <MudItem id="Company Phone" xs="12" md="12">
                                         <MudTextField T="string"
                                                       @bind-Value="@_vendorReg.CompanyPhoneNo"
@@ -86,14 +133,14 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="true"
                                                       For="@(() => _vendorReg.CompanyPhoneNo)"
                                                       OnBlur="@(() => ValidatePhoneOnBlur("Organization"))" />
                                     </MudItem>
-                                    
+
                                     <MudItem xs="12">
-                                          <MudSelect T="string"
+                                        <MudSelect T="string"
                                                    Label="Services Offered"
                                                    Placeholder="Services Offered"
                                                    Typo="@_inputTypo"
@@ -105,7 +152,7 @@
                                                    @bind-SelectedValues="@_selectedServices"
                                                    Required="true"
                                                    RequiredError="Please Select the Services Offered"
-                                                   Disabled="@_isReadOnly"
+                                                   ReadOnly="@_isReadOnly"
                                                    OnBlur="@(async (e) => await ValidateField(nameof(_vendorReg.VendorServices)))">
                                             @foreach (var vType in _vendorServices)
                                             {
@@ -114,7 +161,7 @@
                                                 </MudSelectItem>
                                             }
 
-                                        </MudSelect> 
+                                        </MudSelect>
                                     </MudItem>
 
 
@@ -127,7 +174,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="true"
                                                       For="@(() => _vendorReg.CompanyEmailID)"
                                                       OnBlur="@(() => ValidateEmailOnBlur("Organization"))" />
@@ -140,7 +187,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="false"
                                                       For="@(() => _vendorReg.WebSite)" />
                                     </MudItem>
@@ -171,7 +218,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegAddress1))"
                                                       For="@(() => _vendorReg.RegAddress1)" />
                                     </MudItem>
@@ -182,7 +229,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegAddress2))"
                                                       For="@(() => _vendorReg.RegAddress2)" />
                                     </MudItem>
@@ -193,7 +240,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegAddress3))"
                                                       For="@(() => _vendorReg.RegAddress3)" />
                                     </MudItem>
@@ -204,7 +251,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegCity))"
                                                       For="@(() => _vendorReg.RegCity)" />
                                     </MudItem>
@@ -215,7 +262,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegState))"
                                                       For="@(() => _vendorReg.RegState)" />
                                     </MudItem>
@@ -226,7 +273,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegCountry))"
                                                       For="@(() => _vendorReg.RegCountry)" />
                                     </MudItem>
@@ -237,7 +284,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.RegPIN))"
                                                       For="@(() => _vendorReg.RegPIN)" />
                                     </MudItem>
@@ -271,7 +318,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="true"
                                                       For="@(() => _vendorReg.ResponderFName)"
                                                       OnBlur="@(() => ValidateField(nameof(_vendorReg.ResponderFName)))" />
@@ -283,7 +330,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderLName)"
                                                       For="@(() => _vendorReg.ResponderLName)" />
                                     </MudItem>
@@ -294,7 +341,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderDesignation)"
                                                       For="@(() => _vendorReg.ResponderDesignation)" />
                                     </MudItem>
@@ -306,7 +353,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderMobileNo)"
                                                       For="@(() => _vendorReg.ResponderMobileNo)"
                                                       OnBlur="@(() => ValidatePhoneOnBlur("Contact"))" />
@@ -319,7 +366,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderEmailId)"
                                                       For="@(() => _vendorReg.ResponderEmailId)"
                                                       OnBlur="@(() => ValidateEmailOnBlur("Contact"))" />
@@ -331,7 +378,7 @@
 
                 </MudTabPanel>
                 <MudTabPanel Text="Statutory and Bank Information" Icon="@Icons.Material.Rounded.AccountBalance">
-                    <MudGrid GutterSize="1" Spacing="0">
+                    <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
                         <MudItem id="Registration Details 1" xs="4" md="4">
                             <MudPaper Height="100%" Elevation="1" Class="pa-2 mr-2">
                                 <MudGrid Spacing="0" GutterSize="1" AlignItems="center">
@@ -356,7 +403,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@_isPANRequired"
                                                       For="@(() => _vendorReg.PANNo)" />
                                     </MudItem>
@@ -371,9 +418,10 @@
                                     <MudItem id="TAN Number" xs="9" md="9" Style="padding-right:4px ;">
                                         <MudTextField @bind-Value="_vendorReg.TANNo"
                                                       Placeholder="TAN Number"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Label="TAN No"
                                                       Margin="Margin.Dense"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@_isTANRequired"
                                                       FullWidth="true"
                                                       For="@(() => _vendorReg.TANNo)" />
@@ -389,9 +437,10 @@
                                     <MudItem id="GST Number" xs="9" md="9" Style="padding-right:4px;">
                                         <MudTextField @bind-Value="_vendorReg.GSTNO"
                                                       Placeholder="GST Registration Number"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Label="GST No"
                                                       Margin="Margin.Dense"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@_isGSTRequired"
                                                       FullWidth="true"
                                                       For="@(() => _vendorReg.GSTNO)" />
@@ -407,9 +456,10 @@
                                     <MudItem id="CIN Number" xs="9" md="9" Style="padding-right:4px;">
                                         <MudTextField @bind-Value="_vendorReg.CIN"
                                                       Placeholder="CIN Number"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Label="CIN"
                                                       Margin="Margin.Dense"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@_isCINRequired"
                                                       FullWidth="true"
                                                       For="@(() => _vendorReg.CIN)" />
@@ -450,7 +500,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@_isAadharRequired"
                                                       For="@(() => _vendorReg.AadharNo)" />
                                     </MudItem>
@@ -466,9 +516,10 @@
                                     <MudItem id="UDYAM Number" xs="9" md="9" Style="padding-right:4px ;">
                                         <MudTextField @bind-Value="_vendorReg.UDYAMRegNo"
                                                       Placeholder="UDYAM Number"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Label="UDYAM No"
-                                                      Margin="Margin.Dense"
+                                                      Margin="@_inputMargin"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@_isUDYAMRequired"
                                                       FullWidth="true"
                                                       For="@(() => _vendorReg.UDYAMRegNo)" />
@@ -484,9 +535,10 @@
                                     <MudItem id="PF Number" xs="9" md="9" Style="padding-right:4px;">
                                         <MudTextField @bind-Value="_vendorReg.PFNo"
                                                       Placeholder="PF Registration Number"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Label="PF No"
-                                                      Margin="Margin.Dense"
+                                                      Margin="@_inputMargin"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@_isPFRequired"
                                                       FullWidth="true"
                                                       For="@(() => _vendorReg.PFNo)" />
@@ -502,9 +554,10 @@
                                     <MudItem id="ESI Number" xs="9" md="9" Style="padding-right:4px;">
                                         <MudTextField @bind-Value="_vendorReg.ESIRegNo"
                                                       Placeholder="ESI Number"
-                                                      Typo="Typo.subtitle2"
+                                                      Typo="@_inputTypo"
                                                       Label="ESI"
-                                                      Margin="Margin.Dense"
+                                                      Margin="@_inputMargin"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@_isESIRequired"
                                                       FullWidth="true"
                                                       For="@(() => _vendorReg.ESIRegNo)" />
@@ -543,7 +596,7 @@
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      Disabled="@_isReadOnly"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.BankName) ? false : true)"
                                                       For="@(() => _vendorReg.BankName)" />
                                     </MudItem>
@@ -553,8 +606,8 @@
                                                       Placeholder="Bank Branch"
                                                       Typo="@_inputTypo"
                                                       Label="Bank Branch"
-                                                      Margin="Margin.Dense"
-                                                      Disabled="@_isReadOnly"
+                                                      Margin="@_inputMargin"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.BankBranch) ? false : true)"
                                                       FullWidth="true"
                                                       For="@(() => _vendorReg.BankBranch)" />
@@ -565,8 +618,8 @@
                                                       Placeholder="IFSC Code"
                                                       Typo="@_inputTypo"
                                                       Label="IFSC Code"
-                                                      Margin="Margin.Dense"
-                                                      Disabled="@_isReadOnly"
+                                                      Margin="@_inputMargin"
+                                                      ReadOnly="@_isReadOnly"
                                                       FullWidth="true"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.IFSCCode) ? false : true)"
                                                       For="@(() => _vendorReg.IFSCCode)" />
@@ -577,8 +630,8 @@
                                                       Label="Account Number"
                                                       Placeholder="Account Number"
                                                       Typo="@_inputTypo"
-                                                      Margin="Margin.Dense"
-                                                      Disabled="@_isReadOnly"
+                                                      Margin="@_inputMargin"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.AccountNumber) ? false : true)"
                                                       Style="flex:1;"
                                                       For="@(() => _vendorReg.AccountNumber)" />
@@ -589,29 +642,218 @@
                                                       Label="Account Name"
                                                       Placeholder="Name of the Account Holder/Organizaton"
                                                       Typo="@_inputTypo"
-                                                      Margin="Margin.Dense"
-                                                      Disabled="@_isReadOnly"
+                                                      Margin="@_inputMargin"
+                                                      ReadOnly="@_isReadOnly"
                                                       Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.AccountName) ? false : true)"
                                                       Style="flex:1;"
                                                       For="@(() => _vendorReg.AccountName)" />
                                     </MudItem>
-                                    <MudItem id="Upload Cancelled Cheque" xs="12" md="12" Style="padding-right:4px;" class="flex-column align-content-end" >
+                                    <MudItem id="Upload Cancelled Cheque" xs="12" md="12" Style="padding-right:4px;" class="flex-column align-content-end">
                                         <MudText Typo="Typo.caption" Color="Color.Secondary" Style="flex:1;">Upload a Cancelled Cheque/Bank Statement* </MudText>
                                         <OrgRegisterDocsUploader DocType="CANCELCHEQ" OnChange="OnCancelChequeUploaded" />
                                     </MudItem>
-                                    
+
 
                                 </MudGrid>
                             </MudPaper>
                         </MudItem>
                     </MudGrid>
 
-                    
+
 
                 </MudTabPanel>
-                
+
                 <MudTabPanel Text="Review & Submit">
-                    @* <ReviewSubmitForm Vendor="Vendor" ContactInfo="ContactInfo" Documents="Documents" OnSubmit="HandleSubmit" /> *@
+                    <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
+                        <MudItem id="Review Panel" xs="6" md="6">
+                                <MudPaper Height="100%" Elevation="1" Class="ms-2 me-2 pa-2">
+                                <MudGrid GutterSize="1" Spacing="1">
+                                    <MudText Typo="Typo.h6" Color="Color.Info">Review Details</MudText>
+                                    <MudDivider Class="my-2" />
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Assigned On </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ReviewAssignedOn is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Due Date </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ReviewTargetDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Days </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ReviewSLADurationInDays ?? "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Status </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ReviewSLAStatus ?? "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Reviewed By </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ReviewerName ?? "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Review Date </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg?.ReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                        </MudText>
+                                    </MudItem>
+
+                                    <MudItem xs="6" md="6">
+                                        <MudSelect Label="Review Status"
+                                                   Value="_vendorReg.ReviewerStatus"
+                                                   Placeholder="Review Status"
+                                                   Typo="@_inputTypo"
+                                                   ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnReviewerStatusChanged))"
+                                                   Variant="@_inputVariant"
+                                                   Margin="@_inputMargin"
+                                                   Class="short-field"
+                                                   ReadOnly="@_isReviewLocked">
+                                            <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                            <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+                                            <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        @* <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
+                                        <MudSwitch T="bool" @bind-Checked="_vendorReg.AllowInvUploadByInitiator"
+                                                   Color="Color.Primary"
+                                                   Disabled="@_isReviewLocked" /> *@
+                                    </MudItem>
+                                    <MudItem xs="12" md="12">
+                                        <MudTextField Typo="@_inputTypo"
+                                                      Label="Review Comments"
+                                                      Placeholder="Enter Review Comments"
+                                                      Variant="@_inputVariant"
+                                                      Margin="@_inputMargin"
+                                                      @bind-Value="_vendorReg.ReviewComments" />
+                                    </MudItem>
+                                    <MudDivider Class="my-2" />
+                                    
+                                    <MudItem xs="6" Class="d-flex justify-start">
+                                        <MudButton ButtonType="ButtonType.Button"
+                                                   Variant="Variant.Filled" Color="Color.Primary"
+                                                   Disabled="@(_vendorReg.ReviewDate != null)"
+                                                   OnClick="LockReview">
+                                            <MudText Typo="Typo.caption">Submit Review</MudText>
+                                        </MudButton>
+                                    </MudItem>
+                                    <MudItem xs="6" Class="d-flex justify-end">
+                                        <MudChip T="string" Color="@(_isReviewer? Color.Success: Color.Warning)"
+                                                 Variant="Variant.Filled"
+                                                 Size="Size.Small"
+                                                 Class="me-2">
+                                            @(_isReviewer ? "Reviewer" : "Not Reviewer")
+                                        </MudChip>
+                                    </MudItem>
+                                </MudGrid>
+                                </MudPaper>
+
+                        </MudItem>
+
+                        <MudItem id="Approval Panel" xs="6" md="6">
+
+                            <MudPaper Height="100%" Elevation="1" Class="ms-2 me-4 pa-2">
+                                <MudGrid GutterSize="1" Spacing="1">
+                                    <MudText Typo="Typo.h6" Color="Color.Info">Approal Details</MudText>
+                                    <MudDivider Class="my-2" />
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Assigned On </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ApprovalAssignedOn is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Due Date </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ApprovalTargetDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Days </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ApprovalSLADurationInDays ?? "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Status </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ApprovalSLAStatus ?? "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Approved By </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg.ApproverName ?? "—")
+                                        </MudText>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Approval Date </MudText>
+                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                            @(_vendorReg?.ApprovalDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                        </MudText>
+                                    </MudItem>
+
+                                    <MudItem xs="6" md="6">
+                                        <MudSelect Label="Approval Status"
+                                            Placeholder="Approval Status"
+                                                   Value="_vendorReg.ApproverStatus"
+                                                   Typo="@_inputTypo"
+                                                   ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnApproverStatusChanged))"
+                                                   Variant="@_inputVariant"
+                                                   Margin="@_inputMargin"
+                                                   Class="short-field"
+                                                   Disabled="@_isApproverLocked">
+                                            <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                            <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+                                            <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="6" md="6">
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
+                                        <MudSwitch T="bool" @bind-Checked="_vendorReg.AllowInvUploadByInitiator"
+                                                   Color="Color.Primary"
+                                                   Disabled="@_isReviewLocked" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="12">
+                                        <MudTextField Typo="@_inputTypo"
+                                                      Label="Approver Comments"
+                                                      Placeholder="Enter Approver Comments"
+                                                      Variant="@_inputVariant"
+                                                      Margin="@_inputMargin"
+                                                      @bind-Value="_vendorReg.ApprovalComments" />
+                                    </MudItem>
+                                    <MudDivider Class="my-2" />
+                                    
+                                    <MudItem xs="6" Class="d-flex justify-start">
+                                        <MudButton ButtonType="ButtonType.Button"
+                                                   Variant="Variant.Filled" Color="Color.Primary"
+                                                   Disabled="@(_vendorReg.ApprovalDate != null)"
+                                                   OnClick="LockApproval">
+                                            <MudText Typo="Typo.caption">Submit Approval</MudText>
+                                        </MudButton>
+                                    </MudItem>
+                                    <MudItem xs="6" Class="d-flex justify-end">
+                                        <MudChip T="string" Color="@(_isApprover? Color.Success: Color.Warning)"
+                                                 Variant="Variant.Filled"
+                                                 Size="Size.Small"
+                                                 Class="me-2">
+                                            @(_isApprover ? "Approver" : "Not Approver")
+                                        </MudChip>
+                                    </MudItem>
+                                </MudGrid>
+                            </MudPaper>
+
+                        </MudItem>
+                    </MudGrid>
                 </MudTabPanel>
                 <div class="d-flex justify-end mt-2">
                     <MudButton Variant="Variant.Outlined"
@@ -626,7 +868,7 @@
                     <MudButton ButtonType="ButtonType.Submit"
                                Variant="Variant.Filled"
                                Color="Color.Primary"
-                               Disabled="@_isSaving">
+                               Disabled="@(_isSaving || _isReadOnly)">
                         @if (_isSaving)
                         {
                             <MudProgressCircular Size="Size.Medium" Class="me-2" Indeterminate="true" />
@@ -634,7 +876,18 @@
                         }
                         else
                         {
-                            <span>Submit</span>
+                            @if(_formEditMode == "Create")
+                            {
+                                <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.AddCircleOutline" />
+                                <span>Submit</span>
+                            }
+                            else if(_formEditMode == "Edit")
+                            {
+                                <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.Edit" />
+                                <span>Update</span>
+                            }
+    
+                            
                         }
                     </MudButton>
                 </div>

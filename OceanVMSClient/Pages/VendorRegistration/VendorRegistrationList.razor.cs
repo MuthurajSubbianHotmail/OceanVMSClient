@@ -38,6 +38,7 @@ namespace OceanVMSClient.Pages.VendorRegistration
         private string? organizationName;
         private string? responderFName;
         private string? responderLName;
+        private string? responderFullName;
         private string? reviewerStatus;
         private string? approverStatus;
         private string? cityName;
@@ -79,8 +80,9 @@ namespace OceanVMSClient.Pages.VendorRegistration
                     PageNumber = state.Page + 1,
                     PageSize = state.PageSize,
                     OrganizationName = string.IsNullOrWhiteSpace(organizationName) ? null : organizationName,
-                    ResponderFName = string.IsNullOrWhiteSpace(responderFName) ? null : responderFName,
-                    ResponderLName = string.IsNullOrWhiteSpace(responderLName) ? null : responderLName,
+                    ResponderFullName = string.IsNullOrWhiteSpace(responderFullName)
+                        ? null
+                        : responderFullName.Trim(),
                     ReviewerStatus = reviewerFilter,
                     ApproverStatus = approverFilter,
                     GSTNO = string.IsNullOrWhiteSpace(gstno) ? null : gstno

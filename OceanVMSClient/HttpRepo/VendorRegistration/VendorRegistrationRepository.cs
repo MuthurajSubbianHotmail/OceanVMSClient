@@ -112,6 +112,8 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
                     queryParams.Add(add("SearchTerm", vendorRegistrationFormParameters.SearchTerm));
                 if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.OrganizationName))
                     queryParams.Add(add("OrganizationName", vendorRegistrationFormParameters.OrganizationName));
+                if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.ResponderFullName))
+                    queryParams.Add(add("ResponderFullName", vendorRegistrationFormParameters.ResponderFullName));
                 if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.ReviewerStatus))
                     queryParams.Add(add("ReviewerStatus", vendorRegistrationFormParameters.ReviewerStatus));
                 if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.ApproverStatus))

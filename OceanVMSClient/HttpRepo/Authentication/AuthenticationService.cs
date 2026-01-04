@@ -194,5 +194,68 @@ namespace OceanVMSClient.HttpRepo.Authentication
 
             return result.AccessToken;
         }
+
+        /// <summary>
+        /// Calls the API endpoint that triggers sending a password reset token to the user's email.
+        /// Adjust the endpoint path if your API exposes a different route.
+        /// </summary>
+        public async Task<bool> SendPasswordResetTokenAsync(string userName)
+        {
+            if (string.IsNullOrWhiteSpace(userName))
+                throw new ArgumentException("userName is required", nameof(userName));
+
+            var payload = new { userName = userName.Trim() };
+            var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // Default endpoint - change if your API uses a different path (e.g. "auth/forgotpassword")
+            var response = await _httpClient.PostAsync("authentication/forgot-password", content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // throw with details so caller can log/inspect server message
+                throw new Exception($"Password reset request failed: {(int)response.StatusCode} {response.ReasonPhrase}. Response: {responseBody}");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Submits a new password along with the reset token to the API.
+        /// </summary>
+        public async Task<bool> ResetPasswordAsync(string userName, string token, string newPassword)
+        {
+            if (string.IsNullOrWhiteSpace(userName))
+                throw new ArgumentException("userName is required", nameof(userName));
+            if (string.IsNullOrWhiteSpace(token))
+                throw new ArgumentException("token is required", nameof(token));
+            if (string.IsNullOrWhiteSpace(newPassword))
+                throw new ArgumentException("newPassword is required", nameof(newPassword));
+
+            // The API expects both password and confirmPassword fields (server-side validation requires ConfirmPassword).
+            var payload = new
+            {
+                UserName = userName.Trim(),
+                Token = token,
+                // Use properties named so camel-casing produces "password" and "confirmPassword"
+                NewPassword = newPassword,
+                ConfirmPassword = newPassword
+            };
+
+            var json = JsonSerializer.Serialize(payload, _jsonSerializerOptions);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync("authentication/reset-password", content);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Provide useful message up the stack
+                throw new Exception($"Password reset failed: {(int)response.StatusCode} {response.ReasonPhrase}. Response: {responseBody}");
+            }
+
+            return true;
+        }
     }
 }

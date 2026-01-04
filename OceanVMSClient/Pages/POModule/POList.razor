@@ -12,7 +12,7 @@
 <MudPaper Class="pa-4 po-paper">
     <!-- Top summary -->
     <!-- Filters -->
-    <MudPaper Elevation="0" Class="pa-3 po-section">
+    <MudPaper Elevation="1" Class="pa-3 po-section">
         <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
             <MudItem xs="12" md="12">
                 <MudGrid GutterSize="1">
@@ -20,7 +20,7 @@
                         <MudSelect T="string"
                                    Label="Invoice Status"
                                    Placeholder=""
-                                   Typo="Typo.subtitle2"
+                                   Typo="Typo.caption"
                                    Value="selectedInvoiceStatus"
                                    ValueChanged="OnInvoiceStatusChanged"
                                    Dense="true"
@@ -34,7 +34,7 @@
 
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="string"
-                                      Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                                       Label="SAP PO No"
                                       Placeholder="SAP PO No"
                                       OnDebounceIntervalElapsed="@( (string s) => { sapPONo = s; return OnSearch(); } )"
@@ -46,7 +46,7 @@
 
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="string"
-                                      Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                                       Label="Vendor"
                                       Placeholder="Vendor Name"
                                       OnDebounceIntervalElapsed="@( (string s) => { vendorName = s; return OnSearch(); } )"
@@ -58,7 +58,7 @@
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="decimal?"
-                                      Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                                          Label="Min Total"
                                          InputType="InputType.Number"
                                          ValueChanged="@( (decimal? v) => { minTotalValue = v; return OnSearch(); } )"
@@ -69,7 +69,7 @@
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="decimal?"
-                                      Typo="Typo.subtitle2"
+                                      Typo="Typo.caption"
                                       Label="Max Total"
                                       InputType="InputType.Number"
                                       ValueChanged="@( (decimal? v) => { maxTotalValue = v; return OnSearch(); } )"
@@ -80,6 +80,7 @@
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
                         <MudDateRangePicker @ref="_dateRangePicker"
+                            Placeholder="Date Range"
                                             DateRangeChanged="OnDateRangeSearch"
                                             DateFormat="dd-MMM-yy"
                                             TitleDateFormat="MMMM dd"
@@ -108,6 +109,7 @@
               Hover="true"
               Breakpoint="Breakpoint.Sm"
               RightAlignSmall="true"
+              Dense="true"
               @ref="_table"
               RowsPerPage="15"
                Virtualize =" true"
@@ -115,12 +117,12 @@
         <HeaderContent>
             <MudTh Class="col-type">Type</MudTh>
             <MudTh Class="col-pono">PONo</MudTh>
-            <MudTh>PO Date</MudTh>
+            <MudTh>PO.Date</MudTh>
             <MudTh>Supplier</MudTh>
-            <MudTh Align="Align.Right">Item Value</MudTh>
-            <MudTh Align="Align.Right">Tax Value</MudTh>
-            <MudTh Align="Align.Right">Total Value</MudTh>
-            <MudTh>Inv Status</MudTh>
+            <MudTh Align="Align.Right">Item.Value</MudTh>
+            <MudTh Align="Align.Right">Tax.Value</MudTh>
+            <MudTh Align="Align.Right">Total.Value</MudTh>
+            <MudTh>Inv.Status</MudTh>
             <MudTh></MudTh>
         </HeaderContent>
 

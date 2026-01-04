@@ -13,7 +13,7 @@
 
         @if (isPanelOpen)
         {
-            <div class="auth-details-panel" role="dialog" aria-label="Account details">
+            <div class="auth-details-panel" role="dialog" aria-label="Account details" @ref="panelRef">
                 <div class="auth-panel-header">
                     <button class="close-btn" @onclick="ClosePanel" aria-label="Close">&times;</button>
 
@@ -45,17 +45,17 @@
 
                     <div style="margin-top:.25rem;">
                         <div style="display:flex; gap:.5rem; align-items:center;">
-                            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">@FormatLabel("Account")</MudChip>
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined" Size="Size.Small">@FormatUserType(userTypeValue)</MudChip>
                             <MudText Typo="Typo.caption" Class="ml-auto" Color="Color.Secondary">@DateTime.Now.ToString("dd-MMM-yyyy")</MudText>
                         </div>
                     </div>
 
                     <div class="auth-panel-actions">
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToLogout" FullWidth="true" Size="Size.Small">
-                            Log Out
+                            <MudText Typo="Typo.caption" Class="me-2">Log Out</MudText>
                         </MudButton>
                         <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="NavigateToChangePassword" FullWidth="true" Size="Size.Small">
-                            Change Password
+                            <MudText Typo="Typo.caption" Class="me-2">Change Password</MudText>
                         </MudButton>
                     </div>
                 </div>
@@ -66,7 +66,7 @@
     <NotAuthorized>
         <div style="display:inline-flex; gap:.5rem; align-items:center;">
             <MudLink Href="/Login" Color="Color.Inherit">LogIn</MudLink>
-            <MudLink Href=@($"/vendor-registration/{Guid.Empty.ToString()}") Color="Color.Inherit">Register</MudLink>
+            <MudLink Href=@($"register-vendor/{Guid.Empty}") Color="Color.Inherit">Register</MudLink>
         </div>
     </NotAuthorized>
 </AuthorizeView>

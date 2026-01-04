@@ -1,8 +1,0 @@
-﻿wwwroot/css/site.css
-/* Make MudBlazor required asterisk red */
-.mud-required,
-.mud-input-required,
-.mud-form-control .mud-required,
-.mud-form-field .mud-input-required {
-  color: #e53935 !important; /* red (use any hex you prefer) */
-}

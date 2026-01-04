@@ -33,11 +33,10 @@
         <MudNavGroup Title="Vendors" Icon="@Icons.Material.Filled.Person" Expanded="false">
 
             <MudNavLink Href="vendor-registrations" Icon="@Icons.Material.Filled.Person4">Vendor Registrations</MudNavLink>
-            <MudNavLink Href=@($"vendor-registration/{Guid.Empty}") Icon="@Icons.Material.Filled.Person4">Old Vendor Registration</MudNavLink>
-
+            <MudNavLink Href=@($"register-vendor/{Guid.Empty}") Icon="@Icons.Material.Filled.Settings">New Vendor Registration</MudNavLink>
         </MudNavGroup>
 
-        <MudNavLink Href="register-vendor" Icon="@Icons.Material.Filled.Settings">New Vendor Registration</MudNavLink>
+       
     </MudNavMenu>
 </MudDrawer>
 @code {

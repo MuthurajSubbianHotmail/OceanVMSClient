@@ -30,6 +30,20 @@
 }
 .vendorreg-table thead th { font-weight:600; padding:0.6rem; color:#0f172a; }
 
+.header-cell {
+    background-color: #e6f7ff; /* light blue */
+    color: #0b3d91;            /* dark blue text for contrast */
+    font-weight: 600;
+}
+
+/* override the table header background with higher specificity */
+.vendorreg-table thead th.header-cell {
+  background-color: #e6f7ff !important; /* light blue */
+  background-image: none !important;    /* remove existing gradient */
+  color: #0b3d91 !important;            /* ensure contrast */
+  font-weight: 600;
+}
+
 /* child row card */
 .child-row-paper { background:linear-gradient(180deg,#fff,#fafaff); border-radius:8px; padding:0.75rem; border:1px solid rgba(15,23,42,0.03); }
 
