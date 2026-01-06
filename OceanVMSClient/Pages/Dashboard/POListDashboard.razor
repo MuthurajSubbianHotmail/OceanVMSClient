@@ -1,0 +1,17 @@
+﻿@using Shared.DTO.POModule
+<MudTable T="PurchaseOrderDto"
+          ServerData="GetServerData"
+          Hover="true"
+          Breakpoint="Breakpoint.Sm"
+          Dense="true"
+          @ref="_table"
+          RowsPerPage="10"
+          Virtualize="true"
+          Class="po-table mt-3">
+    <RowTemplate>
+        <MudTd DataLabel="PO Number">@context.SAPPONumber</MudTd>
+        <MudTd DataLabel="Supplier">@context.VendorName</MudTd>
+        <MudTd DataLabel="Date">@FormatDate(@context.SAPPODate)</MudTd>
+        <MudTd DataLabel="Total Amount"><CurrencyText Amount="@context.TotalValue" /></MudTd>
+    </RowTemplate>
+</MudTable>

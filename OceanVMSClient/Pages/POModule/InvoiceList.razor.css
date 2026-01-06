@@ -147,4 +147,10 @@
         height: auto;
         padding: 6px 10px;
     }
+    /* Prevent wrapping for date/short table cells and show ellipsis when truncated */
+    .no-wrap {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }

@@ -2,6 +2,7 @@ using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using MudBlazor;
 using OceanVMSClient.HttpRepo.Authentication;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
@@ -10,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,6 +28,8 @@ namespace OceanVMSClient.Pages.POModule
         [Inject] public IInvoiceRepository InvoiceRepository { get; set; } = default!;
         [Inject] public ISnackbar Snackbar { get; set; } = default!;
         [Inject] public ILogger<InvoiceList> Logger { get; set; } = default!;
+        [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+
         private InvoiceParameters _invoiceParameters = new InvoiceParameters();
 
         // Add this field to the class to fix CS0103
@@ -106,7 +110,8 @@ namespace OceanVMSClient.Pages.POModule
                 {
                     response = await InvoiceRepository.GetInvoicesByApproverEmployeeId(_employeeId ?? Guid.Empty, _invoiceParameters);
                 }
-
+                var items = response.Items?.ToList() ?? new List<InvoiceDto>();
+                StoreCurrentPageItems(items);
                 return new TableData<InvoiceDto>
                 {
                     Items = response.Items?.ToList() ?? new List<InvoiceDto>(),
@@ -254,6 +259,53 @@ namespace OceanVMSClient.Pages.POModule
 
         private static Guid? ParseGuid(string? value) => Guid.TryParse(value, out var g) ? g : (Guid?)null;
 
+        #endregion
+
+        #region Export to excel
+        private List<InvoiceDto> _lastPageItems = new();
+        private void StoreCurrentPageItems(IEnumerable<InvoiceDto>? items)
+        {
+            _lastPageItems = items?.ToList() ?? new();
+        }
+        private static string EscapeCsv(string? s)
+        {
+            if (string.IsNullOrEmpty(s))
+                return string.Empty;
+            var escaped = s.Replace("\"", "\"\"");
+            return $"\"{escaped}\"";
+        }
+        private async Task ExportVisibleToCsv()
+        {
+            if (_lastPageItems == null || !_lastPageItems.Any())
+            {
+                // Optional: show a notification to user that there is nothing to export.
+                return;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Invoice Ref No,Invoice Date,Vendor Name,SAP PO No,SAP PO Date,PO Total,Invoice Total,Invoice Status,Payment Status");
+
+            foreach (var item in _lastPageItems)
+            {
+                var invoiceRefNo = EscapeCsv(item.InvoiceRefNo);
+                var invDate = EscapeCsv(item.InvoiceDate == default ? string.Empty : item.InvoiceDate.ToString("dd-MMM-yy"));
+                var vendor = EscapeCsv(item.VendorName);
+                var SapPoNo = EscapeCsv(item.SAPPONumber);
+                var SapPoDate = item.SAPPODate == default ? string.Empty : item.SAPPODate.ToString("dd-MMM-yy");
+                var PoTotal = item.POTotalValue;
+                var invTotal = item.InvoiceTotalValue;
+                var invoicestatus = EscapeCsv(item.InvoiceStatus);
+                var PaymentStatus = EscapeCsv(item.PaymentStatus);
+
+                sb.AppendLine($"{invoiceRefNo},{invDate},{vendor},{SapPoNo},{SapPoDate},{PoTotal},{invTotal},{invoicestatus},{PaymentStatus}");
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            var base64 = Convert.ToBase64String(bytes);
+
+            // Calls the JS helper to trigger download
+            await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", "InvoiceList.csv", base64);
+        }
         #endregion
     }
 }

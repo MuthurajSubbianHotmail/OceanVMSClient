@@ -3,6 +3,7 @@ using Entities.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using MudBlazor;
 using OceanVMSClient.Features;
 using OceanVMSClient.HttpRepo.Authentication;
@@ -11,11 +12,13 @@ using OceanVMSClient.HttpRepoInterface.PoModule;
 using OceanVMSClient.HttpRepoInterface.POModule;
 using Shared.DTO;
 using Shared.DTO.POModule;
+using Shared.DTO.VendorReg;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Reflection;
 using System.Security.Claims;
+using System.Text;
 using System.Threading;
-using System.Collections.Concurrent;
 
 namespace OceanVMSClient.Pages.POModule
 {
@@ -46,7 +49,7 @@ namespace OceanVMSClient.Pages.POModule
 
         [Inject]
         public HttpInterceptorService Interceptor { get; set; } = default!;
-
+        [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
         #endregion
 
         #region Private fields / state
@@ -213,11 +216,11 @@ namespace OceanVMSClient.Pages.POModule
             }
 
             var items = response.Items?.ToList() ?? new List<PurchaseOrderDto>();
-
+            StoreCurrentPageItems(items);
             // Evaluate create-invoice permission for each returned PO (populates cache)
             // Await evaluation so buttons render with correct enabled/disabled state.
             await EvaluateCreatePermissionsForItemsAsync(items);
-
+            
             return new TableData<PurchaseOrderDto>
             {
                 Items = items,
@@ -444,6 +447,52 @@ namespace OceanVMSClient.Pages.POModule
         {
             if (!value.HasValue) return "—";
             return $"₹{value.Value.ToString("N2", CultureInfo.InvariantCulture)}";
+        }
+        private List<PurchaseOrderDto> _lastPageItems = new();
+
+        // Call this from your existing GetServerData(...) after you retrieve the page items:
+        // StoreCurrentPageItems(result.Items);
+        private void StoreCurrentPageItems(IEnumerable<PurchaseOrderDto>? items)
+        {
+            _lastPageItems = items?.ToList() ?? new();
+        }
+        private static string EscapeCsv(string? s)
+        {
+            if (string.IsNullOrEmpty(s))
+                return string.Empty;
+            var escaped = s.Replace("\"", "\"\"");
+            return $"\"{escaped}\"";
+        }
+        private async Task ExportVisibleToCsv()
+        {
+            if (_lastPageItems == null || !_lastPageItems.Any())
+            {
+                // Optional: show a notification to user that there is nothing to export.
+                return;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("PO Type,SAP PoNo,PO Date,Vendor Name,Item Value,GST Total,Total Value,Invoice Status");
+
+            foreach (var item in _lastPageItems)
+            {
+                var potype = EscapeCsv(item.PoTypeName);
+                var ponumber = EscapeCsv(item.SAPPONumber);
+                var podate = EscapeCsv(item.SAPPODate == default ? string.Empty : item.SAPPODate.ToString("dd-MMM-yy"));
+                var supplinerName = EscapeCsv(item.VendorName);
+                var poitemvalue = item.ItemValue;
+                var taxvalue = item.GSTTotal;
+                var totalvalue = item.TotalValue;
+                var invoicestatus = EscapeCsv(item.InvoiceStatus);
+
+                sb.AppendLine($"{potype},{ponumber},{podate},{supplinerName},{poitemvalue},{taxvalue},{totalvalue},{invoicestatus}");
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            var base64 = Convert.ToBase64String(bytes);
+
+            // Calls the JS helper to trigger download
+            await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", "PurchaseOrderList.csv", base64);
         }
     }
 }

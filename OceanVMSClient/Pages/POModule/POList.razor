@@ -274,6 +274,12 @@
             <MudTablePager PageSizeOptions="@_pageSizeOption" RowsPerPageString="POs Per Page" />
         </PagerContent>
     </MudTable>
+    <MudDivider Class="mt-2" />
+    <MudItem xs="12" Class="d-flex justify-end">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportVisibleToCsv">
+            Export CSV
+        </MudButton>
+    </MudItem>
 </MudPaper>
 
 

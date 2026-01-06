@@ -276,8 +276,11 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 // Vendor responder: editable only if approver hasn't approved
                 if (role.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
                 {
+                    _isApproverLocked = true;
+                    _isReviewLocked = true;
                     if (isResponder)
                         _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                        
                     else
                         _isReadOnly = true;
                 }

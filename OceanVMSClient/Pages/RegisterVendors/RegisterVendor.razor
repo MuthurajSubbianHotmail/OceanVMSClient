@@ -235,8 +235,8 @@ else
                                     </MudItem>
                                     <MudItem id="Address Line 3" xs="12" md="12">
                                         <MudTextField T="string" @bind-Value="@_vendorReg.RegAddress3"
-                                                      Label="Address Line 2"
-                                                      Placeholder="Enter Address Line 2"
+                                                      Label="Address Line 3"
+                                                      Placeholder="Enter Address Line 3"
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
@@ -411,7 +411,7 @@ else
                                         <OrgRegisterDocsUploader DocType="PAN"
                                                                  OnChange="OnPANUploaded"
                                                                  ImgUrl="@_vendorReg.PANCardURL"
-                                                                 IsReadOnly="@_isPANRequired" />
+                                                                 IsRequired="@_isPANRequired" />
                                     </MudItem>
 
 
@@ -811,7 +811,8 @@ else
                                                    Variant="@_inputVariant"
                                                    Margin="@_inputMargin"
                                                    Class="short-field"
-                                                   Disabled="@_isApproverLocked">
+                                                   ReadOnly="@_isApproverLocked"
+                                                   >
                                             <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
                                             <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
                                             <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
@@ -821,7 +822,7 @@ else
                                         <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
                                         <MudSwitch T="bool" @bind-Checked="_vendorReg.AllowInvUploadByInitiator"
                                                    Color="Color.Primary"
-                                                   Disabled="@_isReviewLocked" />
+                                                   Disabled="@_isApproverLocked" />
                                     </MudItem>
                                     <MudItem xs="12" md="12">
                                         <MudTextField Typo="@_inputTypo"
@@ -829,6 +830,7 @@ else
                                                       Placeholder="Enter Approver Comments"
                                                       Variant="@_inputVariant"
                                                       Margin="@_inputMargin"
+                                                      ReadOnly="@_isApproverLocked"
                                                       @bind-Value="_vendorReg.ApprovalComments" />
                                     </MudItem>
                                     <MudDivider Class="my-2" />
@@ -836,7 +838,7 @@ else
                                     <MudItem xs="6" Class="d-flex justify-start">
                                         <MudButton ButtonType="ButtonType.Button"
                                                    Variant="Variant.Filled" Color="Color.Primary"
-                                                   Disabled="@(_vendorReg.ApprovalDate != null)"
+                                                   Disabled="@(_vendorReg.ApprovalDate != null && !_isApproverLocked)"
                                                    OnClick="LockApproval">
                                             <MudText Typo="Typo.caption">Submit Approval</MudText>
                                         </MudButton>

@@ -12,6 +12,8 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text;
+using Microsoft.JSInterop;
 
 namespace OceanVMSClient.Pages.VendorRegistration
 {
@@ -22,6 +24,7 @@ namespace OceanVMSClient.Pages.VendorRegistration
         [Inject] public IVendorRegistrationRepository Repository { get; set; } = default!;
         [Inject] public ISnackbar Snackbar { get; set; } = default!;
         [Inject] public ILogger<VendorRegistrationList> Logger { get; set; } = default!;
+        [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
         private MudTable<VendorRegistrationFormDto>? _table;
         private readonly int[] _pageSizeOption = { 15, 25, 50 };
@@ -58,6 +61,9 @@ namespace OceanVMSClient.Pages.VendorRegistration
             new BreadcrumbItem("Vendor Registrations", href: "/vendor-registrations", disabled: true),
         };
 
+        // Filled from your existing ServerData method each time a page is loaded.
+        private List<VendorRegistrationFormDto> _lastPageItems = new();
+
         protected override async Task OnInitializedAsync()
         {
             await LoadUserContextAsync();
@@ -91,6 +97,9 @@ namespace OceanVMSClient.Pages.VendorRegistration
                 var response = await Repository.GetAllVendorRegistration(parameters);
 
                 var items = response.Items?.ToList() ?? new List<VendorRegistrationFormDto>();
+
+                // StoreCurrentPageItems(result.Items);
+                StoreCurrentPageItems(items);
 
                 return new TableData<VendorRegistrationFormDto>
                 {
@@ -173,6 +182,53 @@ namespace OceanVMSClient.Pages.VendorRegistration
             if (Guid.TryParse(value, out var guid))
                 return guid;
             return null;
+        }
+
+        // Call this from your existing GetServerData(...) after you retrieve the page items:
+        // StoreCurrentPageItems(result.Items);
+        private void StoreCurrentPageItems(IEnumerable<VendorRegistrationFormDto>? items)
+        {
+            _lastPageItems = items?.ToList() ?? new();
+        }
+
+        private static string EscapeCsv(string? s)
+        {
+            if (string.IsNullOrEmpty(s))
+                return string.Empty;
+            var escaped = s.Replace("\"", "\"\"");
+            return $"\"{escaped}\"";
+        }
+
+        private async Task ExportVisibleToCsv()
+        {
+            if (_lastPageItems == null || !_lastPageItems.Any())
+            {
+                // Optional: show a notification to user that there is nothing to export.
+                return;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Organization,GST No,Services,Responder,RegistrationDate,City,ReviewStatus,ApprovalStatus");
+
+            foreach (var item in _lastPageItems)
+            {
+                var org = EscapeCsv(item.OrganizationName);
+                var gst = EscapeCsv(item.GSTNO);
+                var services = EscapeCsv(item.VendorServices);
+                var responder = EscapeCsv($"{item.ResponderFName} {item.ResponderLName}".Trim());
+                var regDate = item.RegistrationDate == default ? string.Empty : item.RegistrationDate.ToString("dd-MMM-yy");
+                var city = EscapeCsv(item.RegCity);
+                var review = EscapeCsv(item.ReviewerStatus);
+                var approval = EscapeCsv(item.ApproverStatus);
+
+                sb.AppendLine($"{org},{gst},{services},{responder},{EscapeCsv(regDate)},{city},{review},{approval}");
+            }
+
+            var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+            var base64 = Convert.ToBase64String(bytes);
+
+            // Calls the JS helper to trigger download
+            await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", "vendor-registrations.csv", base64);
         }
     }
 }

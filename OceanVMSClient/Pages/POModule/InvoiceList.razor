@@ -8,7 +8,7 @@
 <PageHeader Title="Invoices" Class="mb-0" />
 
 <MudPaper Class="pa-4 invoice-paper">
-    <MudPaper Elevation="1" Class="pa-3 section">
+    <MudPaper Elevation="1" Class="pa-3">
         <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
             <MudItem xs="12" md="12">
                 <MudGrid GutterSize="1">
@@ -102,7 +102,6 @@
             <MudTh Align="Align.Right">PO.Total</MudTh>
             <MudTh Align="Align.Right">Invoice.Total</MudTh>
             <MudTh>Inv.Status</MudTh>
-            <MudTh>Payment.Status</MudTh>
             <MudTh>More</MudTh>
         </HeaderContent>
 
@@ -112,11 +111,10 @@
                     @context.InvoiceRefNo
                 </MudLink>
             </MudTd>
-            <MudTd>
-                <MudText Typo="Typo.caption">
+            <MudTd Class="flex-md-nowrap no-wrap">
+                <MudText Typo="Typo.caption" Class="no-wrap">
                     @FormatDate(context.InvoiceDate)
                 </MudText>
-
             </MudTd>
             <MudTd>@context.VendorName</MudTd>
             <MudTd>
@@ -124,10 +122,10 @@
                     @context.SAPPONumber
                 </MudLink>
             </MudTd>
-            <MudTd Align="Align.Right">
-                <MudText Typo="Typo.caption">
+            <MudTd Align="Align.Right" Class="flex-nowrap">
+                
                     @FormatDate(context.SAPPODate)
-                </MudText>
+                
             </MudTd>
             <MudTd Align="Align.Right">
                 <MudText Typo="Typo.caption">
@@ -145,12 +143,7 @@
                     @context.InvoiceStatus
                 </MudChip>
             </MudTd>
-            <MudTd>
-                <MudText Typo="Typo.caption">
-                    @context.PaymentStatus
-                </MudText>
-
-            </MudTd>
+            
             <MudTd>
                 <MudIconButton OnClick="@(() => ToggleRow(context.Id))"
                                Icon="@(IsRowExpanded(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Outlined.ArrowDropDown)"
@@ -244,8 +237,14 @@
         <PagerContent>
             <MudTablePager PageSizeOptions="@_pageSize_option" RowsPerPageString="Invoices Per Page" />
         </PagerContent>
+
     </MudTable>
-    <MudDivider Class="my-3" />
+    <MudDivider Class="mt-2" />
+    <MudItem xs="12" Class="d-flex justify-end">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportVisibleToCsv">
+            Export CSV
+        </MudButton>
+    </MudItem>
 
     @* <MudGrid>
         <MudItem xs="12" Class="d-flex justify-end">
