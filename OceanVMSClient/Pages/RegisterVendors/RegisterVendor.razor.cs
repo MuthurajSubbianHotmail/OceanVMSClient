@@ -1,4 +1,5 @@
 ﻿using Blazored.LocalStorage;
+using Entities.Models;
 using Entities.Models.Setup;
 using Entities.Models.VendorReg;
 using Microsoft.AspNetCore.Components;
@@ -75,7 +76,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private bool _isReviewer = false;
         private bool _isApprover = false;
         private bool _isReviewLocked = true;
-        private bool _isApproverLocked = false;
+        private bool _isApproverLocked = true;
         private string _reviewStatus = "Pending";
         private string _approvalStatus = "Pending";
         private string _formEditMode = "Create";
@@ -242,8 +243,6 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-
-
         private void LockUlockForm()
         {
             try
@@ -252,19 +251,32 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _isReadOnly = true;
                 _isReviewLocked = true;
                 _isApproverLocked = true;
+                _isReviewer = false;
+                _isApprover = false;
 
-                if (string.IsNullOrWhiteSpace(_userRole))
-                    return;
-
-                var role = _userRole.Trim();
-
-                // Resolve current user (sync because called from init)
+                // Resolve auth state synchronously because this runs during init
                 var authState = AuthState?.GetAwaiter().GetResult();
                 var user = authState?.User;
-                var username = user?.Identity?.Name
-                               ?? user?.FindFirst("username")?.Value
-                               ?? user?.FindFirst("email")?.Value
-                               ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+
+                // If no user is logged in -> lock review/approval and exit early
+                if (user == null || user.Identity == null || user.Identity.IsAuthenticated == false)
+                {
+                    _isApproverLocked = true;
+                    _isReviewLocked = true;
+                    _isReadOnly = true;
+                    return;
+                }
+
+                // determine role/userType from previously loaded context (LoadUserContextAsync sets _userType/_userRole)
+                var role = (_userRole ?? string.Empty).Trim();
+                var isVendorType = (!string.IsNullOrWhiteSpace(_userType) && _userType.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
+                                   || (!string.IsNullOrWhiteSpace(role) && role.IndexOf("VENDOR", StringComparison.OrdinalIgnoreCase) >= 0);
+
+                // compute responder identity (may be used to allow vendor responder edits until approved)
+                var username = user.Identity?.Name
+                               ?? user.FindFirst("username")?.Value
+                               ?? user.FindFirst("email")?.Value
+                               ?? user.FindFirst(ClaimTypes.Name)?.Value
                                ?? string.Empty;
 
                 var isResponder = !string.IsNullOrWhiteSpace(username)
@@ -273,34 +285,30 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
                 var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
 
-                // Vendor responder: editable only if approver hasn't approved
-                if (role.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
+                // If user is a vendor type -> lock review/approval and prevent acting as reviewer/approver
+                if (isVendorType)
                 {
                     _isApproverLocked = true;
                     _isReviewLocked = true;
-                    if (isResponder)
-                        _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
-                        
-                    else
-                        _isReadOnly = true;
-                }
-                else
-                {
-                    // Non-vendor users should not edit vendor data
-                    _isReadOnly = true;
+                    _isReviewer = false;
+                    _isApprover = false;
+
+                    // vendor responder may edit their own form until it's approved
+                    _isReadOnly = isResponder ? !string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase) : true;
+                    return;
                 }
 
-                // Reviewer role: can act on review only when reviewerStatus == "Pending"
+                // Non-vendor flows: core form fields remain read-only (only vendor responder edits core data)
+                _isReadOnly = true;
+
+                // Reviewer rules: reviewers cannot approve
                 if (_isReviewer)
                 {
                     _isReviewLocked = !string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase);
-                    // reviewers should not be able to change approval
                     _isApproverLocked = true;
                 }
 
-                // Approver role rules:
-                // - If reviewer has explicitly rejected => approver CANNOT approve (locked)
-                // - Otherwise (no reviewer decision or reviewer approved), approver may act when approverStatus == "Pending"
+                // Approver rules
                 if (_isApprover)
                 {
                     if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
@@ -309,11 +317,17 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     }
                     else
                     {
+                        // approver may act only when their status is Pending
                         _isApproverLocked = !string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase);
                     }
 
-                    // keep review fields locked for approver users
+                    // approver should not change review fields
                     _isReviewLocked = true;
+                }
+                else
+                {
+                    // ensure approver section locked when user is not approver
+                    _isApproverLocked = true;
                 }
             }
             catch
@@ -322,8 +336,101 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _isReadOnly = true;
                 _isReviewLocked = true;
                 _isApproverLocked = true;
+                _isReviewer = false;
+                _isApprover = false;
             }
         }
+
+        //private void LockUlockForm()
+        //{
+        //    try
+        //    {
+        //        // safe defaults: lock everything
+        //        _isReadOnly = true;
+        //        _isReviewLocked = true;
+        //        _isApproverLocked = true;
+
+        //        if (string.IsNullOrWhiteSpace(_userRole))
+        //            return;
+
+        //        var role = _userRole.Trim();
+
+        //        // Resolve current user (sync because called from init)
+        //        var authState = AuthState?.GetAwaiter().GetResult();
+        //        var user = authState?.User;
+        //        var username = user?.Identity?.Name
+        //                       ?? user?.FindFirst("username")?.Value
+        //                       ?? user?.FindFirst("email")?.Value
+        //                       ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+        //                       ?? string.Empty;
+
+        //        var isResponder = !string.IsNullOrWhiteSpace(username)
+        //                          && string.Equals(username.Trim(), (_vendorReg.ResponderEmailId ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase);
+
+        //        var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
+        //        var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
+
+        //        // Vendor responder: editable only if approver hasn't approved
+        //        if (role.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
+        //        {
+        //            _isApproverLocked = true;
+        //            _isReviewLocked = true;
+        //            if (isResponder)
+        //                _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+
+        //            else
+        //                _isReadOnly = true;
+        //        }
+        //        else
+        //        {
+        //            // Non-vendor users should not edit vendor data
+        //            _isReadOnly = true;
+        //        }
+
+        //        // Reviewer role: can act on review only when reviewerStatus == "Pending"
+        //        if (_isReviewer)
+        //        {
+        //            _isReviewLocked = !string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+        //            // reviewers should not be able to change approval
+        //            _isApproverLocked = true;
+        //        }
+
+        //        // Approver role rules:
+        //        // - If reviewer has explicitly rejected => approver CANNOT approve (locked)
+        //        // - Otherwise (no reviewer decision or reviewer approved), approver may act when approverStatus == "Pending"
+        //        if (_isApprover)
+        //        {
+        //            if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+        //            {
+        //                _isApproverLocked = true;
+        //            }
+        //            else
+        //            {
+        //                _isApproverLocked = !string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+        //            }
+
+        //            // keep review fields locked for approver users
+        //            _isReviewLocked = true;
+        //        }
+
+        //        if (_userType == null || _userType == "VENDOR")
+        //        {
+        //            // vendor responder cannot edit if approver has approved
+        //            _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+        //            _isApproverLocked = true;
+        //            _isReviewLocked = true;
+        //        }
+
+
+        //    }
+        //    catch
+        //    {
+        //        // conservative fallback
+        //        _isReadOnly = true;
+        //        _isReviewLocked = true;
+        //        _isApproverLocked = true;
+        //    }
+        //}
         // EditContext initialization
         private void InitializeEditContext(VendorRegistrationFormDto model)
         {
@@ -1374,7 +1481,13 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 && string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase)
                 && string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase)
             );
-
+            if (_userType == null || _userType=="VENDOR")
+            {
+                // vendor responder cannot edit if approver has approved
+                _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                _isApproverLocked = true;
+                _isReviewLocked = true;
+            }
             StateHasChanged();
             return Task.CompletedTask;
         }
