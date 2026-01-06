@@ -71,7 +71,7 @@ namespace OceanVMSClient.Components
         private void NavigateToChangePassword()
         {
             isPanelOpen = false;
-            NavigationManager.NavigateTo("ChangePassword");
+            NavigationManager.NavigateTo("change-password");
         }
         private void NavigateToLogout()
         {

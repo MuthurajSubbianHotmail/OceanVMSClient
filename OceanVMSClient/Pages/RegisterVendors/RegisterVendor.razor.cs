@@ -119,16 +119,25 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private readonly List<string> _registrationSection1Fields = new()
         {
             nameof(VendorRegistrationFormDto.PANNo),
+            nameof(VendorRegistrationFormDto.PANCardURL),
             nameof(VendorRegistrationFormDto.TANNo),
+            nameof(VendorRegistrationFormDto.TANCertURL),
             nameof(VendorRegistrationFormDto.GSTNO),
-            nameof(VendorRegistrationFormDto.CIN)
+            nameof(VendorRegistrationFormDto.GSTRegistrationCertURL),
+            nameof(VendorRegistrationFormDto.CIN),
+            nameof(VendorRegistrationFormDto.CINCertURL)
         };
         private readonly List<string> _registrationSection2Fields = new()
         {
             nameof(VendorRegistrationFormDto.AadharNo),
+            nameof(VendorRegistrationFormDto.AadharDocURL),
             nameof(VendorRegistrationFormDto.UDYAMRegNo),
+            nameof(VendorRegistrationFormDto.UDYAMRegCertURL),
             nameof(VendorRegistrationFormDto.PFNo),
-            nameof(VendorRegistrationFormDto.ESIRegNo)
+            nameof(VendorRegistrationFormDto.PFRegCertURL),
+            nameof(VendorRegistrationFormDto.ESIRegNo),
+            nameof(VendorRegistrationFormDto.ESIRegCertURL)
+
         };
         private readonly List<string> _bankAccountSectionFields = new()
         {
@@ -251,8 +260,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _isReadOnly = true;
                 _isReviewLocked = true;
                 _isApproverLocked = true;
-                _isReviewer = false;
-                _isApprover = false;
+                //_isReviewer = false;
+                //_isApprover = false;
 
                 // Resolve auth state synchronously because this runs during init
                 var authState = AuthState?.GetAwaiter().GetResult();
@@ -269,8 +278,26 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
                 // determine role/userType from previously loaded context (LoadUserContextAsync sets _userType/_userRole)
                 var role = (_userRole ?? string.Empty).Trim();
-                var isVendorType = (!string.IsNullOrWhiteSpace(_userType) && _userType.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
-                                   || (!string.IsNullOrWhiteSpace(role) && role.IndexOf("VENDOR", StringComparison.OrdinalIgnoreCase) >= 0);
+                //var isVendorType = (!string.IsNullOrWhiteSpace(_userType) && _userType.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
+                //                   || (!string.IsNullOrWhiteSpace(role) && role.IndexOf("VENDOR", StringComparison.OrdinalIgnoreCase) >= 0);
+
+                static bool HasVendorToken(string? input)
+                {
+                    if (string.IsNullOrWhiteSpace(input)) return false;
+                    var separators = new[] { ';', ',', '|', '/' };
+                    var parts = input.Split(separators, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim());
+                    foreach (var part in parts)
+                    {
+                        // split part into words by common separators so "Vendor Approver", "VENDOR_APPROVER" and "Vendor-Approver" match
+                        var words = part.Split(new[] { ' ', '_', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (words.Any(w => string.Equals(w, "VENDOR", StringComparison.OrdinalIgnoreCase)))
+                            return true;
+                    }
+                    return false;
+                }
+                var isVendorType = false;
+                isVendorType = (!string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase))
+                                   || HasVendorToken(role);
 
                 // compute responder identity (may be used to allow vendor responder edits until approved)
                 var username = user.Identity?.Name
@@ -290,8 +317,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 {
                     _isApproverLocked = true;
                     _isReviewLocked = true;
-                    _isReviewer = false;
-                    _isApprover = false;
+                    //_isReviewer = false;
+                    //_isApprover = false;
 
                     // vendor responder may edit their own form until it's approved
                     _isReadOnly = isResponder ? !string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase) : true;
@@ -315,10 +342,13 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     {
                         _isApproverLocked = true;
                     }
-                    else
+                    else if (string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase))
                     {
                         // approver may act only when their status is Pending
-                        _isApproverLocked = !string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+                        _isApproverLocked = true;
+                    } else if (string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isApproverLocked = false;
                     }
 
                     // approver should not change review fields
@@ -341,96 +371,6 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-        //private void LockUlockForm()
-        //{
-        //    try
-        //    {
-        //        // safe defaults: lock everything
-        //        _isReadOnly = true;
-        //        _isReviewLocked = true;
-        //        _isApproverLocked = true;
-
-        //        if (string.IsNullOrWhiteSpace(_userRole))
-        //            return;
-
-        //        var role = _userRole.Trim();
-
-        //        // Resolve current user (sync because called from init)
-        //        var authState = AuthState?.GetAwaiter().GetResult();
-        //        var user = authState?.User;
-        //        var username = user?.Identity?.Name
-        //                       ?? user?.FindFirst("username")?.Value
-        //                       ?? user?.FindFirst("email")?.Value
-        //                       ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
-        //                       ?? string.Empty;
-
-        //        var isResponder = !string.IsNullOrWhiteSpace(username)
-        //                          && string.Equals(username.Trim(), (_vendorReg.ResponderEmailId ?? string.Empty).Trim(), StringComparison.OrdinalIgnoreCase);
-
-        //        var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
-        //        var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
-
-        //        // Vendor responder: editable only if approver hasn't approved
-        //        if (role.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
-        //        {
-        //            _isApproverLocked = true;
-        //            _isReviewLocked = true;
-        //            if (isResponder)
-        //                _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
-
-        //            else
-        //                _isReadOnly = true;
-        //        }
-        //        else
-        //        {
-        //            // Non-vendor users should not edit vendor data
-        //            _isReadOnly = true;
-        //        }
-
-        //        // Reviewer role: can act on review only when reviewerStatus == "Pending"
-        //        if (_isReviewer)
-        //        {
-        //            _isReviewLocked = !string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase);
-        //            // reviewers should not be able to change approval
-        //            _isApproverLocked = true;
-        //        }
-
-        //        // Approver role rules:
-        //        // - If reviewer has explicitly rejected => approver CANNOT approve (locked)
-        //        // - Otherwise (no reviewer decision or reviewer approved), approver may act when approverStatus == "Pending"
-        //        if (_isApprover)
-        //        {
-        //            if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
-        //            {
-        //                _isApproverLocked = true;
-        //            }
-        //            else
-        //            {
-        //                _isApproverLocked = !string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase);
-        //            }
-
-        //            // keep review fields locked for approver users
-        //            _isReviewLocked = true;
-        //        }
-
-        //        if (_userType == null || _userType == "VENDOR")
-        //        {
-        //            // vendor responder cannot edit if approver has approved
-        //            _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
-        //            _isApproverLocked = true;
-        //            _isReviewLocked = true;
-        //        }
-
-
-        //    }
-        //    catch
-        //    {
-        //        // conservative fallback
-        //        _isReadOnly = true;
-        //        _isReviewLocked = true;
-        //        _isApproverLocked = true;
-        //    }
-        //}
         // EditContext initialization
         private void InitializeEditContext(VendorRegistrationFormDto model)
         {
@@ -790,7 +730,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-        // Registration section 1
+
+
+        // Registration Section 1 (New)
         private void UpdateRegistrationSection1Validity()
         {
             if (_editContext == null || _vendorReg == null)
@@ -801,87 +743,76 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             var anyInvalid = false;
 
-            foreach (var propName in _registrationSection1Fields)
+            foreach (var propName in _registrationSection2Fields)
             {
-                var fieldId = new FieldIdentifier(_vendorReg, propName);
-                if (_editContext.GetValidationMessages(fieldId).Any())
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(propName);
+                if (prop == null) continue;
+
+                var value = prop.GetValue(_vendorReg);
+
+                // Run DataAnnotations for the property (if any)
+                var results = new List<ValidationResult>();
+                var context = new ValidationContext(_vendorReg) { MemberName = propName };
+                Validator.TryValidateProperty(value, context, results);
+                if (results.Any())
                 {
                     anyInvalid = true;
                     break;
                 }
 
-                var prop = typeof(VendorRegistrationFormDto).GetProperty(propName);
-                if (prop != null)
-                {
-                    var value = prop.GetValue(_vendorReg);
-                    var results = new List<ValidationResult>();
-                    var context = new ValidationContext(_vendorReg) { MemberName = propName };
-                    Validator.TryValidateProperty(value, context, results);
-                    if (results.Any())
-                    {
-                        anyInvalid = true;
-                        break;
-                    }
-
-                    var isRequired = prop.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any()
-                                     || propName == nameof(VendorRegistrationFormDto.PANNo)
-                                     || propName == nameof(VendorRegistrationFormDto.GSTNO);
-
-                    if (isRequired)
-                    {
-                        if (prop.PropertyType == typeof(string))
-                        {
-                            if (string.IsNullOrWhiteSpace((string?)value))
-                            {
-                                anyInvalid = true;
-                                break;
-                            }
-                        }
-                    }
-                }
+                // Determine if this field is required by attribute OR by runtime dynamic flags
+                var isRequired = prop.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any();
 
                 if (string.Equals(propName, nameof(VendorRegistrationFormDto.PANNo), StringComparison.Ordinal) && _isPANRequired)
-                {
-                    if (string.IsNullOrWhiteSpace(_vendorReg.PANNo))
-                    {
-                        anyInvalid = true;
-                        break;
-                    }
-                }
+                    isRequired = true;
+                if (string.Equals(propName, nameof(VendorRegistrationFormDto.PANCardURL), StringComparison.Ordinal) && _isPANRequired)
+                    isRequired = true;
+
                 if (string.Equals(propName, nameof(VendorRegistrationFormDto.TANNo), StringComparison.Ordinal) && _isTANRequired)
-                {
-                    if (string.IsNullOrWhiteSpace(_vendorReg.TANNo))
-                    {
-                        anyInvalid = true;
-                        break;
-                    }
-                }
+                    isRequired = true;
+                if (string.Equals(propName, nameof(VendorRegistrationFormDto.TANCertURL), StringComparison.Ordinal) && _isTANRequired)
+                    isRequired = true;
+
+
                 if (string.Equals(propName, nameof(VendorRegistrationFormDto.GSTNO), StringComparison.Ordinal) && _isGSTRequired)
-                {
-                    if (string.IsNullOrWhiteSpace(_vendorReg.GSTNO))
-                    {
-                        anyInvalid = true;
-                        break;
-                    }
-                }
+                    isRequired = true;
+                if (string.Equals(propName, nameof(VendorRegistrationFormDto.GSTRegistrationCertURL), StringComparison.Ordinal) && _isGSTRequired)
+                    isRequired = true;
+
+
                 if (string.Equals(propName, nameof(VendorRegistrationFormDto.CIN), StringComparison.Ordinal) && _isCINRequired)
+                    isRequired = true;
+                if (string.Equals(propName, nameof(VendorRegistrationFormDto.CINCertURL), StringComparison.Ordinal) && _isCINRequired)
+                    isRequired = true;
+
+                if (isRequired)
                 {
-                    if (string.IsNullOrWhiteSpace(_vendorReg.CIN))
+                    if (prop.PropertyType == typeof(string))
                     {
-                        anyInvalid = true;
-                        break;
+                        if (string.IsNullOrWhiteSpace((string?)value))
+                        {
+                            anyInvalid = true;
+                            break;
+                        }
+                    }
+                    else if (prop.PropertyType == typeof(Guid) || Nullable.GetUnderlyingType(prop.PropertyType) == typeof(Guid))
+                    {
+                        if (value == null || (Guid)value == Guid.Empty)
+                        {
+                            anyInvalid = true;
+                            break;
+                        }
                     }
                 }
             }
 
             var newState = !anyInvalid;
-            if (newState != _isRegistrationSection1Valid)
+            if (newState != _isRegistrationSection2Valid)
             {
-                _isRegistrationSection1Valid = newState;
+                _isRegistrationSection2Valid = newState;
                 _ = InvokeAsync(StateHasChanged);
             }
         }
-
         // Registration section 2
         private void UpdateRegistrationSection2Validity()
         {
@@ -915,11 +846,22 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
                 if (string.Equals(propName, nameof(VendorRegistrationFormDto.AadharNo), StringComparison.Ordinal) && _isAadharRequired)
                     isRequired = true;
+                if (string.Equals(propName, nameof(VendorRegistrationFormDto.AadharDocURL), StringComparison.Ordinal) && _isAadharRequired)
+                    isRequired = true;
+
                 if (string.Equals(propName, nameof(VendorRegistrationFormDto.UDYAMRegNo), StringComparison.Ordinal) && _isUDYAMRequired)
                     isRequired = true;
+                if (string.Equals(propName, nameof(VendorRegistrationFormDto.UDYAMRegCertURL), StringComparison.Ordinal) && _isUDYAMRequired)
+                    isRequired = true;
+
                 if (string.Equals(propName, nameof(VendorRegistrationFormDto.PFNo), StringComparison.Ordinal) && _isPFRequired)
                     isRequired = true;
+                if (string.Equals(propName, nameof(VendorRegistrationFormDto.PFRegCertURL), StringComparison.Ordinal) && _isPFRequired)
+                    isRequired = true;
+
                 if (string.Equals(propName, nameof(VendorRegistrationFormDto.ESIRegNo), StringComparison.Ordinal) && _isESIRequired)
+                    isRequired = true;
+                if (string.Equals(propName, nameof(VendorRegistrationFormDto.ESIRegCertURL), StringComparison.Ordinal) && _isESIRequired)
                     isRequired = true;
 
                 if (isRequired)
@@ -1173,9 +1115,32 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     isRequired = true;
                 }
 
-                // For registration section dynamic flags
+
+                // For registration section1 dynamic flags
+                if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.PANNo), StringComparison.Ordinal) && _isPANRequired)
+                    isRequired = true;
+                if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.PANCardURL), StringComparison.Ordinal) && _isPANRequired)
+                    isRequired = true;
+
+                if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.TANNo), StringComparison.Ordinal) && _isTANRequired)
+                    isRequired = true;
+                if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.TANCertURL), StringComparison.Ordinal) && _isTANRequired)
+                    isRequired = true;
+
+                if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.GSTNO), StringComparison.Ordinal) && _isGSTRequired)
+                    isRequired = true;
+                if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.GSTRegistrationCertURL), StringComparison.Ordinal) && _isGSTRequired)
+                    isRequired = true;
+
+                if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.CIN), StringComparison.Ordinal) && _isCINRequired)
+                    isRequired = true;
+                if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.CINCertURL), StringComparison.Ordinal) && _isCINRequired)
+                    isRequired = true;
+
+                // For registration section2 dynamic flags
                 if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.AadharNo), StringComparison.Ordinal) && _isAadharRequired)
                     isRequired = true;
+
                 if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.UDYAMRegNo), StringComparison.Ordinal) && _isUDYAMRequired)
                     isRequired = true;
                 if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.PFNo), StringComparison.Ordinal) && _isPFRequired)
@@ -1310,29 +1275,49 @@ namespace OceanVMSClient.Pages.RegisterVendors
             var validationContext = new ValidationContext(_vendorReg, serviceProvider: null, items: null);
             Validator.TryValidateObject(_vendorReg, validationContext, validationResults, validateAllProperties: true);
 
-            if (_isAadharRequired && string.IsNullOrWhiteSpace(_vendorReg.AadharNo))
-                validationResults.Add(new ValidationResult("Aadhar is required for the selected ownership.", new[] { nameof(_vendorReg.AadharNo) }));
-
             if (_isPANRequired && string.IsNullOrWhiteSpace(_vendorReg.PANNo))
                 validationResults.Add(new ValidationResult("PAN is required for the selected ownership.", new[] { nameof(_vendorReg.PANNo) }));
+            if (_isPANRequired && string.IsNullOrWhiteSpace(_vendorReg.PANCardURL))
+                validationResults.Add(new ValidationResult("PAN Card document is required for the selected ownership.", new[] { nameof(_vendorReg.PANCardURL) }));
+
 
             if (_isTANRequired && string.IsNullOrWhiteSpace(_vendorReg.TANNo))
                 validationResults.Add(new ValidationResult("TAN No is required for the selected ownership.", new[] { nameof(_vendorReg.TANNo) }));
+            if (_isTANRequired && string.IsNullOrWhiteSpace(_vendorReg.TANCertURL))
+                validationResults.Add(new ValidationResult("TAN Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.TANCertURL) }));
 
             if (_isGSTRequired && string.IsNullOrWhiteSpace(_vendorReg.GSTNO))
                 validationResults.Add(new ValidationResult("GST No is required for the selected ownership.", new[] { nameof(_vendorReg.GSTNO) }));
 
-            if (_isUDYAMRequired && string.IsNullOrWhiteSpace(_vendorReg.UDYAMRegNo))
-                validationResults.Add(new ValidationResult("UDYAM No is required for the selected ownership.", new[] { nameof(_vendorReg.UDYAMRegNo) }));
+            if (_isGSTRequired && string.IsNullOrWhiteSpace(_vendorReg.GSTRegistrationCertURL))
+                validationResults.Add(new ValidationResult("GST Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.GSTRegistrationCertURL) }));
 
             if (_isCINRequired && string.IsNullOrWhiteSpace(_vendorReg.CIN))
                 validationResults.Add(new ValidationResult("CIN is required for the selected ownership.", new[] { nameof(_vendorReg.CIN) }));
+            if (_isCINRequired && string.IsNullOrWhiteSpace(_vendorReg.CINCertURL))
+                validationResults.Add(new ValidationResult("CIN Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.CINCertURL) }));
+
+
+            if (_isAadharRequired && string.IsNullOrWhiteSpace(_vendorReg.AadharNo))
+                validationResults.Add(new ValidationResult("Aadhar is required for the selected ownership.", new[] { nameof(_vendorReg.AadharNo) }));
+            if (_isAadharRequired && string.IsNullOrWhiteSpace(_vendorReg.AadharDocURL))
+                validationResults.Add(new ValidationResult("Aadhar document is required for the selected ownership.", new[] { nameof(_vendorReg.AadharDocURL) }));
+
+            if (_isUDYAMRequired && string.IsNullOrWhiteSpace(_vendorReg.UDYAMRegNo))
+                validationResults.Add(new ValidationResult("UDYAM No is required for the selected ownership.", new[] { nameof(_vendorReg.UDYAMRegNo) }));
+            if (_isUDYAMRequired && string.IsNullOrWhiteSpace(_vendorReg.UDYAMRegCertURL))
+                validationResults.Add(new ValidationResult("UDYAM Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.UDYAMRegCertURL) }));
+
 
             if (_isPFRequired && string.IsNullOrWhiteSpace(_vendorReg.PFNo))
                 validationResults.Add(new ValidationResult("PF No is required for the selected ownership.", new[] { nameof(_vendorReg.PFNo) }));
+            if (_isPFRequired && string.IsNullOrWhiteSpace(_vendorReg.PFRegCertURL))
+                validationResults.Add(new ValidationResult("PF Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.PFRegCertURL) }));
 
             if (_isESIRequired && string.IsNullOrWhiteSpace(_vendorReg.ESIRegNo))
                 validationResults.Add(new ValidationResult("ESI No is required for the selected ownership.", new[] { nameof(_vendorReg.ESIRegNo) }));
+            if (_isESIRequired && string.IsNullOrWhiteSpace(_vendorReg.ESIRegCertURL))
+                validationResults.Add(new ValidationResult("ESI Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.ESIRegCertURL) }));
 
             _messageStore?.Clear();
             if (validationResults.Any())
@@ -1481,7 +1466,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 && string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase)
                 && string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase)
             );
-            if (_userType == null || _userType=="VENDOR")
+            if (_userType == null || _userType == "VENDOR")
             {
                 // vendor responder cannot edit if approver has approved
                 _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
@@ -1497,8 +1482,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _vendorReg.ApproverStatus = value;
 
             var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
-            if (!string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase))
-                _isApproverLocked = true;
+            //if (!string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+            //    _isApproverLocked = true;
 
             StateHasChanged();
             return Task.CompletedTask;

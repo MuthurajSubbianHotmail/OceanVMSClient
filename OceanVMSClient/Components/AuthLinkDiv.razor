@@ -6,7 +6,12 @@
                 <div class="name">
                     @(!string.IsNullOrWhiteSpace(fullNameValue) ? FormatFullName(fullNameValue) : FormatFullName(auth.User.Identity?.Name))
                 </div>
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" Color="Color.Inherit" DisableRipple="true" />
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDropDown"
+                               Size="Size.Small"
+                               Color="Color.Inherit"
+                               DisableRipple="true"
+                               OnClick="TogglePanel"
+                               ButtonType="ButtonType.Button" />
             </div>
 
         </div>
@@ -72,6 +77,5 @@
 </AuthorizeView>
 
 @code {
-    
-}
 
+}

@@ -1,4 +1,5 @@
-﻿using Shared.DTO;
+﻿using OceanVMSClient.Pages.Authentication;
+using Shared.DTO;
 
 namespace OceanVMSClient.HttpRepoInterface.Authentication
 {
@@ -18,6 +19,7 @@ namespace OceanVMSClient.HttpRepoInterface.Authentication
         /// Returns true when reset completed successfully (2xx). Throws/returns false on error.
         /// </summary>
         Task<bool> ResetPasswordAsync(string userName, string token, string newPassword);
+        Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordModel);
 
     }
 }

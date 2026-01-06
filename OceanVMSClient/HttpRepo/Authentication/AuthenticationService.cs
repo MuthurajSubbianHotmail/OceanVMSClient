@@ -22,7 +22,7 @@ namespace OceanVMSClient.HttpRepo.Authentication
         private readonly ISnackbar _snackbar;
         private readonly ILogger<AuthenticationService>? _logger;
 
-        public AuthenticationService(HttpClient httpClient, 
+        public AuthenticationService(HttpClient httpClient,
             AuthenticationStateProvider authenticationStateProvider,
             NavigationManager nav,
             ILocalStorageService localStorageService,
@@ -102,8 +102,8 @@ namespace OceanVMSClient.HttpRepo.Authentication
 
 
             // Notify AuthStateProvider including first/last/vendor name so UI updates immediately
-            ((AuthStateProvider)_authStateProvider).NotifyUserAuthentication(result.Token.AccessToken, 
-                result.FirstName, result.LastName, 
+            ((AuthStateProvider)_authStateProvider).NotifyUserAuthentication(result.Token.AccessToken,
+                result.FirstName, result.LastName,
                 result.VendorName, result.UserType,
                 result.FullName, result.VendorId, result.VendorContactId, result.EmployeeId);
 
@@ -113,7 +113,7 @@ namespace OceanVMSClient.HttpRepo.Authentication
             return new AuthenticationResponseDto { IsAuthSuccessful = true };
             //return result;
         }
-       
+
 
         public async Task Logout()
         {
@@ -257,5 +257,68 @@ namespace OceanVMSClient.HttpRepo.Authentication
 
             return true;
         }
+
+        public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordModel)
+        {
+            if (changePasswordModel == null)
+                throw new ArgumentNullException(nameof(changePasswordModel));
+
+            var authToken = await _localStorage.GetItemAsync<string>("authToken");
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", authToken);
+
+            var json = JsonSerializer.Serialize(changePasswordModel, _jsonSerializerOptions);
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // Build the request URI from the HttpClient BaseAddress to avoid hard-coded absolute URLs.
+            // If BaseAddress is not configured, fall back to the relative path.
+            Uri requestUri = _httpClient.BaseAddress != null
+                ? new Uri(_httpClient.BaseAddress, "authentication/change-password")
+                : new Uri("authentication/change-password", UriKind.Relative);
+
+            var response = await _httpClient.PostAsync(requestUri, content);
+            var body = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"API Error: {response.StatusCode} - {body}");
+            }
+            return true;
+        }
+
+        //public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordModel)
+        //{
+        //    if (changePasswordModel == null)
+        //        throw new ArgumentNullException(nameof(changePasswordModel));
+        //    var url = "https://myoceanapp.azurewebsites.net/api/authentication/change-password";
+        //    var authToken = await _localStorage.GetItemAsync<string>("authToken");
+        //    _httpClient.DefaultRequestHeaders.Authorization =
+        //new AuthenticationHeaderValue("Bearer", authToken);
+
+
+        //    var json = JsonSerializer.Serialize(changePasswordModel, _jsonSerializerOptions);
+        //    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        //    var response = await _httpClient.PostAsync(url, content);
+
+        //    var body = await response.Content.ReadAsStringAsync();
+
+        //    if (!response.IsSuccessStatusCode)
+        //    {
+        //        throw new Exception($"API Error: {response.StatusCode} - {body}");
+        //    }
+        //    return true;
+
+        //    //using var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        //    //_httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+        //    //var response = await _httpClient.PostAsync("authentication/change-password", content);
+        //    //var responseBody = await response.Content.ReadAsStringAsync();
+        //    //if (!response.IsSuccessStatusCode)
+        //    //{
+        //    //    throw new Exception($"Change password failed: {(int)response.StatusCode} {response.ReasonPhrase}. Response: {responseBody}");
+        //    //}
+        //    //return true;
+        //}
     }
 }
