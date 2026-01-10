@@ -1,21 +1,29 @@
 ﻿@using MudBlazor
+@using Microsoft.AspNetCore.Components
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<div class="version-footer" title="Application version" @onclick="MaybeShowUpdateDialog" role="status" aria-live="polite">
-    @if (!string.IsNullOrWhiteSpace(_bootVersion))
-    {
-        <span class="current">v@_bootVersion</span>
-        @if (!string.IsNullOrWhiteSpace(_latestVersion) && !string.Equals(_latestVersion, _bootVersion, StringComparison.OrdinalIgnoreCase))
+@if (ShowFooter)
+{
+    <div class="version-footer" title="Application version" @onclick="MaybeShowUpdateDialog" role="status" aria-live="polite">
+        @if (!string.IsNullOrWhiteSpace(_bootVersion))
         {
-            <span class="available"> — new: v@_latestVersion</span>
+            <span class="current">v@_bootVersion</span>
+            @if (!string.IsNullOrWhiteSpace(_latestVersion) && !string.Equals(_latestVersion, _bootVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                <span class="available"> — new: v@_latestVersion</span>
+            }
         }
-    }
-</div>
+    </div>
+}
 
 @code {
+
+    [Parameter]
+    public bool ShowFooter { get; set; } = true;
+
     private string? _bootVersion;
     private string? _latestVersion;
     private System.Threading.Timer? _timer;
@@ -90,7 +98,18 @@
     {
         try
         {
-            var json = await Http.GetStringAsync($"version.json?cb={DateTime.UtcNow.Ticks}");
+            // Build absolute URL using NavigationManager to avoid base-address mismatch
+            var uri = $"{NavigationManager.BaseUri.TrimEnd('/')}/version.json?cb={DateTime.UtcNow.Ticks}";
+
+            using var response = await Http.GetAsync(uri);
+
+            // If the file doesn't exist, treat as "no version info" (don't spam the user)
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return null;
+
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync();
             using var doc = System.Text.Json.JsonDocument.Parse(json);
             // prefer 'appVersion' key, fall back to 'version'
             if (doc.RootElement.TryGetProperty("appVersion", out var appVer) && appVer.ValueKind == System.Text.Json.JsonValueKind.String)
@@ -98,9 +117,14 @@
             if (doc.RootElement.TryGetProperty("version", out var ver) && ver.ValueKind == System.Text.Json.JsonValueKind.String)
                 return ver.GetString();
         }
-        catch
+        catch (System.Net.Http.HttpRequestException httpEx)
         {
-            // ignore
+            // Show a non-blocking warning for network/server errors (but not for 404 which is handled above)
+            Snackbar.Add($"Network error checking for latest version: {httpEx.Message}", Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error checking for latest version: {ex.Message}", Severity.Error);
         }
         return null;
     }

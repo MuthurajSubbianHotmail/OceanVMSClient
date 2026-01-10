@@ -2,38 +2,52 @@
 @using OceanVMSClient.Components
 @using MudBlazor
 @inject HttpClient Http
-<MudLayout>
-    <MudAppBar Elevation="3">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleSidebar"/> 
-        <MudSpacer />
-        <AuthLinkDiv />
-        @if (_isDarkMode)
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.Brightness5" Color="Color.Inherit" OnClick="@ToggleTheme" />
-        }
-        else
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.Brightness4" Color="Color.Inherit" OnClick="@ToggleTheme" />
-        }
-        <NavMenu SideBarOpen="_sidebarOpen" />
-    </MudAppBar>
-    
-    <MudMainContent Class="pt-16 px-16">
-        <MudContainer Class="mt-6">
-            <MudPopoverProvider />
-            <VersionChecker />
-            @Body
-        </MudContainer>
-    </MudMainContent>
-</MudLayout>
+@inject NavigationManager NavigationManager
 
-<!-- small fixed footer showing app version -->
-@if (!string.IsNullOrWhiteSpace(_appVersion))
-{
-    <div style="position:fixed; left:12px; bottom:8px; z-index:1200; font-size:0.75rem; color:rgba(0,0,0,0.6);">
-        v@_appVersion
-    </div>
-}
+<!-- Layout container: make a column flex so footer sits after content or at viewport bottom when content is short -->
+<div style="display:flex; flex-direction:column; min-height:100vh;">
+    <MudLayout style="flex:1;">
+        <MudAppBar Elevation="3">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleSidebar"/> 
+            <MudSpacer />
+            <AuthLinkDiv />
+            @if (_isDarkMode)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Brightness5" Color="Color.Inherit" OnClick="@ToggleTheme" />
+            }
+            else
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Brightness4" Color="Color.Inherit" OnClick="@ToggleTheme" />
+            }
+            <NavMenu SideBarOpen="_sidebarOpen" />
+        </MudAppBar>
+        
+        <MudMainContent Class="pt-16 px-16">
+            <MudContainer Class="mt-6">
+                <MudPopoverProvider />
+                <!-- keep VersionChecker active for polling/notifications but hide its inline footer -->
+                <VersionChecker ShowFooter="false" />
+                @Body
+            </MudContainer>
+        </MudMainContent>
+    </MudLayout>
+
+    <!-- footer placed after layout so it participates in document flow.
+         Use MudBlazor theme CSS variables for background but force white text color. -->
+    <footer role="contentinfo" aria-label="Application footer" style="width:100%;">
+        <div style="background-color:var(--mud-palette-primary); color:white; width:100%; display:flex; justify-content:space-between; align-items:center; padding:8px 16px; font-size:0.875rem;">
+            <div>
+                © Crisolite Solutions 2026
+            </div>
+            <div>
+                @if (!string.IsNullOrWhiteSpace(_appVersion))
+                {
+                    <span>v@_appVersion</span>
+                }
+            </div>
+        </div>
+    </footer>
+</div>
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode"/>
 <MudSnackbarProvider />
@@ -78,14 +92,29 @@
     {
         try
         {
-            var json = await Http.GetStringAsync($"version.json?cb={DateTime.UtcNow.Ticks}");
+            // Build absolute URL to avoid base-address mismatch and to handle 404 gracefully
+            var uri = $"{NavigationManager.BaseUri.TrimEnd('/')}/version.json?cb={DateTime.UtcNow.Ticks}";
+            using var response = await Http.GetAsync(uri);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _appVersion = null;
+                return;
+            }
+
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+
             using var doc = System.Text.Json.JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("version", out var ver))
+            // prefer 'appVersion' key, fall back to 'version'
+            if (doc.RootElement.TryGetProperty("appVersion", out var appVer) && appVer.ValueKind == System.Text.Json.JsonValueKind.String)
+                _appVersion = appVer.GetString();
+            else if (doc.RootElement.TryGetProperty("version", out var ver) && ver.ValueKind == System.Text.Json.JsonValueKind.String)
                 _appVersion = ver.GetString();
         }
         catch
         {
-            // ignore errors reading version
+            // ignore errors reading version (keep UI clean)
             _appVersion = null;
         }
     }
