@@ -1533,14 +1533,24 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-        private async Task LockReview()
+        private async Task SubmitReview()
         {
             if (_vendorReg == null)
             {
                 Snackbar.Add("Vendor registration is not loaded.", Severity.Error);
-                Logger.LogWarning("LockReview called but _vendorReg was null.");
+                Logger.LogWarning("SubmitReview called but _vendorReg was null.");
                 return;
             }
+
+            // ask for confirmation before saving review comments
+            var confirmed = await DialogService.ShowMessageBox(
+                "Confirm review",
+                "Are you sure you want to submit this review?",
+                yesText: "Yes",
+                noText: "No");
+
+            if (confirmed != true)
+                return;
 
             _vendorReviewDto ??= new VendorRegistrationFormReviewDto();
             _vendorReviewDto.ReviewerId = _employeeId ?? Guid.Empty;
@@ -1556,6 +1566,11 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 if (reviewResult != null)
                 {
                     Snackbar.Add("Vendor registration reviewed.", Severity.Success);
+
+                    // lock review UI after successful submit
+                    _isReviewLocked = true;
+                    StateHasChanged();
+
                     NavigationManager.NavigateTo($"/vendor-registrations");
                 }
                 else
@@ -1570,14 +1585,24 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
         }
 
-        private async Task LockApproval()
+        private async Task SubmitApproval()
         {
             if (_vendorReg == null)
             {
                 Snackbar.Add("Vendor registration is not loaded.", Severity.Error);
-                Logger.LogWarning("LockApproval called but _vendorReg was null.");
+                Logger.LogWarning("SubmitApproval called but _vendorReg was null.");
                 return;
             }
+
+            // ask for confirmation before saving review comments
+            var confirmed = await DialogService.ShowMessageBox(
+                "Confirm your Approval",
+                "Are you sure you want to submit this Approval Status?",
+                yesText: "Yes",
+                noText: "No");
+
+            if (confirmed != true)
+                return;
 
             _vendorApprovalDto ??= new VendorRegistrationFormApprovalDto();
             _vendorApprovalDto.ApproverId = _employeeId ?? Guid.Empty;
@@ -1613,12 +1638,16 @@ namespace OceanVMSClient.Pages.RegisterVendors
             var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
             var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
 
-            _isReviewLocked = !(_isReviewer && string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase));
+            // Allow users with reviewer role to edit review fields until they explicitly submit.
+            _isReviewLocked = !_isReviewer;
+
+            // Keep approver locking logic as before
             _isApproverLocked = !(
                 _isApprover
                 && string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase)
                 && string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase)
             );
+
             if (_userType == null || _userType == "VENDOR")
             {
                 // vendor responder cannot edit if approver has approved
@@ -1626,6 +1655,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _isApproverLocked = true;
                 _isReviewLocked = true;
             }
+
             StateHasChanged();
             return Task.CompletedTask;
         }
@@ -1635,8 +1665,22 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _vendorReg.ApproverStatus = value;
 
             var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
-            //if (!string.Equals(approverStatus, "Pending", StringComparison.OrdinalIgnoreCase))
-            //    _isApproverLocked = true;
+            var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
+
+            // Allow users with approver role to edit approval fields until they explicitly submit.
+            // Approver may act only when reviewer has approved the form.
+            _isApproverLocked = !(_isApprover && string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase));
+
+            // Approver should not change reviewer fields
+            _isReviewLocked = true;
+
+            if (_userType == null || _userType == "VENDOR")
+            {
+                // vendor responder cannot edit if approver has approved
+                _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                _isApproverLocked = true;
+                _isReviewLocked = true;
+            }
 
             StateHasChanged();
             return Task.CompletedTask;

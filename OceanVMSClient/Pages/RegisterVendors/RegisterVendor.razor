@@ -649,7 +649,7 @@ else
 
 
                 </MudTabPanel>
-                @if(_userType != "VENDOR"){
+                @if(_userType != "VENDOR" && _userType != null){
                 <MudTabPanel Text="Review & Submit">
                     <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
                         <MudItem id="Review Panel" xs="6" md="6">
@@ -730,7 +730,7 @@ else
                                         <MudButton ButtonType="ButtonType.Button"
                                                    Variant="Variant.Filled" Color="Color.Primary"
                                                    Disabled="@_isReviewLocked"
-                                                   OnClick="LockReview">
+                                                       OnClick="SubmitReview">
                                             <MudText Typo="Typo.caption">Submit Review</MudText>
                                         </MudButton>
                                     </MudItem>
@@ -826,7 +826,7 @@ else
                                         <MudButton ButtonType="ButtonType.Button"
                                                    Variant="Variant.Filled" Color="Color.Primary"
                                                    Disabled="@_isApproverLocked"
-                                                   OnClick="LockApproval">
+                                                   OnClick="SubmitApproval">
                                             <MudText Typo="Typo.caption">Submit Approval</MudText>
                                         </MudButton>
                                     </MudItem>
