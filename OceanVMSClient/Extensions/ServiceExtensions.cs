@@ -50,6 +50,7 @@ namespace OceanVMSClient.Extensions
             services.AddScoped<IVendorRegistrationRepository, VendorRegistrationRepository>();
             services.AddScoped<ICompanyOwnershipRepository, CompanyOwnershipRepository>();
             services.AddScoped<IVendorServiceRepository, VendorServiceRepository>();
+            services.AddScoped<IVendorContactRepository, VendorContactRepository>();
             return services;
         }
 

@@ -1,0 +1,137 @@
+﻿@using MudBlazor
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<div class="version-footer" title="Application version" @onclick="MaybeShowUpdateDialog" role="status" aria-live="polite">
+    @if (!string.IsNullOrWhiteSpace(_bootVersion))
+    {
+        <span class="current">v@_bootVersion</span>
+        @if (!string.IsNullOrWhiteSpace(_latestVersion) && !string.Equals(_latestVersion, _bootVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            <span class="available"> — new: v@_latestVersion</span>
+        }
+    }
+</div>
+
+@code {
+    private string? _bootVersion;
+    private string? _latestVersion;
+    private System.Threading.Timer? _timer;
+    private readonly TimeSpan _pollInterval = TimeSpan.FromMinutes(1); // adjust as needed
+
+    // ensure we notify only once per new version
+    private bool _notifiedForCurrentChange;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _bootVersion = await ReadVersionAsync();
+        _latestVersion = _bootVersion;
+        // start polling (runs on a ThreadPool thread)
+        _timer = new System.Threading.Timer(async _ => await PollAsync(), null, _pollInterval, _pollInterval);
+    }
+
+    private async Task PollAsync()
+    {
+        try
+        {
+            var latest = await ReadVersionAsync();
+            if (string.IsNullOrEmpty(latest)) return;
+
+            // Update latest for UI
+            if (!string.Equals(latest, _latestVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                _latestVersion = latest;
+                await InvokeAsync(StateHasChanged);
+            }
+
+            // version changed and not yet notified
+            if (!string.Equals(latest, _bootVersion, StringComparison.OrdinalIgnoreCase) && !_notifiedForCurrentChange)
+            {
+                _notifiedForCurrentChange = true;
+
+                // Show a MudDialog on the renderer thread and wait for its result
+                var parameters = new DialogParameters
+                {
+                    ["BootVersion"] = _bootVersion,
+                    ["LatestVersion"] = latest
+                };
+                var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+                IDialogReference dlgRef = null;
+                await InvokeAsync(() =>
+                {
+                    dlgRef = DialogService.Show<UpdateAvailableDialog>("Update available", parameters, options);
+                });
+
+                var dialogResult = await dlgRef.Result;
+
+                // MudBlazor's DialogResult has a property 'Canceled'
+                if (!dialogResult.Canceled && dialogResult.Data is bool refresh && refresh)
+                {
+                    // force full reload from server
+                    await InvokeAsync(() => NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true));
+                }
+                else
+                {
+                    // user deferred: show snackbar and leave the current app running
+                    Snackbar.Add("New version available. Refresh the page when convenient to use the latest version.", Severity.Info);
+                    // still show "new" badge in footer via _latestVersion
+                }
+            }
+        }
+        catch
+        {
+            // ignore transient errors
+        }
+    }
+
+    private async Task<string?> ReadVersionAsync()
+    {
+        try
+        {
+            var json = await Http.GetStringAsync($"version.json?cb={DateTime.UtcNow.Ticks}");
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            // prefer 'appVersion' key, fall back to 'version'
+            if (doc.RootElement.TryGetProperty("appVersion", out var appVer) && appVer.ValueKind == System.Text.Json.JsonValueKind.String)
+                return appVer.GetString();
+            if (doc.RootElement.TryGetProperty("version", out var ver) && ver.ValueKind == System.Text.Json.JsonValueKind.String)
+                return ver.GetString();
+        }
+        catch
+        {
+            // ignore
+        }
+        return null;
+    }
+
+    // If user clicks the footer when an update is available, show the same dialog again
+    private async Task MaybeShowUpdateDialog()
+    {
+        if (string.IsNullOrWhiteSpace(_latestVersion) || string.Equals(_latestVersion, _bootVersion, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var dlgRef = await DialogService.ShowAsync<UpdateAvailableDialog>(
+            "Update available",
+            new DialogParameters { ["BootVersion"] = _bootVersion, ["LatestVersion"] = _latestVersion },
+            new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true }
+        );
+
+        var dialogResult = await dlgRef.Result;
+
+        if (!dialogResult.Canceled && dialogResult.Data is bool confirmed && confirmed)
+        {
+            NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+        }
+        else
+        {
+            Snackbar.Add("New version available. Refresh when convenient.", Severity.Info);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _timer?.Dispose();
+        await Task.CompletedTask;
+    }
+}

@@ -1,6 +1,7 @@
 ﻿@inherits LayoutComponentBase
 @using OceanVMSClient.Components
 @using MudBlazor
+@inject HttpClient Http
 <MudLayout>
     <MudAppBar Elevation="3">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleSidebar"/> 
@@ -20,10 +21,19 @@
     <MudMainContent Class="pt-16 px-16">
         <MudContainer Class="mt-6">
             <MudPopoverProvider />
+            <VersionChecker />
             @Body
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+
+<!-- small fixed footer showing app version -->
+@if (!string.IsNullOrWhiteSpace(_appVersion))
+{
+    <div style="position:fixed; left:12px; bottom:8px; z-index:1200; font-size:0.75rem; color:rgba(0,0,0,0.6);">
+        v@_appVersion
+    </div>
+}
 
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode"/>
 <MudSnackbarProvider />
@@ -62,5 +72,21 @@
     }
     bool _drawerOpen = true;
 
-    
+    private string? _appVersion;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var json = await Http.GetStringAsync($"version.json?cb={DateTime.UtcNow.Ticks}");
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("version", out var ver))
+                _appVersion = ver.GetString();
+        }
+        catch
+        {
+            // ignore errors reading version
+            _appVersion = null;
+        }
+    }
 }

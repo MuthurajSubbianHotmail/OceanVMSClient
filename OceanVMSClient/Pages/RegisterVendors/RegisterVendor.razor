@@ -56,7 +56,8 @@ else
                                                       Variant="@_inputVariant"
                                                       ReadOnly="@_isReadOnly"
                                                       Required="true"
-                                                      For="@(() => _vendorReg.OrganizationName)" />
+                                                      For="@(() => _vendorReg.OrganizationName)"
+                                                      OnBlur="@(() => ValidateOrganizationNameOnBlur())" />
                                     </MudItem>
                                     <MudItem id="Ownershp Type" xs="8" md="8">
                                         @if (_companyOwnerships?.Any() == true)
@@ -107,7 +108,7 @@ else
 
 
 
-                                   
+
 
                                     <MudItem xs="12">
                                         <MudSelect T="string"
@@ -134,7 +135,7 @@ else
                                         </MudSelect>
                                     </MudItem>
 
-                                     <MudItem id="Company Phone" xs="12" md="12">
+                                    <MudItem id="Company Phone" xs="12" md="12">
                                         <MudTextField T="string"
                                                       @bind-Value="@_vendorReg.CompanyPhoneNo"
                                                       Label="Company Phone Number"
@@ -146,7 +147,7 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="true"
                                                       For="@(() => _vendorReg.CompanyPhoneNo)"
-                                                      OnBlur="@(() => ValidatePhoneOnBlur("Organization"))" />
+                                                      OnBlur="@(() => ValidateCompanyPhoneOnBlur())" />
                                     </MudItem>
                                     <MudItem id="Company Email" xs="12" md="12">
                                         <MudTextField T="string"
@@ -160,7 +161,7 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="true"
                                                       For="@(() => _vendorReg.CompanyEmailID)"
-                                                      OnBlur="@(() => ValidateEmailOnBlur("Organization"))" />
+                                                      OnBlur="@(() => ValidateCompanyEmailOnBlur())" />
                                     </MudItem>
                                     <MudItem id="Company WebSite" xs="12" md="12">
                                         <MudTextField T="string" @bind-Value="@_vendorReg.WebSite"
@@ -339,7 +340,7 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderMobileNo)"
                                                       For="@(() => _vendorReg.ResponderMobileNo)"
-                                                      OnBlur="@(() => ValidatePhoneOnBlur("Contact"))" />
+                                                      OnBlur="@(() => ValidateResponderPhoneOnBlur())" />
                                     </MudItem>
                                     <MudItem id="Responder Email ID" xs="12" md="12">
                                         <MudTextField T="string" @bind-Value="@_vendorReg.ResponderEmailId"
@@ -352,7 +353,7 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderEmailId)"
                                                       For="@(() => _vendorReg.ResponderEmailId)"
-                                                      OnBlur="@(() => ValidateEmailOnBlur("Contact"))" />
+                                                      OnBlur="@(() => ValidateResponderEmailOnBlur())" />
                                     </MudItem>
                                 </MudGrid>
                             </MudPaper>
@@ -632,8 +633,11 @@ else
                                                       For="@(() => _vendorReg.AccountName)" />
                                     </MudItem>
                                     <MudItem id="Upload Cancelled Cheque" xs="12" md="12" Style="padding-right:4px;" class="flex-column align-content-end">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="flex:1;">Upload a Cancelled Cheque/Bank Statement* </MudText>
-                                        <OrgRegisterDocsUploader DocType="CANCELCHEQ" OnChange="OnCancelChequeUploaded" />
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="flex:1;" hidden="@_isReadOnly">Upload a Cancelled Cheque/Bank Statement* </MudText>
+                                        <OrgRegisterDocsUploader 
+                                            DocType="CANCELCHEQ" 
+                                            OnChange="OnCancelChequeUploaded"
+                                                                 ImgUrl="@_vendorReg.CancelledChequeURL" />
                                     </MudItem>
 
 
@@ -645,11 +649,11 @@ else
 
 
                 </MudTabPanel>
-
+                @if(_userType != "VENDOR"){
                 <MudTabPanel Text="Review & Submit">
                     <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
                         <MudItem id="Review Panel" xs="6" md="6">
-                                <MudPaper Height="100%" Elevation="1" Class="ms-2 me-2 pa-2">
+                            <MudPaper Height="100%" Elevation="1" Class="ms-2 me-2 pa-2">
                                 <MudGrid GutterSize="1" Spacing="0">
                                     <MudText Typo="Typo.h6" Color="Color.Info">Review Details</MudText>
                                     <MudDivider Class="my-2" />
@@ -721,7 +725,7 @@ else
                                                       @bind-Value="_vendorReg.ReviewComments" />
                                     </MudItem>
                                     <MudDivider Class="my-2" />
-                                    
+
                                     <MudItem xs="6" Class="d-flex justify-start">
                                         <MudButton ButtonType="ButtonType.Button"
                                                    Variant="Variant.Filled" Color="Color.Primary"
@@ -739,7 +743,7 @@ else
                                         </MudChip>
                                     </MudItem>
                                 </MudGrid>
-                                </MudPaper>
+                            </MudPaper>
 
                         </MudItem>
 
@@ -747,7 +751,7 @@ else
 
                             <MudPaper Height="100%" Elevation="1" Class="ms-2 me-4 pa-2">
                                 <MudGrid GutterSize="1" Spacing="0">
-                                    <MudText Typo="Typo.h6" Color="Color.Info">Approal Details</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Info">Approval Details</MudText>
                                     <MudDivider Class="my-2" />
                                     <MudItem xs="6" md="6">
                                         <MudText Typo="Typo.subtitle2" Color="Color.Default">Assigned On </MudText>
@@ -788,15 +792,14 @@ else
 
                                     <MudItem xs="6" md="6">
                                         <MudSelect Label="Approval Status"
-                                            Placeholder="Approval Status"
+                                                   Placeholder="Approval Status"
                                                    Value="_vendorReg.ApproverStatus"
                                                    Typo="@_inputTypo"
                                                    ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnApproverStatusChanged))"
                                                    Variant="@_inputVariant"
                                                    Margin="@_inputMargin"
                                                    Class="short-field"
-                                                   ReadOnly="@_isApproverLocked"
-                                                   >
+                                                   ReadOnly="@_isApproverLocked">
                                             <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
                                             <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
                                             <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
@@ -818,7 +821,7 @@ else
                                                       @bind-Value="_vendorReg.ApprovalComments" />
                                     </MudItem>
                                     <MudDivider Class="my-2" />
-                                    
+
                                     <MudItem xs="6" Class="d-flex justify-start">
                                         <MudButton ButtonType="ButtonType.Button"
                                                    Variant="Variant.Filled" Color="Color.Primary"
@@ -841,6 +844,7 @@ else
                         </MudItem>
                     </MudGrid>
                 </MudTabPanel>
+                }
                 <div class="d-flex justify-end mt-2">
                     <MudButton Variant="Variant.Outlined"
                                Color="Color.Default"
@@ -862,18 +866,18 @@ else
                         }
                         else
                         {
-                            @if(_formEditMode == "Create")
+                            @if (_formEditMode == "Create")
                             {
                                 <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.AddCircleOutline" />
                                 <span>Submit</span>
                             }
-                            else if(_formEditMode == "Edit")
+                            else if (_formEditMode == "Edit")
                             {
                                 <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.Edit" />
                                 <span>Update</span>
                             }
-    
-                            
+
+
                         }
                     </MudButton>
                 </div>

@@ -1,0 +1,28 @@
+﻿.version-footer {
+    position: fixed;
+    right: 12px;
+    bottom: 8px;
+    z-index: 1200;
+    font-size: 0.75rem;
+    color: rgba(0,0,0,0.6);
+    background: transparent;
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background .12s ease, color .12s ease;
+}
+
+.version-footer:hover {
+    background: rgba(0,0,0,0.04);
+}
+
+.version-footer .available {
+    color: #0d6efd; /* blue to indicate available update */
+    margin-left: 6px;
+    font-weight: 600;
+}
+
+.version-footer .current {
+    opacity: 0.85;
+}

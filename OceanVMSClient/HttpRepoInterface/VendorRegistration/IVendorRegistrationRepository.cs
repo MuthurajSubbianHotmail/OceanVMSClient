@@ -18,7 +18,6 @@ namespace OceanVMSClient.HttpRepoInterface.VendorRegistration
         Task<VendorRegistrationFormDto> GetVendorRegistrationFormByIdAsync(Guid id);
         Task<string> ApproveVendorRegistrationFormAsync(Guid vendorRegistrationFormId, VendorRegistrationFormApprovalDto approvalDto);
         Task<string> ReviewVendorRegistrationFormAsync(Guid vendorRegistrationFormId, VendorRegistrationFormReviewDto reviewDto);
-
-
+        Task<bool> OrganizationNameExistsAsync(string organizationName);
     }
 }

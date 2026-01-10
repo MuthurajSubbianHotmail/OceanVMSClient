@@ -35,6 +35,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
         [Inject] public required IVendorRegistrationRepository VendorRegistrationFormRepository { get; set; }
         [Inject] public ICompanyOwnershipRepository CompanyOwnershipRepository { get; set; } = default!;
         [Inject] public IVendorServiceRepository VendorServiceRepository { get; set; } = default!;
+        [Inject] public IVendorContactRepository VendorContactRepository { get; set; } = default!;
 
         // Local storage (fallback for claims)
         [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;
@@ -92,6 +93,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private bool _isPFRequired;
         private bool _isESIRequired;
         private bool _IsMSMERegistered;
+
+        private string _originalOrganizationName = string.Empty;
+
 
         // Model & lookups
         private VendorRegistrationFormDto _vendorReg = new()
@@ -197,6 +201,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                         if (loaded != null)
                         {
                             CopyModelValues(loaded, _vendorReg);
+                            // keep original organization name to avoid false-positive when editing existing record
+                            _originalOrganizationName = _vendorReg.OrganizationName ?? string.Empty;
 
                             // Set selected services for multi-select UI
                             if (!string.IsNullOrWhiteSpace(_vendorReg.VendorServices))
@@ -346,7 +352,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     {
                         // approver may act only when their status is Pending
                         _isApproverLocked = true;
-                    } else if (string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+                    }
+                    else if (string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase))
                     {
                         _isApproverLocked = false;
                     }
@@ -1181,8 +1188,60 @@ namespace OceanVMSClient.Pages.RegisterVendors
             return Task.CompletedTask;
         }
 
+        private async Task ValidateOrganizationNameOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return;
+
+            var fieldName = nameof(VendorRegistrationFormDto.OrganizationName);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            // clear previous messages for this field
+            _messageStore?.Clear(fieldId);
+
+            var orgName = (_vendorReg.OrganizationName ?? string.Empty).Trim();
+
+            // required check
+            if (string.IsNullOrWhiteSpace(orgName))
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+
+                _editContext.NotifyValidationStateChanged();
+                UpdateOrganizationSectionValidity();
+                return;
+            }
+
+            // when editing, if name unchanged skip server existence check
+            if (_formEditMode == "Edit" && string.Equals(orgName, _originalOrganizationName, StringComparison.OrdinalIgnoreCase))
+            {
+                _editContext.NotifyValidationStateChanged();
+                UpdateOrganizationSectionValidity();
+                return;
+            }
+
+            try
+            {
+                // call repository to check existence
+                var exists = await VendorRegistrationFormRepository.OrganizationNameExistsAsync(orgName);
+                if (exists)
+                {
+                    _messageStore?.Add(fieldId, "Organization Name already registered.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Organization name existence check failed.");
+                // don't block the user — treat as no existence info; could optionally show a non-blocking warning
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateOrganizationSectionValidity();
+        }
+
         // Email & phone blur validators
-        private Task ValidateEmailOnBlur(string CalledFrom)
+        private Task ValidateCompanyEmailOnBlur()
         {
             if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
 
@@ -1220,14 +1279,12 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _editContext.NotifyValidationStateChanged();
 
             // update section boolean as well
-            if (CalledFrom == "Contact")
-                UpdateContactSectionValidity();
-            else if (CalledFrom == "Organization")
-                UpdateOrganizationSectionValidity();
+
+            UpdateOrganizationSectionValidity();
             return Task.CompletedTask;
         }
 
-        private Task ValidatePhoneOnBlur(string CalledFrom)
+        private Task ValidateCompanyPhoneOnBlur()
         {
             if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
 
@@ -1260,14 +1317,110 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
 
             _editContext.NotifyValidationStateChanged();
-            if (CalledFrom == "Organization")
-                UpdateOrganizationSectionValidity();
-            else if (CalledFrom == "Contact")
-                UpdateContactSectionValidity();
+            UpdateOrganizationSectionValidity();
 
             return Task.CompletedTask;
         }
 
+        private async Task ValidateResponderEmailOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return;
+
+            var fieldName = nameof(VendorRegistrationFormDto.ResponderEmailId);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            // Clear previous messages for this field
+            _messageStore?.Clear(fieldId);
+
+            var email = (_vendorReg.ResponderEmailId ?? string.Empty).Trim();
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+
+            // Run any DataAnnotation validation for the property
+            Validator.TryValidateProperty(email, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            // UI-level format check (only add message if the field is non-empty or if it's required and empty)
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+                if (!Regex.IsMatch(email, emailPattern))
+                {
+                    _messageStore?.Add(fieldId, "Enter a valid email address.");
+                }
+                else
+                {
+                    try
+                    {
+                        // when editing exclude the current registration id from existence check
+                        var excludeId = _formEditMode == "Edit" ? _vendorReg.Id : (Guid?)null;
+                        var exists = await VendorContactRepository.ResponderEmailExistsAsync(email, excludeId);
+                        if (exists)
+                        {
+                            _messageStore?.Add(fieldId, "This email is already registered.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Responder email existence check failed.");
+                        // don't block the user for remote check failures
+                    }
+                }
+            }
+            else
+            {
+                // if the property is required, show required message on blur
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+
+            // update section boolean as well
+            UpdateContactSectionValidity();
+        }
+
+
+        private Task ValidateResponderPhoneOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.ResponderMobileNo);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var phone = _vendorReg.ResponderMobileNo ?? string.Empty;
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+
+            Validator.TryValidateProperty(phone, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(phone))
+            {
+                // Accept optional '+' then 10-13 digits (adjust if you need different rules)
+                var phonePattern = @"^\+?[0-9]{10,13}$";
+                if (!Regex.IsMatch(phone, phonePattern))
+                    _messageStore?.Add(fieldId, "Enter a valid phone number (10-13 digits, optional leading '+').");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateContactSectionValidity();
+
+            return Task.CompletedTask;
+        }
         // Submit handler and validation
         private async Task HandleSubmit(EditContext editContext)
         {

@@ -264,10 +264,21 @@ namespace OceanVMSClient.Components
             var parts = raw.Split(',')
                            .Select(p => p.Trim().Trim('"', '\''))
                            .Where(p => !string.IsNullOrEmpty(p))
-                           .Select(p => new { Orig = p, Key = p.ToUpperInvariant() })
-                           // filter out anything that looks like employee or vendor (tolerant to misspellings)
-                           .Where(x => !(x.Key.Contains("EMPLOY") || x.Key.Contains("VENDOR")))
-                           .Select(x => x.Orig)
+                           // Preserve multi-word roles like "Vendor Validator" but filter out
+                           // single-word roles that are just "vendor"/"employee" (tolerant to misspellings).
+                           .Where(p =>
+                           {
+                               var words = p.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                               if (words.Length == 1)
+                               {
+                                   var key = words[0].ToUpperInvariant();
+                                   // Filter if the single word looks like vendor/employee (keeps variants like EMPLOYEEE)
+                                   if (key.Contains("EMPLOY") || key.Contains("VENDOR"))
+                                       return false;
+                               }
+
+                               return true;
+                           })
                            .Distinct(StringComparer.OrdinalIgnoreCase)
                            .ToArray();
 

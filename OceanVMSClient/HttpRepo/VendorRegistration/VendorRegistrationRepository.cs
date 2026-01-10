@@ -314,5 +314,57 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
             }
             return response.IsSuccessStatusCode.ToString();
         }
+
+        // Add this method to the VendorRegistrationRepository class (e.g., near the other public methods)
+        public async Task<bool> OrganizationNameExistsAsync(string organizationName)
+        {
+            if (string.IsNullOrWhiteSpace(organizationName))
+                return false;
+
+            var url = $"vendors/by-name/{Uri.EscapeDataString(organizationName)}";
+            var response = await _httpClient.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                // You can log response.Content here if useful
+                throw new Exception(content);
+            }
+
+            // Handle different possible JSON shapes: array, paging object { items: [...] }, or single object
+            try
+            {
+                using var doc = JsonDocument.Parse(content);
+                var root = doc.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    var items = JsonSerializer.Deserialize<List<VendorRegistrationFormDto>>(content, _options) ?? new List<VendorRegistrationFormDto>();
+                    return items.Any();
+                }
+
+                if (root.ValueKind == JsonValueKind.Object)
+                {
+                    // case: API returned an object with an "items" array (paged response)
+                    if (root.TryGetProperty("items", out var itemsProp) && itemsProp.ValueKind == JsonValueKind.Array)
+                    {
+                        var itemsJson = itemsProp.GetRawText();
+                        var items = JsonSerializer.Deserialize<List<VendorRegistrationFormDto>>(itemsJson, _options) ?? new List<VendorRegistrationFormDto>();
+                        return items.Any();
+                    }
+
+                    // case: API returned a single DTO object
+                    var single = JsonSerializer.Deserialize<VendorRegistrationFormDto>(content, _options);
+                    return single != null;
+                }
+            }
+            catch (JsonException)
+            {
+                // if parsing fails, fall back to attempt deserializing as list directly
+                var fallback = JsonSerializer.Deserialize<List<VendorRegistrationFormDto>>(content, _options);
+                return fallback != null && fallback.Any();
+            }
+
+            return false;
+        }
     }
 }

@@ -1,4 +1,6 @@
-﻿<MudDrawer Class="nav-drawer" @bind-Open="SideBarOpen" ClipMode="DrawerClipMode.Never" Elevation="1" Variant="DrawerVariant.Temporary">
+﻿@using System.Security.Claims
+
+<MudDrawer Class="nav-drawer" @bind-Open="SideBarOpen" ClipMode="DrawerClipMode.Never" Elevation="1" Variant="DrawerVariant.Temporary">
     <MudDrawerHeader Class="nav-drawer-header">
         <MudAvatar Color="Color.Transparent" Size="Size.Medium">
             <MudImage Src="/assets/oceanlogo.png" />
@@ -18,7 +20,7 @@
                     <MudNavLink Href="po-list" Icon="@Icons.Material.Filled.ShoppingCart">Company</MudNavLink>
                 </Authorized>
             </AuthorizeView>
-            <MudNavLink Href="polist" Icon="@Icons.Material.Filled.ShoppingCart">PO List Paging</MudNavLink>
+            <MudNavLink Href="polist" Icon="@Icons.Material.Filled.ShoppingCart">PO List</MudNavLink>
         </MudNavGroup>
 
         <MudNavGroup Title="Invoices" Icon="@Icons.Material.Filled.AccountBalance" Expanded="false">
@@ -31,15 +33,57 @@
         </MudNavGroup>
 
         <MudNavGroup Title="Vendors" Icon="@Icons.Material.Filled.Person" Expanded="false">
+            <AuthorizeView Context="auth">
+                <Authorized>
+                    @if (UserHasVendorRole(auth.User))
+                    {
+                        <MudNavLink Href="vendor-registrations" Icon="@Icons.Material.Filled.Person4">Vendor Registrations</MudNavLink>
+                    }
+                </Authorized>
+            </AuthorizeView>
 
-            <MudNavLink Href="vendor-registrations" Icon="@Icons.Material.Filled.Person4">Vendor Registrations</MudNavLink>
             <MudNavLink Href=@($"register-vendor/{Guid.Empty}") Icon="@Icons.Material.Filled.Settings">New Vendor Registration</MudNavLink>
         </MudNavGroup>
-
        
     </MudNavMenu>
 </MudDrawer>
+
 @code {
     [Parameter]
     public bool SideBarOpen { get; set; }
+
+    private static bool UserHasVendorRole(ClaimsPrincipal? user)
+    {
+        if (user?.Identity?.IsAuthenticated != true) return false;
+
+        // Collect all role-like claim values (handles ClaimTypes.Role, "role"/"roles", "/role", arrays and comma lists)
+        var roleValues = user.Claims
+            .Where(c =>
+                string.Equals(c.Type, ClaimTypes.Role, StringComparison.OrdinalIgnoreCase)
+                || c.Type.EndsWith("/role", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(c.Type, "role", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(c.Type, "roles", StringComparison.OrdinalIgnoreCase)
+                || c.Type.EndsWith("/roles", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(c => SplitRoleClaimValue(c.Value))
+            .Select(r => r.Trim().Trim('"', '\''))
+            .Where(r => !string.IsNullOrEmpty(r))
+            .Select(r => r.ToUpperInvariant());
+
+        return roleValues.Any(r => r == "VENDOR VALIDATOR" || r == "VENDOR APPROVER");
+    }
+
+    private static IEnumerable<string> SplitRoleClaimValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) yield break;
+
+        // If value looks like a JSON array (["a","b"]) try a simple trim first.
+        var s = value.Trim();
+        if (s.StartsWith("[") && s.EndsWith("]"))
+        {
+            s = s.Trim('[', ']', '"', '\'');
+        }
+
+        foreach (var part in s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            yield return part;
+    }
 }
