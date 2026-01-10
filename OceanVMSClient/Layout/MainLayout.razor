@@ -3,12 +3,20 @@
 @using MudBlazor
 @inject HttpClient Http
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 
 <!-- Layout container: make a column flex so footer sits after content or at viewport bottom when content is short -->
 <div style="display:flex; flex-direction:column; min-height:100vh;">
     <MudLayout style="flex:1;">
         <MudAppBar Elevation="3">
             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleSidebar"/> 
+
+            <!-- Company caption placed in the app bar (uses .app-bar-caption to apply the specific font only here) -->
+            <MudText Typo="Typo.h6" Color="Color.Inherit" Class="app-bar-caption">
+                Ocean Lifespaces India Private Limited
+            </MudText>
+
             <MudSpacer />
             <AuthLinkDiv />
             @if (_isDarkMode)
@@ -19,8 +27,12 @@
             {
                 <MudIconButton Icon="@Icons.Material.Filled.Brightness4" Color="Color.Inherit" OnClick="@ToggleTheme" />
             }
-            <NavMenu SideBarOpen="_sidebarOpen" />
         </MudAppBar>
+
+        <!-- NavMenu moved out of the AppBar so it renders below the AppBar and cannot overlap it -->
+        <div style="width:100%;">
+            <NavMenu SideBarOpen="_sidebarOpen" />
+        </div>
         
         <MudMainContent Class="pt-16 px-16">
             <MudContainer Class="mt-6">
@@ -37,7 +49,7 @@
     <footer role="contentinfo" aria-label="Application footer" style="width:100%;">
         <div style="background-color:var(--mud-palette-primary); color:white; width:100%; display:flex; justify-content:space-between; align-items:center; padding:8px 16px; font-size:0.875rem;">
             <div>
-                © Crisolite Solutions 2026
+                Powered By: Crisolite Solutions 2026
             </div>
             <div>
                 @if (!string.IsNullOrWhiteSpace(_appVersion))
@@ -99,23 +111,39 @@
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 _appVersion = null;
-                return;
             }
+            else
+            {
+                response.EnsureSuccessStatusCode();
+                var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync();
-
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            // prefer 'appVersion' key, fall back to 'version'
-            if (doc.RootElement.TryGetProperty("appVersion", out var appVer) && appVer.ValueKind == System.Text.Json.JsonValueKind.String)
-                _appVersion = appVer.GetString();
-            else if (doc.RootElement.TryGetProperty("version", out var ver) && ver.ValueKind == System.Text.Json.JsonValueKind.String)
-                _appVersion = ver.GetString();
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                // prefer 'appVersion' key, fall back to 'version'
+                if (doc.RootElement.TryGetProperty("appVersion", out var appVer) && appVer.ValueKind == System.Text.Json.JsonValueKind.String)
+                    _appVersion = appVer.GetString();
+                else if (doc.RootElement.TryGetProperty("version", out var ver) && ver.ValueKind == System.Text.Json.JsonValueKind.String)
+                    _appVersion = ver.GetString();
+            }
         }
         catch
         {
             // ignore errors reading version (keep UI clean)
             _appVersion = null;
+        }
+
+        // check if we were reloaded due to a version update
+        try
+        {
+            var reloadedVersion = await JS.InvokeAsync<string>("localStorage.getItem", "app.reloadedForVersion");
+            if (!string.IsNullOrWhiteSpace(reloadedVersion))
+            {
+                Snackbar.Add($"Application reloaded to version {reloadedVersion}", Severity.Success);
+                await JS.InvokeVoidAsync("localStorage.removeItem", "app.reloadedForVersion");
+            }
+        }
+        catch
+        {
+            // ignore JS/localStorage errors
         }
     }
 }

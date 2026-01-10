@@ -2,34 +2,28 @@
 
 <MudDrawer Class="nav-drawer" @bind-Open="SideBarOpen" ClipMode="DrawerClipMode.Never" Elevation="1" Variant="DrawerVariant.Temporary">
     <MudDrawerHeader Class="nav-drawer-header">
-        <MudAvatar Color="Color.Transparent" Size="Size.Medium">
-            <MudImage Src="/assets/oceanlogo.png" />
-        </MudAvatar>
-
-        <div class="nav-header-text">
-            <MudText Typo="Typo.h6" Color="Color.Primary" Class="brand-title">Ocean</MudText>
-        </div>
+            <MudImage Style="height: 34px; width: auto;" Src="/assets/ocean logo full.webp" />
     </MudDrawerHeader>
 
     <MudNavMenu Class="nav-menu">
         <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
 
-        <MudNavGroup Title="Purchase Order" Icon="@Icons.Material.Filled.DashboardCustomize" Expanded="false">
+        <MudNavGroup Title="Purchase Order" Icon="@Icons.Material.Filled.Inventory" Expanded="false">
             <AuthorizeView Roles="EMPLOYEE">
                 <Authorized>
                     <MudNavLink Href="po-list" Icon="@Icons.Material.Filled.ShoppingCart">Company</MudNavLink>
                 </Authorized>
             </AuthorizeView>
-            <MudNavLink Href="polist" Icon="@Icons.Material.Filled.ShoppingCart">PO List</MudNavLink>
+            <MudNavLink Href="polist" Icon="@Icons.Material.Filled.Assignment">PO List</MudNavLink>
         </MudNavGroup>
 
-        <MudNavGroup Title="Invoices" Icon="@Icons.Material.Filled.AccountBalance" Expanded="false">
+        <MudNavGroup Title="Invoices" Icon="@Icons.Material.Filled.AutoAwesomeMosaic" Expanded="false">
             <AuthorizeView Roles="EMPLOYEE, VENDOR">
                 <Authorized>
-                    <MudNavLink Href="invoices" Icon="@Icons.Material.Filled.ShoppingCart">Invoice List</MudNavLink>
+                    <MudNavLink Href="invoices" Icon="@Icons.Material.Filled.ReceiptLong">Invoice List</MudNavLink>
                 </Authorized>
             </AuthorizeView>
-            <MudNavLink Href="invoices" Icon="@Icons.Material.Filled.ShoppingCart">Invoice List</MudNavLink>
+            <MudNavLink Href="invoices" Icon="@Icons.Material.Filled.ReceiptLong">Invoice List</MudNavLink>
         </MudNavGroup>
 
         <MudNavGroup Title="Vendors" Icon="@Icons.Material.Filled.Person" Expanded="false">
@@ -37,12 +31,12 @@
                 <Authorized>
                     @if (UserHasVendorRole(auth.User))
                     {
-                        <MudNavLink Href="vendor-registrations" Icon="@Icons.Material.Filled.Person4">Vendor Registrations</MudNavLink>
+                        <MudNavLink Href="vendor-registrations" Icon="@Icons.Material.Filled.ListAlt">Vendor Registrations</MudNavLink>
                     }
                 </Authorized>
             </AuthorizeView>
 
-            <MudNavLink Href=@($"register-vendor/{Guid.Empty}") Icon="@Icons.Material.Filled.Settings">New Vendor Registration</MudNavLink>
+            <MudNavLink Href=@($"register-vendor/{Guid.Empty}") Icon="@Icons.Material.Filled.AppRegistration">New Vendor Registration</MudNavLink>
         </MudNavGroup>
        
     </MudNavMenu>
