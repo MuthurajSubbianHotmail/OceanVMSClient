@@ -15,6 +15,8 @@ namespace OceanVMSClient.Pages.Authentication
         public bool ShowAuthError { get; set; }
         public string ErrorMessage { get; set; }
 
+        
+
         // EditForm OnValidSubmit provides an EditContext — accept it to match the delegate.
         private async Task HandleSubmit(EditContext _)
         {

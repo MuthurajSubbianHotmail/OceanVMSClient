@@ -28,7 +28,7 @@
 .filter-control { width:100%; }
 .po-section .mud-form-field .mud-input-label,
 .po-section .mud-input-label {
-    font-size:0.88rem !important;
+    font-size:0.75rem !important;
     font-weight:600;
     color:#6b7280;
 }

@@ -1,4 +1,5 @@
 ﻿@page "/ViewPurchaseOrder/{PurchaseOrderId:guid}"
+@inject IDialogService DialogService
 @using Shared.DTO.POModule
 
 <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
@@ -100,7 +101,11 @@
                         </MudItem>
 
                         <MudItem xs="6" sm="6">
-                            <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Visibility" Class="full-width" Disabled="@isDetailsLoading">
+                            <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small" 
+                            StartIcon="@Icons.Material.Filled.Visibility" 
+                            Class="full-width" 
+                            Disabled="@isDetailsLoading"
+                                       OnClick="@(() => ShowInvoices(PurchaseOrderId))">
                                 View Invoices
                             </MudButton>
                         </MudItem>

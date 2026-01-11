@@ -85,6 +85,7 @@ namespace OceanVMSClient.HttpRepo.POModule
                 ["postartdate"] = purchaseOrderParameters.POStartDate == DateTime.MinValue ? string.Empty : purchaseOrderParameters.POStartDate.ToString("o", CultureInfo.InvariantCulture),
                 ["poenddate"] = purchaseOrderParameters.POEndDate == DateTime.MinValue ? string.Empty : purchaseOrderParameters.POEndDate.ToString("o", CultureInfo.InvariantCulture),
                 ["vendorname"] = purchaseOrderParameters.VendorName ?? string.Empty,
+                ["ProjectCode"] = purchaseOrderParameters.ProjectCode ?? string.Empty,
             };
 
             // add decimals only when valid range provided (no quotes; formatted invariantly)
@@ -120,6 +121,7 @@ namespace OceanVMSClient.HttpRepo.POModule
                 ["postartdate"] = purchaseOrderParameters.POStartDate == DateTime.MinValue ? string.Empty : purchaseOrderParameters.POStartDate.ToString("o", CultureInfo.InvariantCulture),
                 ["poenddate"] = purchaseOrderParameters.POEndDate == DateTime.MinValue ? string.Empty : purchaseOrderParameters.POEndDate.ToString("o", CultureInfo.InvariantCulture),
                 ["vendorname"] = purchaseOrderParameters.VendorName ?? string.Empty,
+                ["ProjectCode"] = purchaseOrderParameters.ProjectCode ?? string.Empty,
             };
 
             // add decimals only when valid range provided (no quotes; formatted invariantly)

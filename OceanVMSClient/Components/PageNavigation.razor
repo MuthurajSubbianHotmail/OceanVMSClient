@@ -1,7 +1,7 @@
-﻿<MudBreadcrumbs Items="Items">
+﻿<MudBreadcrumbs Items="Items" Class="px-0">
     @foreach (var item in Items)
     {
-        <MudBreadcrumbItem Href="@item.Href" Disabled="@item.Disabled">@item.Text</MudBreadcrumbItem>
+        <MudBreadcrumbItem Href="@item.Href" Disabled="@item.Disabled" class="px-0 mx-0">@item.Text</MudBreadcrumbItem>
     }
 </MudBreadcrumbs>
 

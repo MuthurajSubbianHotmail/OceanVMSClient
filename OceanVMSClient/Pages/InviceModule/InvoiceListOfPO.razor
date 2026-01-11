@@ -1,0 +1,138 @@
+﻿@page "/InvoiceListOfPO/{PurchaseOrderId:guid}"
+@using Shared.DTO.POModule
+@using MudBlazor
+
+<style>
+    /* Make the dialog occupy the full viewport so table can use full space */
+    .modal-paper {
+        width: 100vw;
+        height: 100vh;
+        max-height: none;
+        overflow: hidden; /* contain inner scroll */
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+    }
+
+    .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex: 0 0 auto;
+    }
+
+    .po-summary {
+        display:flex;
+        gap:1rem;
+        align-items:center;
+        flex-wrap:wrap;
+        flex: 0 0 auto;
+    }
+
+    /* Table container should take remaining space and scroll internally */
+    .table-container {
+        flex: 1 1 auto;
+        min-height: 0; /* allow flex child to shrink and enable scrolling */
+        overflow: auto;
+        overflow-x: hidden; /* prevent horizontal scroll */
+        margin-top: 0.5rem;
+    }
+
+    /* Ensure table fits container width and columns distribute evenly */
+    .table-container .mud-table-root,
+    .table-container table {
+        width: 100% !important;
+        table-layout: fixed; /* prevent table widening beyond container */
+        border-collapse: collapse;
+    }
+
+    /* Allow cells to wrap/break long content so no horizontal scrollbar appears */
+    .table-container th,
+    .table-container td {
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        vertical-align: middle;
+    }
+
+    /* Ensure links and other inline content can wrap */
+    .table-container a,
+    .table-container .cell-link {
+        white-space: normal !important;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    /* Optional: reduce padding for tight fit */
+    .table-container .mud-td,
+    .table-container .mud-th {
+        padding: 0.375rem 0.5rem;
+    }
+
+    .po-summary .item { font-size:0.95rem; color:var(--mud-palette-text-primary); }
+</style>
+
+<MudPaper Class="modal-paper pa-4" Elevation="6">
+    <div class="modal-header mb-2">
+        <div>
+            <MudText Typo="Typo.h6">Invoices for Purchase Order</MudText>
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">@PoNumberText</MudText>
+        </div>
+        <div>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" Variant="Variant.Text" OnClick="Close" />
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div style="display:flex;align-items:center;justify-content:center;min-height:200px;">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        </div>
+    }
+    else
+    {
+        <div class="po-summary mb-3">
+            <div class="item"><strong>PO Date:</strong> @PoDateText</div>
+            <div class="item"><strong>Supplier:</strong> @VendorText</div>
+            <div class="item"><strong>PO Total:</strong> @TotalValueText</div>
+            <div class="item"><strong>Invoice Balance:</strong> @InvoiceBalanceValueText</div>
+            <div class="item"><strong>Invoices:</strong> @_invoices?.Count ?? 0</div>
+        </div>
+
+        <div class="table-container">
+            <MudTable T="InvoiceDto" Items="_invoices" Dense="true" Hover="true" Class="mb-2" Elevation="0" Style="width:100%">
+                <HeaderContent>
+                    <MudTh Style="width:8%">Ref No</MudTh>
+                    <MudTh Style="width:10%">Inv.Date</MudTh>
+                    <MudTh Style="width:10%">Vendor</MudTh>
+                    <MudTh Style="width:10%">SAP.PO.No</MudTh>
+                    <MudTh Align="Align.Right" Style="width:10%">PO.Date</MudTh>
+                    <MudTh Align="Align.Right" Style="width:10%">Invoice.Total</MudTh>
+                    <MudTh Style="width:10%">Inv.Status</MudTh>
+                    @* <MudTh Style="width:10%">Actions</MudTh> *@
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.InvoiceRefNo</MudTd>
+                    <MudTd>@FormatDate(context.InvoiceDate)</MudTd>
+                    <MudTd>@context.VendorName</MudTd>
+                    <MudTd>
+                        <MudLink Href="@($"ViewPurchaseOrder/{context.PurchaseOrderId}")" Color="Color.Primary" Underline="Underline.Hover">@context.SAPPONumber</MudLink>
+                    </MudTd>
+                    <MudTd Align="Align.Right">@FormatDate(context.SAPPODate)</MudTd>
+                    <MudTd Align="Align.Right"><CurrencyText Amount="context.InvoiceTotalValue" /></MudTd>
+                    <MudTd><MudChip T="string" Size="Size.Small" Color="@GetInvoiceChipColor(context.InvoiceStatus)" Variant="Variant.Filled">@context.InvoiceStatus</MudChip></MudTd>
+                    @* <MudTd>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Visibility" OnClick="@(() => ViewInvoice(context.Id))">View</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Download" Disabled="@(string.IsNullOrWhiteSpace(context.InvoiceFileURL))" OnClick="@(async () => { if (!string.IsNullOrWhiteSpace(context.InvoiceFileURL)) await JSInvokeOpen(context.InvoiceFileURL); })">Download</MudButton>
+                    </MudTd> *@
+                </RowTemplate>
+            </MudTable>
+
+            @if (_invoices == null || !_invoices.Any())
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No invoices found for this purchase order.</MudText>
+            }
+        </div>
+    }
+</MudPaper>

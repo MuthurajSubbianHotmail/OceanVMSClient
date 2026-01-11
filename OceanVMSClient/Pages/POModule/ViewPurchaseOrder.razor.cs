@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Components;
-using OceanVMSClient.HttpRepoInterface.PoModule;
-using Shared.DTO.POModule;
-using Blazored.LocalStorage;
+﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using OceanVMSClient.HttpRepo.Authentication;
-using System.Security.Claims;
-using OceanVMSClient.HttpRepoInterface.POModule;
-using MudBlazor;
 using Microsoft.Extensions.Logging;
+using MudBlazor;
+using OceanVMSClient.HttpRepo.Authentication;
+using OceanVMSClient.HttpRepoInterface.PoModule;
+using OceanVMSClient.HttpRepoInterface.POModule;
+using OceanVMSClient.Pages.InviceModule;
+using Shared.DTO.POModule;
+using System.Security.Claims;
 using System.Threading;
 
 namespace OceanVMSClient.Pages.POModule
@@ -241,6 +242,19 @@ namespace OceanVMSClient.Pages.POModule
                 _cts.Dispose();
             }
             await Task.CompletedTask;
+        }
+
+        private void ShowInvoices(Guid purchaseOrderId)
+        {
+            var parameters = new DialogParameters { ["PurchaseOrderId"] = purchaseOrderId };
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = false
+            };
+            DialogService.Show<InvoiceListOfPO>("Invoices", parameters, options);
         }
     }
 }

@@ -366,5 +366,84 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
 
             return false;
         }
+
+        // NEW: fetch a vendor registration by VendorId
+        public async Task<Guid> GetVendorRegistrationByVendorIdAsync(Guid vendorId)
+        {
+            if (vendorId == Guid.Empty) return Guid.Empty;
+
+            var response = await _httpClient.GetAsync($"vendorregistrationform/{vendorId}");
+            var content = await response.Content.ReadAsStringAsync();
+
+            // If the request was not successful, treat as not found
+            if (!response.IsSuccessStatusCode)
+            {
+                return Guid.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(content))
+                return Guid.Empty;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(content);
+                var root = doc.RootElement;
+
+                // If server returned a paging object { items: [...] }
+                if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("items", out var itemsProp) && itemsProp.ValueKind == JsonValueKind.Array)
+                {
+                    if (itemsProp.GetArrayLength() == 0) return Guid.Empty;
+                    var first = itemsProp[0];
+                    if (first.ValueKind == JsonValueKind.Object && first.TryGetProperty("id", out var idProp))
+                    {
+                        var idStr = idProp.ToString();
+                        if (Guid.TryParse(idStr, out var gid)) return gid;
+                    }
+
+                    // fallback: deserialize first element to DTO
+                    var items = JsonSerializer.Deserialize<List<VendorRegistrationFormDto>>(itemsProp.GetRawText(), _options);
+                    var firstId = items?.FirstOrDefault()?.Id;
+                    return firstId ?? Guid.Empty;
+                }
+
+                // If server returned an array [ { ... } ]
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    if (root.GetArrayLength() == 0) return Guid.Empty;
+                    var first = root[0];
+                    if (first.ValueKind == JsonValueKind.Object && first.TryGetProperty("id", out var idProp))
+                    {
+                        var idStr = idProp.ToString();
+                        if (Guid.TryParse(idStr, out var gid)) return gid;
+                    }
+
+                    var items = JsonSerializer.Deserialize<List<VendorRegistrationFormDto>>(content, _options);
+                    var firstId = items?.FirstOrDefault()?.Id;
+                    return firstId ?? Guid.Empty;
+                }
+
+                // If server returned a single object
+                if (root.ValueKind == JsonValueKind.Object)
+                {
+                    if (root.TryGetProperty("id", out var idProp))
+                    {
+                        var idStr = idProp.ToString();
+                        if (Guid.TryParse(idStr, out var gid)) return gid;
+                    }
+
+                    var single = JsonSerializer.Deserialize<VendorRegistrationFormDto>(content, _options);
+                    // Fix for CS0266 and CS8629:
+                    return single?.Id ?? Guid.Empty;
+                }
+
+                return Guid.Empty;
+            }
+            catch
+            {
+                return Guid.Empty;
+            }
+        }
+
+       
     }
 }

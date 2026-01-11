@@ -10,6 +10,7 @@ using OceanVMSClient.HttpRepo.Authentication;
 using OceanVMSClient.HttpRepo.POModule;
 using OceanVMSClient.HttpRepoInterface.PoModule;
 using OceanVMSClient.HttpRepoInterface.POModule;
+using OceanVMSClient.Pages.InviceModule;
 using Shared.DTO;
 using Shared.DTO.POModule;
 using Shared.DTO.VendorReg;
@@ -75,6 +76,7 @@ namespace OceanVMSClient.Pages.POModule
         // search/filter fields
         private string? sapPONo = string.Empty;
         private string? vendorName = string.Empty;
+        private string? projectCode = string.Empty;
         private decimal? minTotalValue = null;
         private decimal? maxTotalValue = null;
 
@@ -291,6 +293,7 @@ namespace OceanVMSClient.Pages.POModule
         {
             _purchaseOrderParameters.SAPPONumber = string.IsNullOrWhiteSpace(sapPONo) ? null : sapPONo;
             _purchaseOrderParameters.VendorName = string.IsNullOrWhiteSpace(vendorName) ? null : vendorName;
+            _purchaseOrderParameters.ProjectCode = string.IsNullOrWhiteSpace(projectCode) ? null : projectCode;
 
             if (minTotalValue.HasValue || maxTotalValue.HasValue)
             {
@@ -472,20 +475,21 @@ namespace OceanVMSClient.Pages.POModule
             }
 
             var sb = new StringBuilder();
-            sb.AppendLine("PO Type,SAP PoNo,PO Date,Vendor Name,Item Value,GST Total,Total Value,Invoice Status");
+            sb.AppendLine("PO Type,SAP PoNo,PO Date,Vendor Name,Project Code,Item Value,GST Total,Total Value,Invoice Status");
 
             foreach (var item in _lastPageItems)
             {
                 var potype = EscapeCsv(item.PoTypeName);
                 var ponumber = EscapeCsv(item.SAPPONumber);
                 var podate = EscapeCsv(item.SAPPODate == default ? string.Empty : item.SAPPODate.ToString("dd-MMM-yy"));
-                var supplinerName = EscapeCsv(item.VendorName);
+                var supplierName = EscapeCsv(item.VendorName);
+                var projectCode = EscapeCsv(item.ProjectCode);
                 var poitemvalue = item.ItemValue;
                 var taxvalue = item.GSTTotal;
                 var totalvalue = item.TotalValue;
                 var invoicestatus = EscapeCsv(item.InvoiceStatus);
 
-                sb.AppendLine($"{potype},{ponumber},{podate},{supplinerName},{poitemvalue},{taxvalue},{totalvalue},{invoicestatus}");
+                sb.AppendLine($"{potype},{ponumber},{podate},{supplierName},{projectCode},{poitemvalue},{taxvalue},{totalvalue},{invoicestatus}");
             }
 
             var bytes = Encoding.UTF8.GetBytes(sb.ToString());
@@ -493,6 +497,19 @@ namespace OceanVMSClient.Pages.POModule
 
             // Calls the JS helper to trigger download
             await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", "PurchaseOrderList.csv", base64);
+        }
+
+        private void ShowInvoices(Guid purchaseOrderId)
+        {
+            var parameters = new DialogParameters { ["PurchaseOrderId"] = purchaseOrderId };
+            var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true,
+                CloseButton = true,
+                BackdropClick = false
+            };
+            DialogService.Show<InvoiceListOfPO>("Invoices", parameters, options);
         }
     }
 }
