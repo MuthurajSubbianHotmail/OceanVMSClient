@@ -23,10 +23,10 @@
     }
 
     .po-summary {
-        display:flex;
-        gap:1rem;
-        align-items:center;
-        flex-wrap:wrap;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
         flex: 0 0 auto;
     }
 
@@ -39,38 +39,41 @@
         margin-top: 0.5rem;
     }
 
-    /* Ensure table fits container width and columns distribute evenly */
-    .table-container .mud-table-root,
-    .table-container table {
-        width: 100% !important;
-        table-layout: fixed; /* prevent table widening beyond container */
-        border-collapse: collapse;
-    }
+        /* Ensure table fits container width and columns distribute evenly */
+        .table-container .mud-table-root,
+        .table-container table {
+            width: 100% !important;
+            table-layout: fixed; /* prevent table widening beyond container */
+            border-collapse: collapse;
+        }
 
-    /* Allow cells to wrap/break long content so no horizontal scrollbar appears */
-    .table-container th,
-    .table-container td {
-        white-space: normal !important;
-        overflow-wrap: anywhere;
-        word-break: break-word;
-        vertical-align: middle;
-    }
+        /* Allow cells to wrap/break long content so no horizontal scrollbar appears */
+        .table-container th,
+        .table-container td {
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            vertical-align: middle;
+        }
 
-    /* Ensure links and other inline content can wrap */
-    .table-container a,
-    .table-container .cell-link {
-        white-space: normal !important;
-        word-break: break-word;
-        overflow-wrap: anywhere;
-    }
+        /* Ensure links and other inline content can wrap */
+        .table-container a,
+        .table-container .cell-link {
+            white-space: normal !important;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
 
-    /* Optional: reduce padding for tight fit */
-    .table-container .mud-td,
-    .table-container .mud-th {
-        padding: 0.375rem 0.5rem;
-    }
+        /* Optional: reduce padding for tight fit */
+        .table-container .mud-td,
+        .table-container .mud-th {
+            padding: 0.375rem 0.5rem;
+        }
 
-    .po-summary .item { font-size:0.95rem; color:var(--mud-palette-text-primary); }
+    .po-summary .item {
+        font-size: 0.95rem;
+        color: var(--mud-palette-text-primary);
+    }
 </style>
 
 <MudPaper Class="modal-paper pa-4" Elevation="6">
@@ -97,7 +100,7 @@
             <div class="item"><strong>Supplier:</strong> @VendorText</div>
             <div class="item"><strong>PO Total:</strong> @TotalValueText</div>
             <div class="item"><strong>Invoice Balance:</strong> @InvoiceBalanceValueText</div>
-            <div class="item"><strong>Invoices:</strong> @_invoices?.Count ?? 0</div>
+            <div class="item"><strong>Invoices:</strong> @_invoices?.Count</div>
         </div>
 
         <div class="table-container">
@@ -113,7 +116,11 @@
                     @* <MudTh Style="width:10%">Actions</MudTh> *@
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd>@context.InvoiceRefNo</MudTd>
+                    <MudTd>
+                        <MudLink Typo="Typo.caption" Href="@($"{invoiceViewPage}/{context.Id}")">
+                            @context.InvoiceRefNo
+                        </MudLink>
+                    </MudTd>
                     <MudTd>@FormatDate(context.InvoiceDate)</MudTd>
                     <MudTd>@context.VendorName</MudTd>
                     <MudTd>

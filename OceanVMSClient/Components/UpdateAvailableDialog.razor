@@ -1,9 +1,7 @@
 ﻿@using MudBlazor
-
+@inject IDialogService DialogService
 <MudDialog>
-    <MudDialogTitle>Update available</MudDialogTitle>
-
-    <MudDialogContent>
+    <DialogContent>
         <div>
             <strong>Current:</strong> v@BootVersion
         </div>
@@ -13,12 +11,13 @@
         <div class="mt-2">
             A new version is available. Refresh now to load the latest changes.
         </div>
-    </MudDialogContent>
+       
+    </DialogContent>
 
-    <MudDialogActions>
+    <DialogActions>
         <MudButton Color="Color.Primary" OnClick="() => Close(true)">Refresh</MudButton>
         <MudButton Variant="Variant.Text" OnClick="() => Close(false)">Later</MudButton>
-    </MudDialogActions>
+    </DialogActions>
 </MudDialog>
 
 @code {

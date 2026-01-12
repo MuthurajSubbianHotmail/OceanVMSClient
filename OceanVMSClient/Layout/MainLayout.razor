@@ -9,12 +9,12 @@
 <!-- Layout container: make a column flex so footer sits after content or at viewport bottom when content is short -->
 <div style="display:flex; flex-direction:column; min-height:100vh;">
     <MudLayout style="flex:1;">
-        <MudAppBar Elevation="3">
+        <MudAppBar Elevation="3" Dense="true">
             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleSidebar"/> 
 
             <!-- Company caption placed in the app bar (uses .app-bar-caption to apply the specific font only here) -->
-            <MudText Typo="Typo.h6" Color="Color.Inherit" Class="app-bar-caption">
-                Ocean Lifespaces India Private Limited
+            <MudText Typo="Typo.body2" Color="Color.Inherit" Class="app-bar-caption">
+                Ocean Lifespaces India Private Limited - Vendor Management Portal
             </MudText>
 
             <MudSpacer />
@@ -34,12 +34,12 @@
             <NavMenu SideBarOpen="_sidebarOpen" />
         </div>
         
-        <MudMainContent Class="pt-16 px-16">
+        <MudMainContent Class="pt-8 px-16">
             <MudContainer Class="mt-6">
                 
                 <MudPopoverProvider />
                 <!-- keep VersionChecker active for polling/notifications but hide its inline footer -->
-                <VersionCheckerV2/>
+                <UpdateAvailableDialog />
                 @* <VersionChecker ShowFooter="false" /> *@
                 @Body
             </MudContainer>

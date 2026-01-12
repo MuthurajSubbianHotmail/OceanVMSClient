@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using Blazored.LocalStorage;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 using MudBlazor;
+using OceanVMSClient.Helpers;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
 using Shared.RequestFeatures; // InvoiceParameters lives here
@@ -29,12 +32,44 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
         [Inject] private ILogger<InvoiceListOfPO>? Logger { get; set; }
         [Inject] private IJSRuntime JS { get; set; } = default!;
-
+        [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;
+        [CascadingParameter] public Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+        private string invoiceViewPage = string.Empty;
+        private string? _userType;
+        private Guid? _vendorId;
+        private Guid? _employeeId;
         protected override async Task OnParametersSetAsync()
         {
             await LoadDataAsync();
         }
 
+        protected override async Task OnInitializedAsync()
+        {
+            var authState = await AuthenticationStateTask;
+            var user = authState.User;
+            var ctx = await user.LoadUserContextAsync(LocalStorage);
+            _userType = ctx.UserType;
+            _vendorId = ctx.VendorId;
+            _employeeId = ctx.EmployeeId;
+
+            try
+            {
+                if (string.Equals(_userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
+                {
+                    invoiceViewPage = "invoiceviewvendor";
+                }
+                else
+                {
+                    invoiceViewPage = "invoiceview";
+                }
+            }
+            catch
+            {
+                _userType = null;
+                Console.WriteLine("Failed to retrieve user type from claims/local storage.");
+            }
+            await base.OnInitializedAsync();
+        }
         private async Task LoadDataAsync()
         {
             isLoading = true;

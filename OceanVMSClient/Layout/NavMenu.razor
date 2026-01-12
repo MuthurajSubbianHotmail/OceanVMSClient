@@ -36,8 +36,16 @@
                 </Authorized>
             </AuthorizeView>
 
-            <MudNavLink Href=@($"register-vendor/{Guid.Empty}") Icon="@Icons.Material.Filled.AppRegistration">New Vendor Registration</MudNavLink>
-            @* <MudNavLink Href="VendorProfile" Icon="@Icons.Material.Filled.Person2">Vendor Profile</MudNavLink> *@
+            @* <MudNavLink Href=@($"register-vendor/{Guid.Empty}") Icon="@Icons.Material.Filled.AppRegistration">New Vendor Registration</MudNavLink> *@
+            <AuthorizeView Context="auth">
+                <Authorized>
+                    @if (UserHasVendorRole(auth.User))
+                    {
+                        <MudNavLink Href="VendorProfile" Icon="@Icons.Material.Filled.Person2">Vendor Profile</MudNavLink>
+                    }
+                </Authorized>
+            </AuthorizeView>
+            
         </MudNavGroup>
        
     </MudNavMenu>

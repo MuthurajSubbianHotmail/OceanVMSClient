@@ -4,7 +4,7 @@
 @inject NavigationManager NavigationManager
 @using OceanVMSClient.SharedComp.Components
 @inject IJSRuntime JS
-<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+<PageNavigation Items="_items" />
 <PageHeader Title="Invoices" Class="mb-0" />
 
 <MudPaper Class="pa-4 invoice-paper">
@@ -19,7 +19,8 @@
                                       Typo="Typo.caption"
                                       DebounceInterval="300"
                                       OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
-                                      Dense="true" Class="filter-control" />
+                                      Margin="Margin.Dense"
+                                      Class="filter-control" />
                     </MudItem>
 
                     <MudItem xs="12" sm="2" md="2">
@@ -29,7 +30,8 @@
                                       @bind-Value="sapPoNo"
                                       DebounceInterval="300"
                                       OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
-                                      Dense="true" Class="filter-control" />
+                                      Margin="Margin.Dense"
+                                      Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="string" Label="Vendor"
@@ -38,7 +40,8 @@
                                       @bind-Value="vendorName"
                                       DebounceInterval="300"
                                       OnDebounceIntervalElapsed="@( (string s) => { vendorName = s; return OnSearch(); } )"
-                                      Dense="true" Class="filter-control" />
+                                      Margin="Margin.Dense"
+                                      Class="filter-control" />
                     </MudItem>
 
                     <MudItem xs="12" sm="2" md="2">
@@ -49,7 +52,7 @@
                                          InputType="InputType.Number"
                                          ValueChanged="@( (decimal? v) => { minInvoiceTotal = v; return OnSearch(); } )"
                                          Clearable="true"
-                                         Dense="true"
+                                      Margin="Margin.Dense"
                                          Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
@@ -59,7 +62,7 @@
                                          InputType="InputType.Number"
                                          ValueChanged="@( (decimal? v) => { maxInvoiceTotal = v; return OnSearch(); } )"
                                          Clearable="true"
-                                         Dense="true"
+                                         Margin="Margin.Dense"
                                          Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
@@ -69,7 +72,6 @@
                                             TitleDateFormat="MMMM dd"
                                             Margin="Margin.Dense"
                                             Variant="Variant.Text"
-                                            Dense="true"
                                             Label="Invoice Date"
                                             Clearable="true"
                                             AutoClose="true"
@@ -94,15 +96,15 @@
               Virtualize="true"
               Class="invoice-table mt-2">
         <HeaderContent>
-            <MudTh>Invoice.Ref</MudTh>
-            <MudTh>Inv.Date</MudTh>
-            <MudTh>Vendor</MudTh>
-            <MudTh>SAP.PO.No</MudTh>
-            <MudTh Align="Align.Right">PO.Date</MudTh>
-            <MudTh Align="Align.Right">PO.Total</MudTh>
-            <MudTh Align="Align.Right">Invoice.Total</MudTh>
-            <MudTh>Inv.Status</MudTh>
-            <MudTh>More</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Invoice.Ref</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Inv.Date</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Vendor</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">SAP.PO.No</MudTh>
+            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">PO.Date</MudTh>
+            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">PO.Total</MudTh>
+            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">Invoice.Total</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Inv.Status</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Details</MudTh>
         </HeaderContent>
 
         <RowTemplate>
@@ -146,10 +148,10 @@
             
             <MudTd>
                 <MudIconButton OnClick="@(() => ToggleRow(context.Id))"
-                               Icon="@(IsRowExpanded(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Outlined.ArrowDropDown)"
+                               Icon="@(IsRowExpanded(context.Id) ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Outlined.ArrowDropDown)"
                                Variant="Variant.Text"
                                Color="Color.Info"
-                               Size="Size.Large" />
+                               Size="Size.Medium" />
             </MudTd>
         </RowTemplate>
 

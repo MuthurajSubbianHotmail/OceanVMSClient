@@ -17,6 +17,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.RegularExpressions; // add near top with other usings
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace OceanVMSClient.Pages.RegisterVendors
 {
@@ -108,7 +109,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             ResponderEmailId = string.Empty,
             OrganizationName = string.Empty,
             IsMSMERegistered = false,
-            CompanyOwnershipId = new Guid("D1E4C053-49B6-410C-BC78-2D54A9991870"),
+            CompanyOwnershipId = Guid.Empty,
             CompanyOwnershipType = string.Empty
         };
 
@@ -1421,6 +1422,404 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             return Task.CompletedTask;
         }
+
+        private Task ValidatePANOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.PANNo);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var pan = (_vendorReg.PANNo ?? string.Empty).Trim();
+            // normalize to trimmed upper-case on blur
+            _vendorReg.PANNo = pan.ToUpperInvariant();
+            _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, fieldName));
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(pan, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(pan))
+            {
+                var panPattern = @"^[A-Z]{5}[0-9]{4}[A-Z]{1}$";
+                if (!Regex.IsMatch(pan, panPattern, RegexOptions.IgnoreCase))
+                    _messageStore?.Add(fieldId, "PAN must be in format 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F).");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired || _isPANRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateRegistrationSection1Validity();
+
+            return Task.CompletedTask;
+        }
+
+        private Task ValidateGSTOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.GSTNO);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var gst = (_vendorReg.GSTNO ?? string.Empty).Trim();
+            // normalize to trimmed upper-case on blur
+            _vendorReg.GSTNO = gst.ToUpperInvariant();
+            _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, fieldName));
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(gst, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(gst))
+            {
+                var gstPattern = @"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$";
+                if (!Regex.IsMatch(gst, gstPattern, RegexOptions.IgnoreCase))
+                    _messageStore?.Add(fieldId, "Enter a valid GSTIN (e.g. 27ABCDE1234F1Z5).");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired || _isGSTRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateRegistrationSection1Validity();
+
+            return Task.CompletedTask;
+        }
+        private Task ValidateTANOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.TANNo);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var tan = (_vendorReg.TANNo ?? string.Empty).Trim();
+            // normalize to trimmed upper-case on blur
+            _vendorReg.TANNo = tan.ToUpperInvariant();
+            _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, fieldName));
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(tan, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(tan))
+            {
+                var tanPattern = @"^[A-Z]{4}[0-9]{5}[A-Z]$";
+                if (!Regex.IsMatch(tan, tanPattern, RegexOptions.IgnoreCase))
+                    _messageStore?.Add(fieldId, "TAN must be in format 4 letters, 5 digits, 1 letter (e.g. ABCD12345E).");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired || _isTANRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateRegistrationSection1Validity();
+
+            return Task.CompletedTask;
+        }
+
+        private Task ValidateCINOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.CIN);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var cin = (_vendorReg.CIN ?? string.Empty).Trim();
+            // normalize to trimmed upper-case on blur
+            _vendorReg.CIN = cin.ToUpperInvariant();
+            _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, fieldName));
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(cin, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(cin))
+            {
+                // Use corrected pattern for CIN start (L or U) and remaining groups
+                var cinPattern = @"^(?:L|U)[0-9]{5}[A-Za-z]{2}[0-9]{4}[A-Za-z]{3}[0-9]{6}$";
+                if (!Regex.IsMatch(cin, cinPattern, RegexOptions.IgnoreCase))
+                    _messageStore?.Add(fieldId, "CIN must match the expected format (e.g. L00000AA0000AAA000000).");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired || _isCINRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateRegistrationSection1Validity();
+
+            return Task.CompletedTask;
+        }
+
+        private Task ValidateAadharOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.AadharNo);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var aadhar = (_vendorReg.AadharNo ?? string.Empty).Trim();
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(aadhar, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(aadhar))
+            {
+                // Accept any one of:
+                //  - 12 continuous digits starting with 2-9
+                //  - grouped with spaces: "xxxx xxxx xxxx" (first digit 2-9)
+                //  - grouped with hyphens: "xxxx-xxxx-xxxx" (first digit 2-9)
+                var aadharPattern = @"^(?:[2-9][0-9]{11}|[2-9][0-9]{3}\s[0-9]{4}\s[0-9]{4}|[2-9][0-9]{3}-[0-9]{4}-[0-9]{4})$";
+                if (!Regex.IsMatch(aadhar, aadharPattern))
+                {
+                    _messageStore?.Add(fieldId, "Aadhar must be 12 digits (starting 2-9) optionally grouped as 'xxxx xxxx xxxx' or 'xxxx-xxxx-xxxx'.");
+                }
+                else
+                {
+                    // Normalize to spaced format: "xxxx xxxx xxxx"
+                    var digits = Regex.Replace(aadhar, @"\D", ""); // remove spaces/hyphens/other chars
+                    if (digits.Length == 12 && Regex.IsMatch(digits, @"^[2-9][0-9]{11}$"))
+                    {
+                        var formatted = $"{digits.Substring(0, 4)} {digits.Substring(4, 4)} {digits.Substring(8, 4)}";
+                        // Only update the field and notify if the value actually changed
+                        if (!string.Equals(_vendorReg.AadharNo, formatted, StringComparison.Ordinal))
+                        {
+                            _vendorReg.AadharNo = formatted;
+                            // notify EditContext so bound UI updates and validation re-runs if necessary
+                            _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, fieldName));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired || _isAadharRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateRegistrationSection2Validity();
+
+            return Task.CompletedTask;
+        }
+
+        private Task ValidateUDYAMOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.UDYAMRegNo);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var udyam = (_vendorReg.UDYAMRegNo ?? string.Empty).Trim();
+
+            // normalize to upper-case on blur and update EditContext
+            _vendorReg.UDYAMRegNo = udyam.ToUpperInvariant();
+            _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, fieldName));
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(_vendorReg.UDYAMRegNo, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(_vendorReg.UDYAMRegNo))
+            {
+                var udyamPattern = @"^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$";
+                if (!Regex.IsMatch(_vendorReg.UDYAMRegNo, udyamPattern))
+                    _messageStore?.Add(fieldId, "UDYAM must be in format UDYAM-LL-NN-NNNNNNN (e.g. UDYAM-AB-12-1234567).");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired || _isUDYAMRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateRegistrationSection2Validity();
+
+            return Task.CompletedTask;
+        }
+
+
+        private Task ValidatePFOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.PFNo);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var pf = (_vendorReg.PFNo ?? string.Empty).Trim();
+            // normalize to upper-case on blur
+            _vendorReg.PFNo = pf.ToUpperInvariant();
+            _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, fieldName));
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(_vendorReg.PFNo, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(_vendorReg.PFNo))
+            {
+                var pfPattern = @"^[A-Z]{2}[A-Z]{3}[0-9]{7}[0-9]{3}[0-9]{7}$";
+                if (!Regex.IsMatch(_vendorReg.PFNo, pfPattern))
+                    _messageStore?.Add(fieldId, "PF format is invalid.");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired || _isPFRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateRegistrationSection2Validity();
+
+            return Task.CompletedTask;
+        }
+
+        private Task ValidateESIOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.ESIRegNo);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            _messageStore?.Clear(fieldId);
+
+            var esi = (_vendorReg.ESIRegNo ?? string.Empty).Trim();
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(esi, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(esi))
+            {
+                var esiPattern = @"^\d{2}-\d{2}-\d{6}-\d{3}-\d{4}$";
+                if (!Regex.IsMatch(esi, esiPattern))
+                    _messageStore?.Add(fieldId, "ESI must match NN-NN-NNNNNN-NNN-NNNN (e.g. 12-34-123456-789-0123).");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired || _isESIRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+            UpdateRegistrationSection2Validity();
+            return Task.CompletedTask;
+        }
+
+        private async Task ValidateIFSCOnBlur(FocusEventArgs _)
+        {
+            if (_editContext == null || _vendorReg == null) return;
+
+            // ensure the latest bound value is applied (MudTextField may update binding just before/around blur)
+            await Task.Yield();
+
+            var fieldName = nameof(VendorRegistrationFormDto.IFSCCode);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            // clear previous messages for this field
+            _messageStore?.Clear(fieldId);
+
+            var ifscRaw = (_vendorReg.IFSCCode ?? string.Empty).Trim();
+            var normalized = ifscRaw.ToUpperInvariant();
+
+            // update model and notify so other listeners see the normalized value
+            if (!string.Equals(_vendorReg.IFSCCode, normalized, StringComparison.Ordinal))
+            {
+                _vendorReg.IFSCCode = normalized;
+                _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, fieldName));
+            }
+
+            // refresh section validity first (this clears any stale messages for bank fields)
+            UpdateBankAccountSectionValidity();
+
+            // Run DataAnnotations for the property
+            var results = new List<ValidationResult>();
+            var context = new ValidationContext(_vendorReg) { MemberName = fieldName };
+            Validator.TryValidateProperty(_vendorReg.IFSCCode, context, results);
+            foreach (var r in results)
+                _messageStore?.Add(fieldId, r.ErrorMessage ?? string.Empty);
+
+            // Regex validation after clearing/section-check
+            if (!string.IsNullOrWhiteSpace(_vendorReg.IFSCCode))
+            {
+                var ifscPattern = @"^[A-Z]{4}0[A-Z0-9]{6}$";
+                if (!Regex.IsMatch(_vendorReg.IFSCCode, ifscPattern))
+                    _messageStore?.Add(fieldId, "IFSC must match format AAAA0XXXXXX (e.g. HDFC0ABC123).");
+            }
+            else
+            {
+                var prop = typeof(VendorRegistrationFormDto).GetProperty(fieldName);
+                var isRequired = prop?.GetCustomAttributes(typeof(RequiredAttribute), inherit: true).Any() ?? false;
+                if (isRequired)
+                    _messageStore?.Add(fieldId, "This field is required.");
+            }
+
+            // notify UI about new messages
+            _editContext.NotifyValidationStateChanged();
+        }
+
         // Submit handler and validation
         private async Task HandleSubmit(EditContext editContext)
         {
@@ -1432,46 +1831,99 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 validationResults.Add(new ValidationResult("PAN is required for the selected ownership.", new[] { nameof(_vendorReg.PANNo) }));
             if (_isPANRequired && string.IsNullOrWhiteSpace(_vendorReg.PANCardURL))
                 validationResults.Add(new ValidationResult("PAN Card document is required for the selected ownership.", new[] { nameof(_vendorReg.PANCardURL) }));
+            if (!string.IsNullOrWhiteSpace(_vendorReg.PANNo))
+            {
+                var panPattern = @"^[A-Z]{5}[0-9]{4}[A-Z]{1}$";
+                if (!Regex.IsMatch(_vendorReg.PANNo.Trim(), panPattern, RegexOptions.IgnoreCase))
+                    validationResults.Add(new ValidationResult("PAN format is invalid. Expected 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F).", new[] { nameof(_vendorReg.PANNo) }));
+            }
 
 
             if (_isTANRequired && string.IsNullOrWhiteSpace(_vendorReg.TANNo))
                 validationResults.Add(new ValidationResult("TAN No is required for the selected ownership.", new[] { nameof(_vendorReg.TANNo) }));
             if (_isTANRequired && string.IsNullOrWhiteSpace(_vendorReg.TANCertURL))
                 validationResults.Add(new ValidationResult("TAN Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.TANCertURL) }));
+            if (!string.IsNullOrWhiteSpace(_vendorReg.TANNo))
+            {
+                var tanPattern = @"^[A-Z]{4}[0-9]{5}[A-Z]$";
+                if (!Regex.IsMatch(_vendorReg.TANNo.Trim(), tanPattern, RegexOptions.IgnoreCase))
+                    validationResults.Add(new ValidationResult("TAN format is invalid. Expected 4 letters, 5 digits, 1 letter (e.g. ABCD12345E).", new[] { nameof(_vendorReg.TANNo) }));
+            }
 
             if (_isGSTRequired && string.IsNullOrWhiteSpace(_vendorReg.GSTNO))
                 validationResults.Add(new ValidationResult("GST No is required for the selected ownership.", new[] { nameof(_vendorReg.GSTNO) }));
-
             if (_isGSTRequired && string.IsNullOrWhiteSpace(_vendorReg.GSTRegistrationCertURL))
                 validationResults.Add(new ValidationResult("GST Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.GSTRegistrationCertURL) }));
+            if (!string.IsNullOrWhiteSpace(_vendorReg.GSTNO))
+            {
+                var gstPattern = @"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$";
+                if (!Regex.IsMatch(_vendorReg.GSTNO.Trim(), gstPattern, RegexOptions.IgnoreCase))
+                    validationResults.Add(new ValidationResult("GSTIN format is invalid. Expected format: 2 digits, 5 letters, 4 digits, 1 letter, 1 alnum/non-zero or letter, 'Z', 1 alnum (e.g. 27ABCDE1234F1Z5).", new[] { nameof(_vendorReg.GSTNO) }));
+            }
 
             if (_isCINRequired && string.IsNullOrWhiteSpace(_vendorReg.CIN))
                 validationResults.Add(new ValidationResult("CIN is required for the selected ownership.", new[] { nameof(_vendorReg.CIN) }));
             if (_isCINRequired && string.IsNullOrWhiteSpace(_vendorReg.CINCertURL))
                 validationResults.Add(new ValidationResult("CIN Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.CINCertURL) }));
+            if (!string.IsNullOrWhiteSpace(_vendorReg.CIN))
+            {
+                var cinPattern = @"^(?:L|U)[0-9]{5}[A-Za-z]{2}[0-9]{4}[A-Za-z]{3}[0-9]{6}$";
+                if (!Regex.IsMatch(_vendorReg.CIN.Trim(), cinPattern, RegexOptions.IgnoreCase))
+                    validationResults.Add(new ValidationResult("CIN format is invalid. Expected pattern starting with 'L' or 'U' followed by the registration groups.", new[] { nameof(_vendorReg.CIN) }));
+            }
 
 
             if (_isAadharRequired && string.IsNullOrWhiteSpace(_vendorReg.AadharNo))
                 validationResults.Add(new ValidationResult("Aadhar is required for the selected ownership.", new[] { nameof(_vendorReg.AadharNo) }));
             if (_isAadharRequired && string.IsNullOrWhiteSpace(_vendorReg.AadharDocURL))
                 validationResults.Add(new ValidationResult("Aadhar document is required for the selected ownership.", new[] { nameof(_vendorReg.AadharDocURL) }));
+            if (!string.IsNullOrWhiteSpace(_vendorReg.AadharNo))
+            {
+                var aadharPattern = @"^(?:[2-9][0-9]{11}|[2-9][0-9]{3}\s[0-9]{4}\s[0-9]{4}|[2-9][0-9]{3}-[0-9]{4}-[0-9]{4})$";
+                if (!Regex.IsMatch(_vendorReg.AadharNo.Trim(), aadharPattern))
+                    validationResults.Add(new ValidationResult("Aadhar format is invalid. Acceptable formats: 12 digits starting with 2-9, 'xxxx xxxx xxxx' or 'xxxx-xxxx-xxxx'.", new[] { nameof(_vendorReg.AadharNo) }));
+            }
 
             if (_isUDYAMRequired && string.IsNullOrWhiteSpace(_vendorReg.UDYAMRegNo))
                 validationResults.Add(new ValidationResult("UDYAM No is required for the selected ownership.", new[] { nameof(_vendorReg.UDYAMRegNo) }));
             if (_isUDYAMRequired && string.IsNullOrWhiteSpace(_vendorReg.UDYAMRegCertURL))
                 validationResults.Add(new ValidationResult("UDYAM Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.UDYAMRegCertURL) }));
-
+            if (!string.IsNullOrWhiteSpace(_vendorReg.UDYAMRegNo))
+            {
+                var udyamPattern = @"^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$";
+                if (!Regex.IsMatch(_vendorReg.UDYAMRegNo.Trim().ToUpperInvariant(), udyamPattern))
+                    validationResults.Add(new ValidationResult("UDYAM format is invalid. Expected UDYAM-LL-NN-NNNNNNN (e.g. UDYAM-AB-12-1234567).", new[] { nameof(_vendorReg.UDYAMRegNo) }));
+            }
 
             if (_isPFRequired && string.IsNullOrWhiteSpace(_vendorReg.PFNo))
                 validationResults.Add(new ValidationResult("PF No is required for the selected ownership.", new[] { nameof(_vendorReg.PFNo) }));
             if (_isPFRequired && string.IsNullOrWhiteSpace(_vendorReg.PFRegCertURL))
                 validationResults.Add(new ValidationResult("PF Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.PFRegCertURL) }));
+            if (!string.IsNullOrWhiteSpace(_vendorReg.PFNo))
+            {
+                var pfPattern = @"^[A-Z]{2}[A-Z]{3}[0-9]{7}[0-9]{3}[0-9]{7}$";
+                if (!Regex.IsMatch(_vendorReg.PFNo.Trim().ToUpperInvariant(), pfPattern))
+                    validationResults.Add(new ValidationResult("PF format is invalid.", new[] { nameof(_vendorReg.PFNo) }));
+            }
 
             if (_isESIRequired && string.IsNullOrWhiteSpace(_vendorReg.ESIRegNo))
                 validationResults.Add(new ValidationResult("ESI No is required for the selected ownership.", new[] { nameof(_vendorReg.ESIRegNo) }));
             if (_isESIRequired && string.IsNullOrWhiteSpace(_vendorReg.ESIRegCertURL))
                 validationResults.Add(new ValidationResult("ESI Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.ESIRegCertURL) }));
+            if (!string.IsNullOrWhiteSpace(_vendorReg.ESIRegNo))
+            {
+                var esiPattern = @"^\d{2}-\d{2}-\d{6}-\d{3}-\d{4}$";
+                if (!Regex.IsMatch(_vendorReg.ESIRegNo.Trim(), esiPattern))
+                    validationResults.Add(new ValidationResult("ESI format is invalid. Expected NN-NN-NNNNNN-NNN-NNNN (e.g. 12-34-123456-789-0123).", new[] { nameof(_vendorReg.ESIRegNo) }));
+            }
 
+           
+            if (!string.IsNullOrWhiteSpace(_vendorReg.IFSCCode))
+            {
+                var ifscPattern = @"^[A-Z]{4}0[A-Z0-9]{6}$";
+                if (!Regex.IsMatch(_vendorReg.IFSCCode.Trim().ToUpperInvariant(), ifscPattern))
+                    validationResults.Add(new ValidationResult("IFSC format is invalid. Expected 4 letters, '0', then 6 alphanumeric characters (e.g. HDFC0ABC123).", new[] { nameof(_vendorReg.IFSCCode) }));
+            }
             _messageStore?.Clear();
             if (validationResults.Any())
             {

@@ -3,7 +3,7 @@
     border-radius: 6px;
     /* remove any default top/bottom spacing so host page controls spacing */
     margin: 0;
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.50rem;
     border-bottom: 1px solid rgba(15, 23, 42, 0.04);
 }
 

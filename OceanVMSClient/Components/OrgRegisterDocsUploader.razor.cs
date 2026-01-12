@@ -30,7 +30,7 @@ namespace OceanVMSClient.Components
 
         private string UploadError { get; set; } = string.Empty;
         private string SelectedFileName { get; set; } = string.Empty;
-        private const long MaxFileBytes = 5 * 1024 * 1024; // 5 MB
+        private const long MaxFileBytes = 10 * 1024 * 1024; // 10 MB
         [Inject]
         public ISnackbar Snackbar { get; set; } = default!;
         private Color labelColor { get; set; } = Color.Default;

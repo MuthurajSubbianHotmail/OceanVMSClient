@@ -14,8 +14,14 @@
     }
 </style>
 
-<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+@* <MudBreadcrumbs Items="_items" Separator="/" >
+    <ItemTemplate Context="item">
+        <MudLink Href="@item.Href">@item.Text</MudLink>
+    </ItemTemplate>
+</MudBreadcrumbs> *@
+<PageNavigation Items="_items" />
 <PageHeader Title="Purchase Orders" Class="mb-0" />
+
 
 <MudPaper Class="pa-2 po-paper">
     <!-- Top summary -->
@@ -31,21 +37,21 @@
                                       Placeholder="SAP PO No"
                                       OnDebounceIntervalElapsed="@( (string s) => { sapPONo = s; return OnSearch(); } )"
                                       DebounceInterval="500"
-                                      Dense="true"
+                                      Margin="Margin.Dense"
                                       Class="filter-control" />
                     </MudItem>
 
                     <MudItem xs="12" sm="2" md="2">
-                       
+
                         <MudTextField T="string"
                                       Typo="Typo.caption"
                                       Label="Vendor"
                                       Placeholder="Vendor Name"
                                       Value="@vendorName"
-                                      Dense="true"
+                                      Margin="Margin.Dense"
                                       DebounceInterval="500"
                                       OnDebounceIntervalElapsed="@((string s) => { vendorName = s; return OnSearch(); })"
-                                       Class="filter-control" />
+                                      Class="filter-control" />
 
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
@@ -55,7 +61,7 @@
                                       Label="Project Code"
                                       Placeholder="Project Code"
                                       Value="@projectCode"
-                                      Dense="true"
+                                      Margin="Margin.Dense"
                                       DebounceInterval="500"
                                       OnDebounceIntervalElapsed="@((string s) => { projectCode = s; return OnSearch(); })"
                                       Class="filter-control" />
@@ -70,7 +76,7 @@
                                       ValueChanged="@( (decimal? v) => { minTotalValue = v; return OnSearch(); } )"
                                       Placeholder="Min"
                                       Clearable="true"
-                                      Dense="true"
+                                      Margin="Margin.Dense"
                                       Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="1" md="1">
@@ -81,7 +87,7 @@
                                       ValueChanged="@( (decimal? v) => { maxTotalValue = v; return OnSearch(); } )"
                                       Placeholder="Max"
                                       Clearable="true"
-                                      Dense="true"
+                                      Margin="Margin.Dense"
                                       Class="filter-control" />
                     </MudItem>
                     <MudItem xs="12" sm="2" md="2">
@@ -91,7 +97,7 @@
                                    Typo="Typo.caption"
                                    Value="selectedInvoiceStatus"
                                    ValueChanged="OnInvoiceStatusChanged"
-                                   Dense="true"
+                                   Margin="Margin.Dense"
                                    Class="filter-control">
                             @foreach (var status in invoiceStatuses)
                             {
@@ -102,14 +108,15 @@
                     <MudItem xs="12" sm="2" md="2">
                         <MudDateRangePicker @ref="_dateRangePicker"
                                             DateRangeChanged="OnDateRangeSearch"
+                                            Placeholder="Select Date Range"
                                             DateFormat="dd-MMM-yy"
                                             TitleDateFormat="MMMM dd"
                                             Margin="Margin.Dense"
                                             Variant="Variant.Text"
-                                            Dense="true"
-                                            Label="PO Date"
+                                            Label="PO Date Range"
                                             Clearable="true"
                                             AutoClose="true"
+                                            Style="font-size: 0.7rem;"
                                             Class="filter-control">
                             <PickerActions>
                                 <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearDateRange">Clear</MudButton>
@@ -117,7 +124,7 @@
                         </MudDateRangePicker>
                     </MudItem>
 
-                   
+
                 </MudGrid>
             </MudItem>
 
@@ -137,18 +144,19 @@
               Virtualize=" true"
               Class="po-table mt-3"
               FixedHeader="true"
-              FixedFooter="true">
+              FixedFooter="true"
+              Striped="true">
         <HeaderContent>
             @* <MudTh Class="col-type">Type</MudTh> *@
-            <MudTh Class="col-pono">PONo</MudTh>
-            <MudTh>PO.Date</MudTh>
-            <MudTh>Supplier</MudTh>
-            <MudTh>Project</MudTh>
-            <MudTh Align="Align.Right">Item.Value</MudTh>
-            <MudTh Align="Align.Right">Tax.Value</MudTh>
-            <MudTh Align="Align.Right">Total.Value</MudTh>
-            <MudTh>Inv.Status</MudTh>
-            <MudTh></MudTh>
+            <MudTh Class="col-pono" Style="background-color: cornflowerblue;">PONo</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">PO.Date</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Supplier</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Project</MudTh>
+            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">Item.Value</MudTh>
+            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">Tax.Value</MudTh>
+            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">Total.Value</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Inv.Status</MudTh>
+            <MudTh Style="background-color: cornflowerblue"> Details </MudTh>
         </HeaderContent>
 
         <RowTemplate>
@@ -156,22 +164,22 @@
                 <MudText Typo="Typo.subtitle2" Class="cell-text">@context.PoTypeName</MudText>
             </MudTd> *@
             <MudTd>
-                <MudLink Typo="Typo.subtitle2" Class="cell-link" Href="@($"ViewPurchaseOrder/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
+                <MudLink Typo="Typo.body2" Class="cell-link" Href="@($"ViewPurchaseOrder/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
                     @context.SAPPONumber
                 </MudLink>
             </MudTd>
             <MudTd DataLabel="PODate" Class="no-wrap">
-                <MudText Typo="Typo.subtitle2">
+                <MudText Typo="Typo.body2">
                     @FormatDate(context.SAPPODate)
                 </MudText>
             </MudTd>
             <MudTd DataLabel="Vendor" Class="no-wrap">
-                <MudText Typo="Typo.subtitle2">
+                <MudText Typo="Typo.body2">
                     @context.VendorName
                 </MudText>
             </MudTd>
             <MudTd DataLabel="ProjectID">
-                <MudText Typo="Typo.subtitle2">
+                <MudText Typo="Typo.body2">
                     @context.ProjectCode
                 </MudText>
             </MudTd>
@@ -195,10 +203,10 @@
             </MudTd>
             <MudTd>
                 <MudIconButton OnClick="@(() => ToggleRow(context.Id))"
-                               Icon="@(IsRowExpanded(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Outlined.ArrowDropDown)"
+                               Icon="@(IsRowExpanded(context.Id) ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Outlined.ArrowDropDown)"
                                Variant="Variant.Text"
                                Color="Color.Info"
-                               Size="Size.Large" />
+                               Size="Size.Medium" />
             </MudTd>
         </RowTemplate>
 

@@ -1,0 +1,101 @@
+﻿@using Shared.DTO.POModule
+<MudTable T="InvoiceDto"
+          ServerData="GetServerData"
+          Hover="true"
+          Breakpoint="Breakpoint.Sm"
+          Dense="true"
+          @ref="_table"
+          RowsPerPage="10"
+          Virtualize="true"
+          Class="invoice-table mt-3">
+    <HeaderContent>
+        <MudTh>Invoice Number</MudTh>
+        <MudTh>Date</MudTh>
+        <MudTh>Supplier</MudTh>
+        <MudTh>PO No</MudTh>
+        <MudTh>Po Date</MudTh>
+        <MudTh>Total Amount</MudTh>
+        <MudTh>Current Status</MudTh>
+        <MudTh>SLA Status</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Invoice Number">
+            <MudLink Typo="Typo.caption" Href="@($"{invoiceViewPage}/{context.Id}")">
+                @context.InvoiceRefNo
+            </MudLink>
+        </MudTd>
+        <MudTd DataLabel="Date">@FormatDate(@context.InvoiceDate)</MudTd>
+        <MudTd DataLabel="Supplier">@context.VendorName</MudTd>
+        <MudTd DataLabel="PO No">
+            <MudLink Typo="Typo.caption" Href="@($"ViewPurchaseOrder/{context.PurchaseOrderId}")" Color="Color.Primary" Underline="Underline.Hover">
+                @context.SAPPONumber
+            </MudLink>
+        </MudTd>
+        <MudTd DataLabel="Po Date">@FormatDate(@context.SAPPODate)</MudTd>
+        <MudTd DataLabel="Total Amount"><CurrencyText Amount="@context.InvoiceTotalValue" /></MudTd>
+        <MudTd DataLabel="Current Status">@context.InvoiceStatus</MudTd>
+        @switch (@context.NextActionBy)
+        {
+            case "Initiator":
+                <MudTd DataLabel="SLA Status">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Color="@GetSLAChipColor(context.InitiatorReviewSLAStatus ?? "NA")">
+                        @context.InitiatorReviewSLAStatus
+                    </MudChip>
+                </MudTd>
+                break;
+            case "Checker":
+                <MudTd DataLabel="SLA Status">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Color="@GetSLAChipColor(context.CheckerReviewSLAStatus ?? "NA")">
+                        @context.CheckerReviewSLAStatus
+                    </MudChip>
+                </MudTd>
+                break;
+            case "Approver":
+                <MudTd DataLabel="SLA Status">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Color="@GetSLAChipColor(context.ApproverReviewSLAStatus ?? "NA")">
+                        @context.ApproverReviewSLAStatus
+                    </MudChip>
+                </MudTd>
+                break;
+            case "Validator":
+                <MudTd DataLabel="SLA Status">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Color="@GetSLAChipColor(context.ValidatorReviewSLAStatus ?? "NA")">
+                        @context.ValidatorReviewSLAStatus
+                    </MudChip>
+                </MudTd>
+                break;
+            case "Payable":
+                <MudTd DataLabel="SLA Status">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Color="@GetSLAChipColor(context.ApproverReviewSLAStatus ?? "NA")">
+                        @context.ApproverReviewSLAStatus
+                    </MudChip>
+                </MudTd>
+                break;
+            default:
+                <MudTd DataLabel="SLA Status">
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Variant="Variant.Filled"
+                             Color="Color.Default">
+                        NA
+                    </MudChip>
+                </MudTd>
+                break;
+        }
+    </RowTemplate>
+</MudTable>

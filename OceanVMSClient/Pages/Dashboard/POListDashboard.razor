@@ -8,10 +8,16 @@
           RowsPerPage="10"
           Virtualize="true"
           Class="po-table mt-3">
+    <HeaderContent>
+        <MudTh>PO Number</MudTh>
+        <MudTh>Date</MudTh>
+        <MudTh>Supplier</MudTh>
+        <MudTh>Total Amount</MudTh>
+    </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="PO Number">@context.SAPPONumber</MudTd>
-        <MudTd DataLabel="Supplier">@context.VendorName</MudTd>
         <MudTd DataLabel="Date">@FormatDate(@context.SAPPODate)</MudTd>
+        <MudTd DataLabel="Supplier">@context.VendorName</MudTd>
         <MudTd DataLabel="Total Amount"><CurrencyText Amount="@context.TotalValue" /></MudTd>
     </RowTemplate>
 </MudTable>

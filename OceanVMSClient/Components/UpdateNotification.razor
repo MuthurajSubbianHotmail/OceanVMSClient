@@ -1,0 +1,52 @@
+﻿@using MudBlazor
+@inject IJSRuntime JS
+@inject IDialogService DialogService
+
+@code {
+    private DotNetObjectReference<UpdateNotification>? _objRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _objRef = DotNetObjectReference.Create(this);
+        // Register for notifications from sw-registrator.js
+        await JS.InvokeVoidAsync("registerForUpdateAvailableNotification", _objRef, nameof(OnUpdateAvailable));
+    }
+
+    [JSInvokable(nameof(OnUpdateAvailable))]
+    public async Task OnUpdateAvailable()
+    {
+        // Show a dialog to the user. Pass versions if you have them (null is acceptable).
+        var parameters = new DialogParameters
+        {
+            { "BootVersion", null },
+            { "LatestVersion", null }
+        };
+
+        var options = new DialogOptions { CloseButton = false, BackdropClick = true };
+        var dialog = DialogService.Show<UpdateAvailableDialog>("Update available", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is bool refresh && refresh)
+        {
+            try
+            {
+                // Ask the service worker to skipWaiting and let controllerchange reload the page.
+                var activated = await JS.InvokeAsync<bool>("activateUpdate");
+                if (!activated)
+                {
+                    // Fallback if no waiting SW found
+                    await JS.InvokeVoidAsync("reloadPage");
+                }
+            }
+            catch
+            {
+                await JS.InvokeVoidAsync("reloadPage");
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _objRef?.Dispose();
+    }
+}

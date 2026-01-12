@@ -2,17 +2,11 @@
 
 @using MudBlazor
 
-<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
+@* <MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" /> *@
+<PageNavigation Items="_items" />
 <PageHeader Title="Invoice" Class="mb-2" />
 
-<div class="d-flex justify-end mb-2">
-    <MudButton Variant="Variant.Outlined"
-               Color="Color.Primary"
-               StartIcon="@Icons.Material.Filled.Visibility"
-               OnClick="ShowApprovalSummary">
-        View Review Status
-    </MudButton>
-</div>
+
 
 @if (isDetailsLoading)
 {
@@ -94,6 +88,15 @@ else
             <!-- Workflow stepper -->
 
         </MudGrid>
+        <MudDivider Class="my-1"/>
+        <div class="d-flex justify-end mb-2">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Visibility"
+                       OnClick="ShowApprovalSummary">
+                View Review Status
+            </MudButton>
+        </div>
     </div>
 }
 

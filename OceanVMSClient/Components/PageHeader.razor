@@ -1,4 +1,7 @@
-﻿@* <MudPaper Square="true" Elevation="0" Class="page-header px-3" @attributes="AdditionalAttributes"> *@
+﻿<MudPaper Elevation="0" Class="px-2 mt-1">
+    <MudText Typo="Typo.h6">@Title</MudText>
+</MudPaper>
+@* <MudPaper Square="true" Elevation="0" Class="px-2 mt-2" @attributes="AdditionalAttributes">
     <div class="header-inner">
         <div class="header-left">
             @if (!string.IsNullOrWhiteSpace(Icon))
@@ -18,4 +21,4 @@
             @RightContent
         </div>
     </div>
-@* </MudPaper> *@
+</MudPaper> *@

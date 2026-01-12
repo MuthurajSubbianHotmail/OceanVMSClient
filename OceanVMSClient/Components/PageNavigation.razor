@@ -1,10 +1,10 @@
-﻿<MudBreadcrumbs Items="Items" Class="px-0">
-    @foreach (var item in Items)
-    {
-        <MudBreadcrumbItem Href="@item.Href" Disabled="@item.Disabled" class="px-0 mx-0">@item.Text</MudBreadcrumbItem>
-    }
+﻿<MudPaper Elevation="0" Class="px-2">
+<MudBreadcrumbs Items="Items" Class="px-0 py-1">
+    <ItemTemplate Context="item">
+        <MudLink Typo="Typo.subtitle2" Href="@item.Href">@item.Text</MudLink>
+    </ItemTemplate>
 </MudBreadcrumbs>
-
+</MudPaper>
 @code {
     [Parameter]
     public List<BreadcrumbItem> Items { get; set; } = new List<BreadcrumbItem>();

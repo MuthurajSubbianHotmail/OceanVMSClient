@@ -33,6 +33,13 @@
     color:#6b7280;
 }
 
+/* Specific: DateRangePicker label — slightly smaller */
+.po-section .mud-date-range-picker .mud-input-label {
+    font-size:0.72rem !important;
+    font-weight:600 !important;
+    color: #6b7280 !important;
+}
+
 /* Inputs: value and placeholder sizing */
 .po-section .mud-input-root input,
 .po-section .mud-text-field .mud-input-slot input,
@@ -62,15 +69,15 @@
 }
 
 .po-table thead th {
-    padding:0.65rem 0.75rem;
+    padding:0.5rem 0.75rem; /* slightly reduced header padding */
     border-bottom:1px solid rgba(15,23,42,0.06);
     font-weight:600;
     color:#0f172a;
     text-align:left;
 }
 
-/* Row & cell */
-.po-table td, .po-table th { font-size:0.95rem; vertical-align:middle; padding-top:0.6rem; padding-bottom:0.6rem; }
+/* Row & cell: reduced vertical padding and line-height to make rows tighter */
+.po-table td, .po-table th { font-size:0.9rem; vertical-align:middle; padding-top:0.35rem; padding-bottom:0.35rem; line-height:1.05rem; }
 .po-table tbody tr { transition: background .12s ease, transform .06s ease; }
 .po-table tbody tr:hover { background: rgba(27,110,194,0.03); transform: translateY(-1px); }
 
@@ -78,7 +85,7 @@
 .po-table tbody tr:nth-child(even) { background: rgba(15,23,42,0.015); }
 
 /* Link styling in cells */
-.cell-link { font-weight:500; font-size:0.95rem; }
+.cell-link { font-weight:500; font-size:0.92rem; }
 
 /* Emphasis columns */
 .total-col { font-weight:600; color:rebeccapurple; }
@@ -104,7 +111,7 @@
     .po-paper { padding:0.75rem; }
     .po-section { padding:0.5rem; }
     .actions-right { margin-top:0.5rem; justify-content:flex-start; }
-    .po-table thead th { font-size:0.92rem; padding:0.5rem; }
+    .po-table thead th { font-size:0.92rem; padding:0.4rem; }
     .child-actions .actions-wrap { justify-content:flex-start; }
 }
 

@@ -99,7 +99,7 @@ else
                                     </MudItem>
                                     <MudItem id="MSME Switch" xs="4">
                                         <MudSwitch Color="Color.Primary" T="bool"
-                                                   Value="_IsMSMERegistered"
+                                                   Value="@_IsMSMERegistered"
                                                    ReadOnly="@_isReadOnly"
                                                    ValueChanged="@(HandleMSMESelectedChange)">
                                             <MudText Typo="Typo.caption">Is MSME?</MudText>
@@ -389,7 +389,8 @@ else
                                                       Variant="@_inputVariant"
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isPANRequired"
-                                                      For="@(() => _vendorReg.PANNo)" />
+                                                      For="@(() => _vendorReg.PANNo)"
+                                                      OnBlur="@(() => ValidatePANOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="PAN"
@@ -408,7 +409,8 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isTANRequired"
                                                       FullWidth="true"
-                                                      For="@(() => _vendorReg.TANNo)" />
+                                                      For="@(() => _vendorReg.TANNo)"
+                                                      OnBlur="@(() => ValidateTANOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="TAN"
@@ -427,7 +429,8 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isGSTRequired"
                                                       FullWidth="true"
-                                                      For="@(() => _vendorReg.GSTNO)" />
+                                                      For="@(() => _vendorReg.GSTNO)" 
+                                                      OnBlur="@(() => ValidateGSTOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="GST"
@@ -446,7 +449,8 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isCINRequired"
                                                       FullWidth="true"
-                                                      For="@(() => _vendorReg.CIN)" />
+                                                      For="@(() => _vendorReg.CIN)" 
+                                                      OnBlur="@(() => ValidateCINOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="CIN"
@@ -486,7 +490,8 @@ else
                                                       Variant="@_inputVariant"
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isAadharRequired"
-                                                      For="@(() => _vendorReg.AadharNo)" />
+                                                      For="@(() => _vendorReg.AadharNo)"
+                                                      OnBlur="@(() => ValidateAadharOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="AADHAR"
@@ -506,7 +511,8 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isUDYAMRequired"
                                                       FullWidth="true"
-                                                      For="@(() => _vendorReg.UDYAMRegNo)" />
+                                                      For="@(() => _vendorReg.UDYAMRegNo)"
+                                                      OnBlur="@(() => ValidateUDYAMOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="UDYAM"
@@ -525,7 +531,8 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isPFRequired"
                                                       FullWidth="true"
-                                                      For="@(() => _vendorReg.PFNo)" />
+                                                      For="@(() => _vendorReg.PFNo)"
+                                                      OnBlur="@(() => ValidatePFOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="PF"
@@ -544,7 +551,8 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isESIRequired"
                                                       FullWidth="true"
-                                                      For="@(() => _vendorReg.ESIRegNo)" />
+                                                      For="@(() => _vendorReg.ESIRegNo)"
+                                                      OnBlur="@(() => ValidateESIOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
                                         <OrgRegisterDocsUploader DocType="ESI"
@@ -553,7 +561,9 @@ else
                                                                  IsRequired="@_isESIRequired" />
                                     </MudItem>
                                 </MudGrid>
+                                
                             </MudPaper>
+                             
                         </MudItem>
 
                         <MudItem id="Bank Account Details 2" xs="4" md="4">
@@ -581,7 +591,7 @@ else
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
                                                       ReadOnly="@_isReadOnly"
-                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.BankName) ? false : true)"
+                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.BankName))"
                                                       For="@(() => _vendorReg.BankName)" />
                                     </MudItem>
 
@@ -592,21 +602,22 @@ else
                                                       Label="Bank Branch"
                                                       Margin="@_inputMargin"
                                                       ReadOnly="@_isReadOnly"
-                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.BankBranch) ? false : true)"
+                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.BankBranch))"
                                                       FullWidth="true"
                                                       For="@(() => _vendorReg.BankBranch)" />
                                     </MudItem>
 
                                     <MudItem id="IFSC Code" xs="12" md="12" Style="padding-right:4px;">
-                                        <MudTextField T="string" @bind-Value="_vendorReg.IFSCCode"
+                                        <MudTextField T="string" @bind-Value="@_vendorReg.IFSCCode"
                                                       Placeholder="IFSC Code"
                                                       Typo="@_inputTypo"
                                                       Label="IFSC Code"
                                                       Margin="@_inputMargin"
                                                       ReadOnly="@_isReadOnly"
                                                       FullWidth="true"
-                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.IFSCCode) ? false : true)"
-                                                      For="@(() => _vendorReg.IFSCCode)" />
+                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.IFSCCode))"
+                                                      For="@(() => _vendorReg.IFSCCode)"
+                                                      OnBlur="ValidateIFSCOnBlur" />
                                     </MudItem>
 
                                     <MudItem id="Account Number" xs="12" md="12" Style="padding-right:4px;">
@@ -616,7 +627,7 @@ else
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       ReadOnly="@_isReadOnly"
-                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.AccountNumber) ? false : true)"
+                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.AccountNumber))"
                                                       Style="flex:1;"
                                                       For="@(() => _vendorReg.AccountNumber)" />
                                     </MudItem>
@@ -628,7 +639,7 @@ else
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       ReadOnly="@_isReadOnly"
-                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.AccountName) ? false : true)"
+                                                      Required="@(ValidationExtensions.HasRequiredAttribute(() => _vendorReg.AccountName))"
                                                       Style="flex:1;"
                                                       For="@(() => _vendorReg.AccountName)" />
                                     </MudItem>
@@ -845,7 +856,47 @@ else
                     </MudGrid>
                 </MudTabPanel>
                 }
-                <div class="d-flex justify-end mt-2">
+
+                <div class="d-flex justify-content-between align-items-center mt-2" style="position:sticky; bottom:0; background:transparent; padding:12px 0;">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-start">
+                        *Uploading relevant documents is mandatory if the respective registration details are provided. | Max file size: 10 MB
+                    </MudText>
+
+                    <div class="d-flex align-items-center">
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Default"
+                                   OnClick="OnCancel"
+                                   Disabled="@_isSaving"
+                                   Class="me-2">
+                            Cancel
+                        </MudButton>
+
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Disabled="@(_isSaving || _isReadOnly)">
+                            @if (_isSaving)
+                            {
+                                <MudProgressCircular Size="Size.Medium" Class="me-2" Indeterminate="true" />
+                                <span>Saving…</span>
+                            }
+                            else
+                            {
+                                @if (_formEditMode == "Create")
+                                {
+                                    <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.AddCircleOutline" />
+                                    <span>Submit</span>
+                                }
+                                else if (_formEditMode == "Edit")
+                                {
+                                    <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.Edit" />
+                                    <span>Update</span>
+                                }
+                            }
+                        </MudButton>
+                    </div>
+                </div>
+               @*  <div class="d-flex justify-end mt-2">
                     <MudButton Variant="Variant.Outlined"
                                Color="Color.Default"
                                OnClick="OnCancel"
@@ -880,7 +931,7 @@ else
 
                         }
                     </MudButton>
-                </div>
+                </div> *@
             </MudTabs>
         </EditForm>
     </MudCardContent>
