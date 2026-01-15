@@ -2,7 +2,7 @@
 
 <MudDrawer Class="nav-drawer" @bind-Open="SideBarOpen" ClipMode="DrawerClipMode.Never" Elevation="1" Variant="DrawerVariant.Temporary">
     <MudDrawerHeader Class="nav-drawer-header">
-            <MudImage Style="height: 34px; width: auto;" Src="/assets/ocean logo full.webp" />
+        <MudImage Style="height: 34px; width: auto;" Src="/assets/logo-web.png" />
     </MudDrawerHeader>
 
     <MudNavMenu Class="nav-menu">
@@ -29,7 +29,7 @@
         <MudNavGroup Title="Vendors" Icon="@Icons.Material.Filled.Person" Expanded="false">
             <AuthorizeView Context="auth">
                 <Authorized>
-                    @if (UserHasVendorRole(auth.User))
+                    @if (UserHasVendorReviewRole(auth.User))
                     {
                         <MudNavLink Href="vendor-registrations" Icon="@Icons.Material.Filled.ListAlt">Vendor Registrations</MudNavLink>
                     }
@@ -55,7 +55,7 @@
     [Parameter]
     public bool SideBarOpen { get; set; }
 
-    private static bool UserHasVendorRole(ClaimsPrincipal? user)
+    private static bool UserHasVendorReviewRole(ClaimsPrincipal? user)
     {
         if (user?.Identity?.IsAuthenticated != true) return false;
 
@@ -75,6 +75,31 @@
         return roleValues.Any(r => r == "VENDOR VALIDATOR" || r == "VENDOR APPROVER");
     }
 
+    private static bool UserHasVendorRole(ClaimsPrincipal? user)
+    {
+        if (user?.Identity?.IsAuthenticated != true) return false;
+
+        // Collect all role-like claim values (handles ClaimTypes.Role, "role"/"roles", "/role", arrays and comma lists)
+        var roleValues = user.Claims
+            .Where(c =>
+                string.Equals(c.Type, ClaimTypes.Role, StringComparison.OrdinalIgnoreCase)
+                || c.Type.EndsWith("/role", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(c.Type, "role", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(c.Type, "roles", StringComparison.OrdinalIgnoreCase)
+                || c.Type.EndsWith("/roles", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(c => SplitRoleClaimValue(c.Value))
+            .Select(r => r.Trim().Trim('"', '\''))
+            .Where(r => !string.IsNullOrEmpty(r))
+            .Select(r => r.ToUpperInvariant())
+            .ToList();
+
+        // Only show the vendor menu when the user's role set indicates a plain "VENDOR" role
+        // and does NOT include approver/reviewer/validator roles.
+        var hasVendor = roleValues.Any(r => r == "VENDOR");
+        var hasApproverOrReviewer = roleValues.Any(r => r.Contains("APPROVER") || r.Contains("VALIDATOR") || r.Contains("REVIEWER"));
+
+        return hasVendor && !hasApproverOrReviewer;
+    }
     private static IEnumerable<string> SplitRoleClaimValue(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) yield break;

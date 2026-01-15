@@ -34,6 +34,7 @@ namespace OceanVMSClient.Components
         private const long MaxFileBytes = 5 * 1024 * 1024; // 5 MB
         [Inject]
         public ISnackbar Snackbar { get; set; } = default!;
+        private string AttachedFile = string.Empty;
 
         // single-file handler - uses this.DocType provided by parent
         private async Task UploadInvFileDocImage(InputFileChangeEventArgs e)
@@ -76,6 +77,9 @@ namespace OceanVMSClient.Components
                 ImgUrl = url;
                 await OnChange.InvokeAsync(ImgUrl);
                 Snackbar.Add($"{DocType} document uploaded successfully.", Severity.Success);
+
+
+                AttachedFile = $"View {DocType}";
             }
             catch (Exception ex)
             {

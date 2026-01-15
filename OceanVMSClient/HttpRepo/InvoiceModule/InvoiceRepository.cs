@@ -256,6 +256,23 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             // fallback: return raw candidate
             return candidate;
         }
+
+        public async Task<PagingResponse<InvoiceDto>> GetInvoicesWithAPReviewNotNAAsync(InvoiceParameters invoiceParameters)
+        {
+            var response = await _httpClient.GetAsync($"invoices/ap-review-not-na?{invoiceParameters.ToQueryString()}");
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var pagingResponse = new PagingResponse<InvoiceDto>
+            {
+                Items = JsonSerializer.Deserialize<List<InvoiceDto>>(content, _options),
+                MetaData = JsonSerializer.Deserialize<MetaData>(response.Headers.GetValues("X-Pagination").First(), _options)
+            };
+            return pagingResponse;
+        }
     }
 
     public static class InvoiceParametersExtensions

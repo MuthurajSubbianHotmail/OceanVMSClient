@@ -309,6 +309,11 @@ namespace OceanVMSClient.Pages.InviceModule
         private Task OnInvoiceUploaded(string? url)
         {
             _invoiceForCreationDto.InvoiceFileURL = url ?? string.Empty;
+            _uploadedFileUrl = url;
+            // clear any validation messages for InvoiceFileURL and refresh validation UI
+            _messageStore?.Clear(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceFileURL)));
+            _editContext?.NotifyValidationStateChanged();
+
             return Task.CompletedTask;
         }
         private async Task CreateInvoiceAsync()
@@ -570,6 +575,14 @@ namespace OceanVMSClient.Pages.InviceModule
                 }
             }
 
+            // Invoice file is required (either an uploaded file in memory or an existing file URL)
+            var hasInMemoryFile = _uploadedInvoiceFile != null && _uploadedInvoiceFile.Length > 0;
+            var hasExistingUrl = !string.IsNullOrWhiteSpace(_invoiceForCreationDto.InvoiceFileURL) || !string.IsNullOrWhiteSpace(_uploadedFileUrl);
+            if (!hasInMemoryFile && !hasExistingUrl)
+            {
+                _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceFileURL)), "Invoice file is required.");
+                isValid = false;
+            }
             return isValid;
         }
 

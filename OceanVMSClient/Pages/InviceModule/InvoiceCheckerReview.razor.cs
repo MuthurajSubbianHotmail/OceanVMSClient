@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
@@ -10,9 +11,6 @@ namespace OceanVMSClient.Pages.InviceModule
 {
     public partial class InvoiceCheckerReview
     {
-        
-
-
         // Component parameters (inputs)
         [Parameter] public InvoiceDto? _invoiceDto { get; set; }
         [Parameter] public PurchaseOrderDto? _PODto { get; set; }
@@ -43,12 +41,16 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public string _CurrentRoleName { get; set; } = string.Empty;
         [Parameter] public bool _isInvAssigned { get; set; } = false;
         [Parameter] public bool _isChecker { get; set; } = false;
+        private (Guid? PreviousReviewerId, string? PreviousReviewerName, decimal? PrevApprovedAmount, decimal? PrevWithheldAmount) _previousReviewInfo = (null, null, null, null);
+
 
         // small state
         private bool _checkerSaved = false;
 
         // EditContext used for client-side DataAnnotations validation
         private EditContext? _editContext;
+        private ValidationMessageStore? _messageStore;
+        private bool _editContextSubscribed = false;
 
         #region Display helpers (computed properties)
         private string FormatCurrency(decimal? value) => value?.ToString("C") ?? "-";
@@ -69,14 +71,31 @@ namespace OceanVMSClient.Pages.InviceModule
         {
             base.OnParametersSet();
 
+            // Ensure we load previous review info before mapping
+            _previousReviewInfo = InvoiceReviewHelpers.GetPreviousReviewInfo(_invoiceDto, "checker");
+
             // Map server invoice values into working DTO when component opens
             MapFromInvoiceDto();
 
             // ensure EditContext tracks current working DTO so DataAnnotationsValidator works
             if (_editContext == null || _editContext.Model != _CheckercompleteDto)
+            {
                 _editContext = new EditContext(_CheckercompleteDto);
+                _messageStore = new ValidationMessageStore(_editContext);
+                _editContextSubscribed = false; // force subscription below
+            }
 
-            // Apply defaults if CheckerReviewStatus == "Pending"
+            // subscribe editContext events once
+            if (_editContext != null && !_editContextSubscribed)
+            {
+                // validate on form submit
+                _editContext.OnValidationRequested += (sender, args) => ValidateWithheldReason();
+
+                // DO NOT validate on every field change — only on blur or submit per request
+                _editContextSubscribed = true;
+            }
+
+            // Apply defaults based on current CheckerReviewStatus
             EnsureDefaultCheckerAmounts();
 
             // If server already indicates review completed, lock UI
@@ -108,34 +127,173 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 _CheckercompleteDto.InvoiceId = _invoiceDto.Id;
                 _CheckercompleteDto.CheckerID = _invoiceDto.CheckerID ?? Guid.Empty;
-                _CheckercompleteDto.CheckerApprovedAmount = _invoiceDto.CheckerApprovedAmount;
-                _CheckercompleteDto.CheckerWithheldAmount = _invoiceDto.CheckerWithheldAmount;
                 _CheckercompleteDto.CheckerWithheldReason = _invoiceDto.CheckerWithheldReason;
                 _CheckercompleteDto.CheckerReviewComment = _invoiceDto.CheckerReviewComment;
                 _CheckercompleteDto.CheckerReviewStatus = _invoiceDto.CheckerReviewStatus;
+
+                // Set amounts according to current status and available previous values:
+                // - Pending => both 0
+                // - Rejected => both 0 (per requested rule)
+                // - Approved => if previous approved+withheld available use them; otherwise set approved = InvoiceTotalValue and withheld = 0
+                ApplyAmountsBasedOnStatus();
             }
         }
 
+        private void OnCheckerReviewStatusChanged(string? newStatus)
+        {
+            if (_CheckercompleteDto == null)
+                return;
+
+            _CheckercompleteDto.CheckerReviewStatus = newStatus?.Trim();
+
+            // Apply business rules for amounts when status changes
+            if (string.Equals(_CheckercompleteDto.CheckerReviewStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                _CheckercompleteDto.CheckerApprovedAmount = 0m;
+                _CheckercompleteDto.CheckerWithheldAmount = 0m;
+            }
+            else if (string.Equals(_CheckercompleteDto.CheckerReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                // Prefer previous review amounts when available, otherwise use invoice total
+                if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
+                {
+                    _CheckercompleteDto.CheckerApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    _CheckercompleteDto.CheckerWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                }
+                else if (_invoiceDto != null)
+                {
+                    _CheckercompleteDto.CheckerApprovedAmount = _invoiceDto.InvoiceTotalValue;
+                    _CheckercompleteDto.CheckerWithheldAmount = 0m;
+                }
+            }
+            else
+            {
+                // Pending or other -> reset to 0
+                _CheckercompleteDto.CheckerApprovedAmount = 0m;
+                _CheckercompleteDto.CheckerWithheldAmount = 0m;
+            }
+
+            StateHasChanged();
+        }
         /// <summary>
-        /// If CheckerReviewStatus is "Pending" set defaults:
-        ///  - CheckerApprovedAmount = InvoiceTotalValue
-        ///  - CheckerWithheldAmount = 0
+        /// Ensure default amounts reflect business rules:
+        /// - Pending => Approved = 0, Withheld = 0
+        /// - Rejected => Approved = 0, Withheld = 0
+        /// - Approved => Use previous amounts if available (both), otherwise Approved = InvoiceTotalValue, Withheld = 0
+        /// This only sets defaults when the working DTO amounts are null (so user edits are preserved).
         /// </summary>
-        /// 
         private void EnsureDefaultCheckerAmounts()
         {
             if (_invoiceDto == null || _CheckercompleteDto == null)
                 return;
 
-            if (string.Equals(_invoiceDto.CheckerReviewStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+            var status = _invoiceDto.CheckerReviewStatus?.Trim();
+            decimal total = _invoiceDto.InvoiceTotalValue;
+
+            if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase))
             {
-                var total = _invoiceDto.InvoiceTotalValue;
-                // set defaults only when amounts are null
                 if (!_CheckercompleteDto.CheckerApprovedAmount.HasValue)
-                    _CheckercompleteDto.CheckerApprovedAmount = total;
+                    _CheckercompleteDto.CheckerApprovedAmount = 0m;
                 if (!_CheckercompleteDto.CheckerWithheldAmount.HasValue)
                     _CheckercompleteDto.CheckerWithheldAmount = 0m;
+
+                return;
             }
+
+            if (string.Equals(status, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!_CheckercompleteDto.CheckerApprovedAmount.HasValue)
+                    _CheckercompleteDto.CheckerApprovedAmount = 0m;
+                if (!_CheckercompleteDto.CheckerWithheldAmount.HasValue)
+                    _CheckercompleteDto.CheckerWithheldAmount = 0m;
+
+                return;
+            }
+
+            if (string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                // if both previous approved and withheld are available use them
+                if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
+                {
+                    if (!_CheckercompleteDto.CheckerApprovedAmount.HasValue)
+                        _CheckercompleteDto.CheckerApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    if (!_CheckercompleteDto.CheckerWithheldAmount.HasValue)
+                        _CheckercompleteDto.CheckerWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                }
+                else
+                {
+                    // fallback: approved := invoice total, withheld := 0
+                    if (!_CheckercompleteDto.CheckerApprovedAmount.HasValue)
+                        _CheckercompleteDto.CheckerApprovedAmount = total;
+                    if (!_CheckercompleteDto.CheckerWithheldAmount.HasValue)
+                        _CheckercompleteDto.CheckerWithheldAmount = 0m;
+                }
+            }
+        }
+
+        private void ApplyAmountsBasedOnStatus()
+        {
+            if (_invoiceDto == null || _CheckercompleteDto == null)
+                return;
+
+            var status = _invoiceDto.CheckerReviewStatus?.Trim();
+            decimal total = _invoiceDto.InvoiceTotalValue;
+
+            if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                _CheckercompleteDto.CheckerApprovedAmount = 0m;
+                _CheckercompleteDto.CheckerWithheldAmount = 0m;
+                return;
+            }
+
+            if (string.Equals(status, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                // As requested, both should be 0 when rejected
+                _CheckercompleteDto.CheckerApprovedAmount = 0m;
+                _CheckercompleteDto.CheckerWithheldAmount = 0m;
+                return;
+            }
+
+            if (string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
+                {
+                    _CheckercompleteDto.CheckerApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    _CheckercompleteDto.CheckerWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                }
+                else
+                {
+                    _CheckercompleteDto.CheckerApprovedAmount = total;
+                    _CheckercompleteDto.CheckerWithheldAmount = 0m;
+                }
+            }
+        }
+
+        private void OnCheckerWithheldReasonBlur(FocusEventArgs e)
+        {
+            ValidateWithheldReason();
+        }
+
+        /// <summary>
+        /// Validate that WithheldReason is present when WithheldAmount != 0.
+        /// Uses ValidationMessageStore so messages appear in ValidationSummary and next to fields.
+        /// Only adds messages; clearing is done by callers when immediate hide is desired.
+        /// </summary>
+        private void ValidateWithheldReason()
+        {
+            if (_editContext == null || _messageStore == null || _CheckercompleteDto == null)
+                return;
+
+            var reasonField = new FieldIdentifier(_CheckercompleteDto, nameof(_CheckercompleteDto.CheckerWithheldReason));
+            _messageStore.Clear(reasonField);
+
+            var withheld = _CheckercompleteDto.CheckerWithheldAmount.GetValueOrDefault(0m);
+            if (withheld != 0m && string.IsNullOrWhiteSpace(_CheckercompleteDto.CheckerWithheldReason))
+            {
+                _messageStore.Add(reasonField, "Withheld reason is required when Withheld Amount is not zero.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
         }
 
         private void OnCheckerApprovedAmountChanged(decimal? newValue)
@@ -156,14 +314,17 @@ namespace OceanVMSClient.Pages.InviceModule
             _CheckercompleteDto.CheckerApprovedAmount = approved;
             _CheckercompleteDto.CheckerWithheldAmount = total - approved;
 
+            // Clear withheld-reason validation while user is changing amounts (message will show only on blur or submit)
+            if (_messageStore != null)
+            {
+                var reasonField = new FieldIdentifier(_CheckercompleteDto, nameof(_CheckercompleteDto.CheckerWithheldReason));
+                _messageStore.Clear(reasonField);
+                _editContext?.NotifyValidationStateChanged();
+            }
+
             StateHasChanged();
         }
 
-        private Task OnSupportingFileUploaded(string? url)
-        {
-            _CheckercompleteDto.CheckerReviewAttachment = url ?? string.Empty;
-            return Task.CompletedTask;
-        }
         #endregion
 
         #region Permissions / read-only
@@ -270,9 +431,19 @@ namespace OceanVMSClient.Pages.InviceModule
                         return;
                     }
 
-                    // When rejected, approved amount should be zero and withheld equals total
+                    // Per requested rule: when rejected both approved and withheld should be 0
                     _CheckercompleteDto.CheckerApprovedAmount = 0m;
-                    _CheckercompleteDto.CheckerWithheldAmount = total;
+                    _CheckercompleteDto.CheckerWithheldAmount = 0m;
+                }
+
+                // Defensive validation: withheld reason must be present when withheld amount != 0
+                if (_CheckercompleteDto.CheckerWithheldAmount.GetValueOrDefault(0m) != 0m
+                    && string.IsNullOrWhiteSpace(_CheckercompleteDto.CheckerWithheldReason))
+                {
+                    Snackbar.Add("Withheld reason is required when Withheld Amount is not zero.", Severity.Warning);
+                    // ensure validation message is shown in form (OnValidationRequested already wired for submit)
+                    ValidateWithheldReason();
+                    return;
                 }
 
                 // Ensure invoice id is set
@@ -337,5 +508,11 @@ namespace OceanVMSClient.Pages.InviceModule
             Task CancelAsync();
         }
         #endregion
+
+        private Task OnSupportingFileUploaded(string? url)
+        {
+            _CheckercompleteDto.CheckerReviewAttachment = url ?? string.Empty;
+            return Task.CompletedTask;
+        }
     }
 }

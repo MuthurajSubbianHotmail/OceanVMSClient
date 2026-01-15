@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using MudBlazor;
+using OceanVMSClient.Features;
+using OceanVMSClient.Helpers;
 using OceanVMSClient.HttpRepo.Authentication;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
@@ -29,6 +31,7 @@ namespace OceanVMSClient.Pages.POModule
         [Inject] public ISnackbar Snackbar { get; set; } = default!;
         [Inject] public ILogger<InvoiceList> Logger { get; set; } = default!;
         [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+        [Inject] public NavigationManager NavigationManager { get; set; } = default!;
 
         private InvoiceParameters _invoiceParameters = new InvoiceParameters();
 
@@ -39,6 +42,7 @@ namespace OceanVMSClient.Pages.POModule
         private string invoiceViewPage = string.Empty;
         // user context
         private string? _userType;
+        private string? _role;
         private Guid? _vendorId;
         private Guid? _vendorContactId;
         private Guid? _employeeId;
@@ -56,7 +60,23 @@ namespace OceanVMSClient.Pages.POModule
         {
             try
             {
-                await LoadUserContextAsync();
+                var authState = await AuthState;
+                var user = authState.User;
+
+                if (user?.Identity?.IsAuthenticated != true)
+                {
+                    NavigationManager.NavigateTo("/");
+                    return;
+                }
+
+                // Use the shared ClaimsHelper extension to load the user context (claims + local storage fallback)
+                var ctx = await user.LoadUserContextAsync(LocalStorage);
+                _userType = ctx.UserType;
+                _role = ctx.Role;
+                _vendorId = ctx.VendorId;
+                _vendorContactId = ctx.VendorContactId;
+                _employeeId = ctx.EmployeeId;
+
                 if (string.Equals(_userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
                 {
                     invoiceViewPage = "invoiceviewvendor";
@@ -98,23 +118,43 @@ namespace OceanVMSClient.Pages.POModule
                 _invoiceParameters.InvStartDate = _invoice_date_range?.Start ?? default;
                 _invoiceParameters.InvEndDate = _invoice_date_range?.End ?? default;
 
-                var response = await InvoiceRepository.GetAllInvoices(_invoiceParameters);
+                PagingResponse<InvoiceDto> response;
 
-
-                // choose repository call based on user type
+                // Vendor users always get vendor-specific invoices
                 if (string.Equals(_userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
                 {
                     response = await InvoiceRepository.GetInvoicesByVendorId(_vendorId ?? Guid.Empty, _invoiceParameters);
                 }
                 else
                 {
-                    response = await InvoiceRepository.GetInvoicesByApproverEmployeeId(_employeeId ?? Guid.Empty, _invoiceParameters);
+                    // Choose repository call based on role for non-vendor users:
+                    // - Account Payable role => GetInvoicesWithAPReviewNotNAAsync
+                    // - Admin role => GetAllInvoices
+                    // - Other employee roles => GetInvoicesByApproverEmployeeId
+                    if (RoleHelper.IsAccountPayableRole(_role))
+                    {
+                        response = await InvoiceRepository.GetInvoicesWithAPReviewNotNAAsync(_invoiceParameters);
+                    }
+                    else if (RoleHelper.IsAdminRole(_role))
+                    {
+                        response = await InvoiceRepository.GetAllInvoices(_invoiceParameters);
+                    }
+                    else if (_employeeId.HasValue)
+                    {
+                        response = await InvoiceRepository.GetInvoicesByApproverEmployeeId(_employeeId.Value, _invoiceParameters);
+                    }
+                    else
+                    {
+                        // Fallback - safe default to all invoices
+                        response = await InvoiceRepository.GetAllInvoices(_invoiceParameters);
+                    }
                 }
+
                 var items = response.Items?.ToList() ?? new List<InvoiceDto>();
                 StoreCurrentPageItems(items);
                 return new TableData<InvoiceDto>
                 {
-                    Items = response.Items?.ToList() ?? new List<InvoiceDto>(),
+                    Items = items,
                     TotalItems = response.MetaData?.TotalCount ?? 0
                 };
             }
@@ -207,59 +247,6 @@ namespace OceanVMSClient.Pages.POModule
             public string? VendorName { get; set; }
         }
 
-
-        #region User context helpers
-
-        private async Task LoadUserContextAsync()
-        {
-            var authState = await AuthState;
-            var user = authState.User;
-
-            if (user?.Identity?.IsAuthenticated == true)
-            {
-                _userType = GetClaimValue(user, "userType");
-                _vendorId = ParseGuid(GetClaimValue(user, "vendorPK") ?? GetClaimValue(user, "vendorId"));
-                _vendorContactId = ParseGuid(GetClaimValue(user, "vendorContactId") ?? GetClaimValue(user, "vendorContact"));
-                _employeeId = ParseGuid(GetClaimValue(user, "empPK") ?? GetClaimValue(user, "EmployeeId"));
-            }
-            else
-            {
-                NavigationManager.NavigateTo("/");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(_userType))
-            {
-                _userType = await LocalStorage.GetItemAsync<string>("userType");
-            }
-
-            if (string.Equals(_userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
-            {
-                _vendorId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("vendorPK"));
-                _vendorContactId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("vendorContactId"));
-            }
-            else
-            {
-                _employeeId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("empPK"));
-            }
-        }
-
-        #endregion
-
-        #region Helpers
-
-        private static string? GetClaimValue(ClaimsPrincipal? user, string claimType)
-        {
-            if (user == null) return null;
-            var claim = user.Claims.FirstOrDefault(c => string.Equals(c.Type, claimType, StringComparison.OrdinalIgnoreCase))
-                        ?? user.Claims.FirstOrDefault(c => c.Type.EndsWith($"/{claimType}", StringComparison.OrdinalIgnoreCase))
-                        ?? user.Claims.FirstOrDefault(c => c.Type.EndsWith(claimType, StringComparison.OrdinalIgnoreCase));
-            return claim?.Value;
-        }
-
-        private static Guid? ParseGuid(string? value) => Guid.TryParse(value, out var g) ? g : (Guid?)null;
-
-        #endregion
 
         #region Export to excel
         private List<InvoiceDto> _lastPageItems = new();

@@ -89,11 +89,13 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private bool _isPANRequired;
         private bool _isTANRequired;
         private bool _isGSTRequired;
+        private bool? _IsMSMERegistered;
         private bool _isUDYAMRequired;
         private bool _isCINRequired;
         private bool _isPFRequired;
         private bool _isESIRequired;
-        private bool _IsMSMERegistered;
+        private bool _isMSMERegistered;
+        private bool _isSAPVendorCodeRequired;
 
         private string _originalOrganizationName = string.Empty;
 
@@ -202,6 +204,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                         if (loaded != null)
                         {
                             CopyModelValues(loaded, _vendorReg);
+                            _IsMSMERegistered = _vendorReg.IsMSMERegistered;
+                            _isUDYAMRequired = _vendorReg.IsMSMERegistered == true;
                             // keep original organization name to avoid false-positive when editing existing record
                             _originalOrganizationName = _vendorReg.OrganizationName ?? string.Empty;
 
@@ -751,7 +755,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             var anyInvalid = false;
 
-            foreach (var propName in _registrationSection2Fields)
+            // FIX: iterate the registrationSection1 fields (was incorrectly iterating section2)
+            foreach (var propName in _registrationSection1Fields)
             {
                 var prop = typeof(VendorRegistrationFormDto).GetProperty(propName);
                 if (prop == null) continue;
@@ -815,9 +820,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
 
             var newState = !anyInvalid;
-            if (newState != _isRegistrationSection2Valid)
+            if (newState != _isRegistrationSection1Valid)
             {
-                _isRegistrationSection2Valid = newState;
+                _isRegistrationSection1Valid = newState;
                 _ = InvokeAsync(StateHasChanged);
             }
         }
@@ -1154,6 +1159,10 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.PFNo), StringComparison.Ordinal) && _isPFRequired)
                     isRequired = true;
                 if (string.Equals(propertyName, nameof(VendorRegistrationFormDto.ESIRegNo), StringComparison.Ordinal) && _isESIRequired)
+                    isRequired = true;
+
+
+                if (string.Equals(propertyName, nameof(_vendorReg.SAPVendorCode), StringComparison.Ordinal) && _isSAPVendorCodeRequired)
                     isRequired = true;
 
                 if (isRequired)
@@ -1713,9 +1722,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             if (!string.IsNullOrWhiteSpace(_vendorReg.PFNo))
             {
-                var pfPattern = @"^[A-Z]{2}[A-Z]{3}[0-9]{7}[0-9]{3}[0-9]{7}$";
+                var pfPattern = @"^[A-Z]{2}/[A-Z]{3}/\d{7}/\d{3}$";
                 if (!Regex.IsMatch(_vendorReg.PFNo, pfPattern))
-                    _messageStore?.Add(fieldId, "PF format is invalid.");
+                    _messageStore?.Add(fieldId, "PF format should be XX/YYY/1234567/123.");
             }
             else
             {
@@ -1820,6 +1829,13 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _editContext.NotifyValidationStateChanged();
         }
 
+
+        private async Task ValidateSAPVendorCodeOnBlur(FocusEventArgs _)
+        {
+            // ensure latest bound value is applied before validating
+            await Task.Yield();
+            await ValidateField(nameof(_vendorReg.SAPVendorCode));
+        }
         // Submit handler and validation
         private async Task HandleSubmit(EditContext editContext)
         {
@@ -1924,6 +1940,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 if (!Regex.IsMatch(_vendorReg.IFSCCode.Trim().ToUpperInvariant(), ifscPattern))
                     validationResults.Add(new ValidationResult("IFSC format is invalid. Expected 4 letters, '0', then 6 alphanumeric characters (e.g. HDFC0ABC123).", new[] { nameof(_vendorReg.IFSCCode) }));
             }
+
+            if (_isSAPVendorCodeRequired && string.IsNullOrWhiteSpace(_vendorReg.SAPVendorCode))
+                validationResults.Add(new ValidationResult("SAP Vendor Code is required when Approval Status is Approved.", new[] { nameof(_vendorReg.SAPVendorCode) }));
             _messageStore?.Clear();
             if (validationResults.Any())
             {
@@ -2061,6 +2080,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _vendorApprovalDto.ApprovalDate = DateTime.UtcNow;
             _vendorApprovalDto.ApproverStatus = _vendorReg.ApproverStatus;
             _vendorApprovalDto.ApprovalComments = _vendorReg.ApprovalComments;
+            _vendorApprovalDto.SAPVendorCode = _vendorReg.SAPVendorCode;
 
             LogPayload("Creating vendor approval", _vendorApprovalDto);
 
@@ -2106,6 +2126,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
                 _isApproverLocked = true;
                 _isReviewLocked = true;
+               
             }
 
             StateHasChanged();
@@ -2133,6 +2154,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _isApproverLocked = true;
                 _isReviewLocked = true;
             }
+            _isSAPVendorCodeRequired = string.Equals(_vendorReg.ApproverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+            // Re-validate the SAPVendorCode field (updates message store & UI)
+            //ValidateField(nameof(_vendorReg.SAPVendorCode));
 
             StateHasChanged();
             return Task.CompletedTask;

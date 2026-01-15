@@ -95,6 +95,7 @@
                                        Size="Size.Small"
                                        StartIcon="@Icons.Material.Filled.Add"
                                        Class="full-width"
+                                       OnClick="@(() => newInvoice(PurchaseOrderDetails.VendorId, PurchaseOrderDetails.Id))"
                                        Disabled="@(!CanCreateInvoice || isDetailsLoading || isActionInProgress)">
                                 Create Invoice
                             </MudButton>

@@ -82,8 +82,16 @@
                     </MudChip>
                 </MudItem>
                 <MudItem xs="12" sm="12" Class="mt-2">
-                    <MudText Typo="Typo.subtitle2" Color="_labelColor">Assigned Reviewers</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Info">@((_AssignedApprovers == null || !_AssignedApprovers.Any()) ? "None" : string.Join(", ", _AssignedApprovers.Select(a => a.EmployeeName)))</MudText>
+                    @if(CurrentTab == "accountpayable")
+                    {
+                        <MudText Typo="Typo.subtitle2" Color="_labelColor">Is AP Approver?</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Info">@(IsAPReviewer)</MudText>
+                    }
+                    else 
+                    {
+                        <MudText Typo="Typo.subtitle2" Color="_labelColor">Assigned Reviewers</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Info">@((_AssignedApprovers == null || !_AssignedApprovers.Any()) ? "None" : string.Join(", ", _AssignedApprovers.Select(a => a.EmployeeName)))</MudText>
+                    }
                 </MudItem>
             </MudGrid>
         </MudPaper>

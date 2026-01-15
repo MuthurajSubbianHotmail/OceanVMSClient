@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components.Web;
 using MudBlazor;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
@@ -38,12 +39,15 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public string _CurrentRoleName { get; set; } = string.Empty;
         [Parameter] public bool _isInvAssigned { get; set; } = false;
         [Parameter] public bool _isApprover { get; set; } = false;
+        private (Guid? PreviousReviewerId, string? PreviousReviewerName, decimal? PrevApprovedAmount, decimal? PrevWithheldAmount) _previousReviewInfo = (null, null, null, null);
 
         // small state
         private bool _approverSaved = false;
 
         // EditContext used for client-side DataAnnotations validation
         private EditContext? _editContext;
+        private ValidationMessageStore? _messageStore;
+        private bool _editContextSubscribed = false;
 
         #region Display helpers (computed properties)
         private string FormatCurrency(decimal? value) => value?.ToString("C") ?? "-";
@@ -64,19 +68,37 @@ namespace OceanVMSClient.Pages.InviceModule
         {
             base.OnParametersSet();
 
+            // load previous review info first (used when applying approved/withheld defaults)
+            _previousReviewInfo = InvoiceReviewHelpers.GetPreviousReviewInfo(_invoiceDto, "approver");
+
             // Map server invoice values into working DTO when component opens
             MapFromInvoiceDto();
 
             // ensure EditContext tracks current working DTO so DataAnnotationsValidator works
             if (_editContext == null || _editContext.Model != _approverCompleteDto)
+            {
                 _editContext = new EditContext(_approverCompleteDto);
+                _messageStore = new ValidationMessageStore(_editContext);
+                _editContextSubscribed = false; // force subscription below
+            }
 
-            // Apply defaults if ApproverReviewStatus == "Pending"
+            // subscribe editContext events once
+            if (_editContext != null && !_editContextSubscribed)
+            {
+                // validate on form submit
+                _editContext.OnValidationRequested += (sender, args) => ValidateWithheldReason();
+
+                // DO NOT validate on every field change — only on blur or submit per request
+                _editContextSubscribed = true;
+            }
+
+            // Apply defaults based on current ApproverReviewStatus
             EnsureDefaultApproverAmounts();
 
             // If server already indicates review completed, lock UI
             _approverSaved = IsApproverReviewCompleted();
         }
+        
         #endregion
 
         #region UI helpers
@@ -112,29 +134,114 @@ namespace OceanVMSClient.Pages.InviceModule
         }
 
         /// <summary>
-        /// If ApproverReviewStatus is "Pending" set defaults:
-        ///  - ApproverApprovedAmount = InvoiceTotalValue
-        ///  - ApproverWithheldAmount = 0
+        /// Ensure default amounts reflect business rules:
+        /// - Pending  => Approved = 0, Withheld = 0
+        /// - Rejected => Approved = 0, Withheld = 0
+        /// - Approved => Use previous amounts if available (both), otherwise Approved = InvoiceTotalValue, Withheld = 0
+        /// This only sets defaults when the working DTO amounts are null (so user edits are preserved).
         /// </summary>
-        /// 
         private void EnsureDefaultApproverAmounts()
         {
             if (_invoiceDto == null || _approverCompleteDto == null)
                 return;
 
-            if (string.Equals(_invoiceDto.ApproverReviewStatus, "Pending", StringComparison.OrdinalIgnoreCase))
+            var status = _invoiceDto.ApproverReviewStatus?.Trim();
+            decimal total = _invoiceDto.InvoiceTotalValue;
+
+            if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase))
             {
-                var total = _invoiceDto.InvoiceTotalValue;
-                // set defaults only when amounts are null
                 if (!_approverCompleteDto.ApproverApprovedAmount.HasValue)
-                    _approverCompleteDto.ApproverApprovedAmount = total;
+                    _approverCompleteDto.ApproverApprovedAmount = 0m;
                 if (!_approverCompleteDto.ApproverWithheldAmount.HasValue)
                     _approverCompleteDto.ApproverWithheldAmount = 0m;
+
+                return;
             }
+
+            if (string.Equals(status, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!_approverCompleteDto.ApproverApprovedAmount.HasValue)
+                    _approverCompleteDto.ApproverApprovedAmount = 0m;
+                if (!_approverCompleteDto.ApproverWithheldAmount.HasValue)
+                    _approverCompleteDto.ApproverWithheldAmount = 0m;
+
+                return;
+            }
+
+            if (string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                // if both previous approved and withheld are available use them
+                if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
+                {
+                    if (!_approverCompleteDto.ApproverApprovedAmount.HasValue)
+                        _approverCompleteDto.ApproverApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    if (!_approverCompleteDto.ApproverWithheldAmount.HasValue)
+                        _approverCompleteDto.ApproverWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                }
+                else
+                {
+                    // fallback: approved := invoice total, withheld := 0
+                    if (!_approverCompleteDto.ApproverApprovedAmount.HasValue)
+                        _approverCompleteDto.ApproverApprovedAmount = total;
+                    if (!_approverCompleteDto.ApproverWithheldAmount.HasValue)
+                        _approverCompleteDto.ApproverWithheldAmount = 0m;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handler wired to the Approval select so UI updates amounts immediately when status changes.
+        /// </summary>
+        private void OnApproverReviewStatusChanged(string? newStatus)
+        {
+            if (_approverCompleteDto == null)
+                return;
+
+            _approverCompleteDto.ApproverReviewStatus = newStatus?.Trim();
+
+            if (string.Equals(_approverCompleteDto.ApproverReviewStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                // Per requirement: both should be 0 when rejected
+                _approverCompleteDto.ApproverApprovedAmount = 0m;
+                _approverCompleteDto.ApproverWithheldAmount = 0m;
+            }
+            else if (string.Equals(_approverCompleteDto.ApproverReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                // Prefer previous review amounts when available, otherwise use invoice total
+                if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
+                {
+                    _approverCompleteDto.ApproverApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    _approverCompleteDto.ApproverWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                }
+                else if (_invoiceDto != null)
+                {
+                    _approverCompleteDto.ApproverApprovedAmount = _invoiceDto.InvoiceTotalValue;
+                    _approverCompleteDto.ApproverWithheldAmount = 0m;
+                }
+            }
+            else
+            {
+                // Pending or other -> reset to 0
+                _approverCompleteDto.ApproverApprovedAmount = 0m;
+                _approverCompleteDto.ApproverWithheldAmount = 0m;
+            }
+
+            // Clear withheld-reason validation while changing status
+            if (_messageStore != null)
+            {
+                var reasonField = new FieldIdentifier(_approverCompleteDto, nameof(_approverCompleteDto.ApproverWithheldReason));
+                _messageStore.Clear(reasonField);
+                _editContext?.NotifyValidationStateChanged();
+            }
+
+            StateHasChanged();
         }
 
         private void OnApproverApprovedAmountChanged(decimal? newValue)
         {
+            if (!CanEditApprovedAmount())
+                return;
+
             if (_invoiceDto == null || _approverCompleteDto == null)
                 return;
 
@@ -147,8 +254,44 @@ namespace OceanVMSClient.Pages.InviceModule
             _approverCompleteDto.ApproverApprovedAmount = approved;
             _approverCompleteDto.ApproverWithheldAmount = total - approved;
 
+            // Clear withheld-reason validation while user is changing amounts (message will show only on blur or submit)
+            if (_messageStore != null)
+            {
+                var reasonField = new FieldIdentifier(_approverCompleteDto, nameof(_approverCompleteDto.ApproverWithheldReason));
+                _messageStore.Clear(reasonField);
+                _editContext?.NotifyValidationStateChanged();
+            }
+
             StateHasChanged();
         }
+
+        private void OnApproverWithheldReasonBlur(FocusEventArgs e)
+        {
+            ValidateWithheldReason();
+        }
+
+        /// <summary>
+        /// Validate that WithheldReason is present when WithheldAmount != 0.
+        /// Uses ValidationMessageStore so messages appear in ValidationSummary and next to fields.
+        /// Only adds messages; clearing is done by callers when immediate hide is desired.
+        /// </summary>
+        private void ValidateWithheldReason()
+        {
+            if (_editContext == null || _messageStore == null || _approverCompleteDto == null)
+                return;
+
+            var reasonField = new FieldIdentifier(_approverCompleteDto, nameof(_approverCompleteDto.ApproverWithheldReason));
+            _messageStore.Clear(reasonField);
+
+            var withheld = _approverCompleteDto.ApproverWithheldAmount.GetValueOrDefault(0m);
+            if (withheld != 0m && string.IsNullOrWhiteSpace(_approverCompleteDto.ApproverWithheldReason))
+            {
+                _messageStore.Add(reasonField, "Withheld reason is required when Withheld Amount is not zero.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+        }
+
         private Task OnSupportingFileUploaded(string? url)
         {
             _approverCompleteDto.ApproverReviewAttachment = url ?? string.Empty;
@@ -261,9 +404,19 @@ namespace OceanVMSClient.Pages.InviceModule
                         return;
                     }
 
-                    // When rejected, approved amount should be zero and withheld equals total
+                    // Per requested rule: when rejected both approved and withheld should be 0
                     _approverCompleteDto.ApproverApprovedAmount = 0m;
-                    _approverCompleteDto.ApproverWithheldAmount = total;
+                    _approverCompleteDto.ApproverWithheldAmount = 0m;
+                }
+
+                // Defensive validation: withheld reason must be present when withheld amount != 0
+                if (_approverCompleteDto.ApproverWithheldAmount.GetValueOrDefault(0m) != 0m
+                    && string.IsNullOrWhiteSpace(_approverCompleteDto.ApproverWithheldReason))
+                {
+                    Snackbar.Add("Withheld reason is required when Withheld Amount is not zero.", Severity.Warning);
+                    // ensure validation message is shown in form (OnValidationRequested already wired for submit)
+                    ValidateWithheldReason();
+                    return;
                 }
 
                 // Ensure invoice id is set

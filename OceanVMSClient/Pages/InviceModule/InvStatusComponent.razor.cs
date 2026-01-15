@@ -18,6 +18,7 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public string? TargetDate { get; set; } = null;
         [Parameter] public string? SLAStatus { get; set; } = null;
         [Parameter] public string? ReviewStatus { get; set; } = null;
+        [Parameter] public string? IsAPReviewer { get; set; } = "No";
         [Inject] public IInvoiceApproverRepository? invoiceApproverRepository { get; set; }
         private List<InvoiceApproverDTO>? _AssignedApprovers { get; set; } = null;
 

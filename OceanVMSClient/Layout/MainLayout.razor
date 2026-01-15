@@ -18,7 +18,10 @@
             </MudText>
 
             <MudSpacer />
-            <AuthLinkDiv />
+            <div style="display:inline-flex; align-items:center; gap:8px;">
+                <AuthLinkDiv />
+               
+            </div>
             @if (_isDarkMode)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.Brightness5" Color="Color.Inherit" OnClick="@ToggleTheme" />
@@ -39,8 +42,8 @@
                 
                 <MudPopoverProvider />
                 <!-- keep VersionChecker active for polling/notifications but hide its inline footer -->
-                <UpdateAvailableDialog />
-                @* <VersionChecker ShowFooter="false" /> *@
+                <VersionChecker ShowFooter="false" />
+                <UpdateNotification />
                 @Body
             </MudContainer>
         </MudMainContent>
@@ -59,6 +62,10 @@
                 {
                     <span>v@_appVersion</span>
                 }
+            </div>
+            <div>
+                <!-- One-click update action visible to users -->
+                <ForceUpdate />
             </div>
         </div>
     </footer>

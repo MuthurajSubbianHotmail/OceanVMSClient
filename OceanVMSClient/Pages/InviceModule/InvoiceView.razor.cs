@@ -12,6 +12,7 @@ using OceanVMSClient.HttpRepoInterface.PoModule;
 using OceanVMSClient.HttpRepoInterface.POModule;
 using Shared.DTO.POModule;
 using System.Security.Claims;
+using OceanVMSClient.Helpers;
 
 namespace OceanVMSClient.Pages.InviceModule
 {
@@ -99,7 +100,24 @@ namespace OceanVMSClient.Pages.InviceModule
             isDetailsLoading = true;
             try
             {
-                await LoadUserContextAsync();
+                // Use ClaimsHelper extension directly instead of local LoadUserContextAsync wrapper.
+                var authState = await AuthState;
+                var user = authState.User;
+                if (user?.Identity?.IsAuthenticated != true)
+                {
+                    NavigationManager.NavigateTo("/");
+                    return;
+                }
+
+                var ctx = await user.LoadUserContextAsync(LocalStorage);
+                _userType = ctx.UserType;
+                _vendorId = ctx.VendorId;
+                _vendorContactId = ctx.VendorContactId;
+                _employeeId = ctx.EmployeeId;
+
+                _LoggedInEmployeeID = _employeeId ?? Guid.Empty;
+                _LoggedInUserType = _userType ?? string.Empty;
+
                 if (!string.IsNullOrWhiteSpace(InvoiceId) && Guid.TryParse(InvoiceId, out var parsed))
                 {
                     InvoiceGuid = parsed;
@@ -174,7 +192,7 @@ namespace OceanVMSClient.Pages.InviceModule
                         _employeeId ?? Guid.Empty,
                         "Approver"
                     );
-
+                    _isApApprover = RoleHelper.IsAccountPayableRole(_role);
                     // compute tab icons/colors after we have assignment/status info
                     RefreshTabIcons();
 
@@ -254,42 +272,9 @@ namespace OceanVMSClient.Pages.InviceModule
         private Guid? _vendorId;
         private Guid? _vendorContactId;
         private Guid? _employeeId;
+        private string? _role;
 
-        private async Task LoadUserContextAsync()
-        {
-            var authState = await AuthState;
-            var user = authState.User;
-
-            if (user?.Identity?.IsAuthenticated == true)
-            {
-                _userType = GetClaimValue(user, "userType");
-                _vendorId = ParseGuid(GetClaimValue(user, "vendorPK") ?? GetClaimValue(user, "vendorId"));
-                _vendorContactId = ParseGuid(GetClaimValue(user, "vendorContactId") ?? GetClaimValue(user, "vendorContact"));
-                _employeeId = ParseGuid(GetClaimValue(user, "empPK") ?? GetClaimValue(user, "EmployeeId"));
-                _LoggedInEmployeeID = _employeeId ?? Guid.Empty;
-                _LoggedInUserType = _userType ?? string.Empty;
-            }
-            else
-            {
-                NavigationManager.NavigateTo("/");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(_userType))
-            {
-                _userType = await LocalStorage.GetItemAsync<string>("userType");
-            }
-
-            if (string.Equals(_userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
-            {
-                _vendorId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("vendorPK"));
-                _vendorContactId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("vendorContactId"));
-            }
-            else
-            {
-                _employeeId ??= ParseGuid(await LocalStorage.GetItemAsync<string>("empPK"));
-            }
-        }
+        // LoadUserContextAsync removed — use ClaimsHelper.LoadUserContextAsync at call sites.
 
         #endregion
 
@@ -455,7 +440,7 @@ namespace OceanVMSClient.Pages.InviceModule
                 return;
             }
 
-            
+
             if (string.Equals(_invoiceDto?.ApproverReviewSLAStatus, "Delayed", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(_invoiceDto?.ApproverReviewSLAStatus, "Escalated", StringComparison.OrdinalIgnoreCase))
             {
@@ -530,14 +515,29 @@ namespace OceanVMSClient.Pages.InviceModule
 
             try
             {
-                await LoadUserContextAsync();
-                _userContextLoaded = true;
-                // Optional: if you want tab icons to reflect user context before invoice loads
-                RefreshTabIcons();
+                // Use ClaimsHelper extension directly here as well
+                var authState = await AuthState;
+                var user = authState.User;
+                if (user?.Identity?.IsAuthenticated == true)
+                {
+                    var ctx = await user.LoadUserContextAsync(LocalStorage);
+                    _userType = ctx.UserType;
+                    _vendorId = ctx.VendorId;
+                    _vendorContactId = ctx.VendorContactId;
+                    _employeeId = ctx.EmployeeId;
+                    _role = ctx.Role;
+
+                    _LoggedInEmployeeID = _employeeId ?? Guid.Empty;
+                    _LoggedInUserType = _userType ?? string.Empty;
+
+                    _userContextLoaded = true;
+                    // Optional: if you want tab icons to reflect user context before invoice loads
+                    RefreshTabIcons();
+                }
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(ex, "LoadUserContextAsync failed during OnInitializedAsync");
+                Logger.LogWarning(ex, "LoadUserContextAsync (ClaimsHelper) failed during OnInitializedAsync");
             }
         }
 
@@ -605,7 +605,7 @@ namespace OceanVMSClient.Pages.InviceModule
                     _employeeId ?? Guid.Empty,
                     "Approver"
                 );
-
+                _isApApprover = RoleHelper.IsAccountPayableRole(_role);
                 // recompute tab icons and UI
                 RefreshTabIcons();
                 StateHasChanged();

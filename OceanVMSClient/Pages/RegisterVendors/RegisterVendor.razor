@@ -18,13 +18,11 @@ else
                 <MudProgressLinear Color="Color.Primary" Striped="true" Size="Size.Large" Value="75" Class="my-7" />
             </div>
         }
-        <MudText>IsApprover: @_isApprover</MudText>
-        <MudText>Review Status: @_reviewStatus</MudText>
 
         <EditForm EditContext="_editContext" OnSubmit="HandleSubmit">
             <DataAnnotationsValidator />
-            <MudTabs>
-                <MudTabPanel Text="Organization Info" Icon="@Icons.Material.Rounded.Apartment">
+            <MudTabs @ref="_tabs">
+                <MudTabPanel Text="Organization Info" @ref="_panelOrgInfo" Icon="@Icons.Material.Rounded.Apartment">
                     <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
                         <MudItem id="Organization Name And Address" xs="4" md="4">
                             <MudPaper Height="100%" Elevation="1" Class="pa-2 mr-2">
@@ -99,16 +97,12 @@ else
                                     </MudItem>
                                     <MudItem id="MSME Switch" xs="4">
                                         <MudSwitch Color="Color.Primary" T="bool"
-                                                   Value="@_IsMSMERegistered"
+                                                   Value="@(_IsMSMERegistered ?? false)"
                                                    ReadOnly="@_isReadOnly"
                                                    ValueChanged="@(HandleMSMESelectedChange)">
                                             <MudText Typo="Typo.caption">Is MSME?</MudText>
                                         </MudSwitch>
                                     </MudItem>
-
-
-
-
 
                                     <MudItem xs="12">
                                         <MudSelect T="string"
@@ -358,10 +352,29 @@ else
                                 </MudGrid>
                             </MudPaper>
                         </MudItem>
+                        <MudDivider Class="my-1" />
+                        <MudItem xs="12" Class="d-flex justify-end align-items-center">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       OnClick="OnCancel"
+                                       Disabled="@_isSaving"
+                                       Class="me-2">
+                                Cancel
+                            </MudButton>
+
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Disabled="@(_isSaving || _isReadOnly)"
+                                       OnClick="() => ActivateTabObjAsync(_panelBankInfo)">
+                                <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.NavigateNext" />
+                                <span>Next</span>
+                            </MudButton>
+                        </MudItem>
                     </MudGrid>
 
                 </MudTabPanel>
-                <MudTabPanel Text="Statutory and Bank Information" Icon="@Icons.Material.Rounded.AccountBalance">
+                <MudTabPanel Text="Statutory and Bank Information" @ref="_panelBankInfo" Icon="@Icons.Material.Rounded.AccountBalance">
+
                     <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
                         <MudItem id="Registration Details 1" xs="4" md="4">
                             <MudPaper Height="100%" Elevation="1" Class="pa-2 mr-2">
@@ -429,7 +442,7 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isGSTRequired"
                                                       FullWidth="true"
-                                                      For="@(() => _vendorReg.GSTNO)" 
+                                                      For="@(() => _vendorReg.GSTNO)"
                                                       OnBlur="@(() => ValidateGSTOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
@@ -449,7 +462,7 @@ else
                                                       ReadOnly="@_isReadOnly"
                                                       Required="@_isCINRequired"
                                                       FullWidth="true"
-                                                      For="@(() => _vendorReg.CIN)" 
+                                                      For="@(() => _vendorReg.CIN)"
                                                       OnBlur="@(() => ValidateCINOnBlur())" />
                                     </MudItem>
                                     <MudItem xs="3" md="3" Style="display:flex; align-items:center; justify-content:center; padding-left:0;">
@@ -561,9 +574,9 @@ else
                                                                  IsRequired="@_isESIRequired" />
                                     </MudItem>
                                 </MudGrid>
-                                
+
                             </MudPaper>
-                             
+
                         </MudItem>
 
                         <MudItem id="Bank Account Details 2" xs="4" md="4">
@@ -645,9 +658,8 @@ else
                                     </MudItem>
                                     <MudItem id="Upload Cancelled Cheque" xs="12" md="12" Style="padding-right:4px;" class="flex-column align-content-end">
                                         <MudText Typo="Typo.caption" Color="Color.Secondary" Style="flex:1;" hidden="@_isReadOnly">Upload a Cancelled Cheque/Bank Statement* </MudText>
-                                        <OrgRegisterDocsUploader 
-                                            DocType="CANCELCHEQ" 
-                                            OnChange="OnCancelChequeUploaded"
+                                        <OrgRegisterDocsUploader DocType="CANCELCHEQ"
+                                                                 OnChange="OnCancelChequeUploaded"
                                                                  ImgUrl="@_vendorReg.CancelledChequeURL" />
                                     </MudItem>
 
@@ -655,206 +667,257 @@ else
                                 </MudGrid>
                             </MudPaper>
                         </MudItem>
+                        <MudDivider Class="my-1" />
+                        <MudItem xs="12" Class="d-flex justify-end align-items-center">
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Default"
+                                       OnClick="OnCancel"
+                                       Disabled="@_isSaving"
+                                       Class="me-2">
+                                Cancel
+                            </MudButton>
+
+                            <MudButton ButtonType="ButtonType.Submit"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Disabled="@(_isSaving || _isReadOnly)">
+                                @if (_isSaving)
+                                {
+                                    <MudProgressCircular Size="Size.Medium" Class="me-2" Indeterminate="true" />
+                                    <span>Saving…</span>
+                                }
+                                else
+                                {
+                                    @if (_formEditMode == "Create")
+                                    {
+                                        <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.AddCircleOutline" />
+                                        <span>Submit</span>
+                                    }
+                                    else if (_formEditMode == "Edit")
+                                    {
+                                        <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.Edit" />
+                                        <span>Update</span>
+                                    }
+                                }
+                            </MudButton>
+                        </MudItem>
                     </MudGrid>
 
 
-
                 </MudTabPanel>
-                @if(_userType != "VENDOR" && _userType != null){
-                <MudTabPanel Text="Review & Submit">
-                    <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
-                        <MudItem id="Review Panel" xs="6" md="6">
-                            <MudPaper Height="100%" Elevation="1" Class="ms-2 me-2 pa-2">
-                                <MudGrid GutterSize="1" Spacing="0">
-                                    <MudText Typo="Typo.h6" Color="Color.Info">Review Details</MudText>
-                                    <MudDivider Class="my-2" />
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Assigned On </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ReviewAssignedOn is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Due Date </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ReviewTargetDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Days </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ReviewSLADurationInDays ?? "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Status </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ReviewSLAStatus ?? "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Reviewed By </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ReviewerName ?? "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Review Date </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg?.ReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
-                                        </MudText>
-                                    </MudItem>
+                @if (_userType != "VENDOR" && _userType != null)
+                {
+                    <MudTabPanel Text="Review & Submit" @ref="_panelApproval">
+                        <MudGrid GutterSize="1" Spacing="0" Class="mt-2">
+                            <MudItem id="Review Panel" xs="6" md="6">
+                                <MudPaper Height="100%" Elevation="1" Class="ms-2 me-2 pa-2">
+                                    <MudGrid GutterSize="1" Spacing="0">
+                                        <MudText Typo="Typo.h6" Color="Color.Info">Review Details</MudText>
+                                        <MudDivider Class="my-2" />
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">Assigned On </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ReviewAssignedOn is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">Due Date </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ReviewTargetDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Days </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ReviewSLADurationInDays ?? "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Status </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ReviewSLAStatus ?? "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">Reviewed By </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ReviewerName ?? "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">Review Date </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg?.ReviewDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                            </MudText>
+                                        </MudItem>
 
-                                    <MudItem xs="6" md="6">
-                                        <MudSelect Label="Review Status"
-                                                   Value="_vendorReg.ReviewerStatus"
-                                                   Placeholder="Review Status"
-                                                   Typo="@_inputTypo"
-                                                   ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnReviewerStatusChanged))"
-                                                   Variant="@_inputVariant"
-                                                   Margin="@_inputMargin"
-                                                   Class="short-field"
-                                                   ReadOnly="@_isReviewLocked">
-                                            <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
-                                            <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
-                                            <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
-                                        </MudSelect>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        @* <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
+                                        <MudItem xs="6" md="6">
+                                            <MudSelect Label="Review Status"
+                                                       Value="_vendorReg.ReviewerStatus"
+                                                       Placeholder="Review Status"
+                                                       Typo="@_inputTypo"
+                                                       ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnReviewerStatusChanged))"
+                                                       Variant="@_inputVariant"
+                                                       Margin="@_inputMargin"
+                                                       Class="short-field"
+                                                       ReadOnly="@_isReviewLocked">
+                                                <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                                <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+                                                <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            @* <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
                                         <MudSwitch T="bool" @bind-Checked="_vendorReg.AllowInvUploadByInitiator"
                                                    Color="Color.Primary"
                                                    Disabled="@_isReviewLocked" /> *@
-                                    </MudItem>
-                                    <MudItem xs="12" md="12">
-                                        <MudTextField Typo="@_inputTypo"
-                                                      Label="Review Comments"
-                                                      Placeholder="Enter Review Comments"
-                                                      Variant="@_inputVariant"
-                                                      Margin="@_inputMargin"
-                                                      ReadOnly="@_isReviewLocked"
-                                                      @bind-Value="_vendorReg.ReviewComments" />
-                                    </MudItem>
-                                    <MudDivider Class="my-2" />
+                                        </MudItem>
+                                        <MudItem xs="12" md="12">
+                                            <MudTextField Typo="@_inputTypo"
+                                                          Label="Review Comments"
+                                                          Placeholder="Enter Review Comments"
+                                                          Variant="@_inputVariant"
+                                                          Margin="@_inputMargin"
+                                                          ReadOnly="@_isReviewLocked"
+                                                          @bind-Value="_vendorReg.ReviewComments" />
+                                        </MudItem>
+                                        <MudDivider Class="my-2" />
 
-                                    <MudItem xs="6" Class="d-flex justify-start">
-                                        <MudButton ButtonType="ButtonType.Button"
-                                                   Variant="Variant.Filled" Color="Color.Primary"
-                                                   Disabled="@_isReviewLocked"
+                                        <MudItem xs="6" Class="d-flex justify-start">
+                                            <MudButton ButtonType="ButtonType.Button"
+                                                       Variant="Variant.Filled" Color="Color.Primary"
+                                                       Disabled="@_isReviewLocked"
                                                        OnClick="SubmitReview">
-                                            <MudText Typo="Typo.caption">Submit Review</MudText>
-                                        </MudButton>
-                                    </MudItem>
-                                    <MudItem xs="6" Class="d-flex justify-end">
-                                        <MudChip T="string" Color="@(_isReviewer? Color.Success: Color.Warning)"
-                                                 Variant="Variant.Filled"
-                                                 Size="Size.Small"
-                                                 Class="me-2">
-                                            @(_isReviewer ? "Reviewer" : "Not Reviewer")
-                                        </MudChip>
-                                    </MudItem>
-                                </MudGrid>
-                            </MudPaper>
+                                                <MudText Typo="Typo.caption">Submit Review</MudText>
+                                            </MudButton>
+                                        </MudItem>
+                                        <MudItem xs="6" Class="d-flex justify-end">
+                                            <MudChip T="string" Color="@(_isReviewer? Color.Success: Color.Warning)"
+                                                     Variant="Variant.Filled"
+                                                     Size="Size.Small"
+                                                     Class="me-2">
+                                                @(_isReviewer ? "Reviewer" : "Not Reviewer")
+                                            </MudChip>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
 
-                        </MudItem>
+                            </MudItem>
 
-                        <MudItem id="Approval Panel" xs="6" md="6">
+                            <MudItem id="Approval Panel" xs="6" md="6">
 
-                            <MudPaper Height="100%" Elevation="1" Class="ms-2 me-4 pa-2">
-                                <MudGrid GutterSize="1" Spacing="0">
-                                    <MudText Typo="Typo.h6" Color="Color.Info">Approval Details</MudText>
-                                    <MudDivider Class="my-2" />
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Assigned On </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ApprovalAssignedOn is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Due Date </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ApprovalTargetDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Days </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ApprovalSLADurationInDays ?? "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Status </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ApprovalSLAStatus ?? "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Approved By </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg.ApproverName ?? "—")
-                                        </MudText>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Approval Date </MudText>
-                                        <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
-                                            @(_vendorReg?.ApprovalDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
-                                        </MudText>
-                                    </MudItem>
+                                <MudPaper Height="100%" Elevation="1" Class="ms-2 me-4 pa-2">
+                                    <MudText>Is Required: @(_isSAPVendorCodeRequired)</MudText>
+                                    <MudGrid GutterSize="1" Spacing="0">
+                                        <MudText Typo="Typo.h6" Color="Color.Info">Approval Details</MudText>
+                                        <MudDivider Class="my-2" />
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">Assigned On </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ApprovalAssignedOn is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">Due Date </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ApprovalTargetDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Days </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ApprovalSLADurationInDays ?? "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">SLA Status </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ApprovalSLAStatus ?? "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">Approved By </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg.ApproverName ?? "—")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">Approval Date </MudText>
+                                            <MudText Typo="Typo.body1" Color="Color.Info" Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-2">
+                                                @(_vendorReg?.ApprovalDate is DateTime rd ? rd.ToString("dd-MMM-yyyy") : "—")
+                                            </MudText>
+                                        </MudItem>
 
-                                    <MudItem xs="6" md="6">
-                                        <MudSelect Label="Approval Status"
-                                                   Placeholder="Approval Status"
-                                                   Value="_vendorReg.ApproverStatus"
-                                                   Typo="@_inputTypo"
-                                                   ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnApproverStatusChanged))"
-                                                   Variant="@_inputVariant"
-                                                   Margin="@_inputMargin"
-                                                   Class="short-field"
-                                                   ReadOnly="@_isApproverLocked">
-                                            <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
-                                            <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
-                                            <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
-                                        </MudSelect>
-                                    </MudItem>
-                                    <MudItem xs="6" md="6">
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
-                                        <MudSwitch T="bool" @bind-Checked="_vendorReg.AllowInvUploadByInitiator"
-                                                   Color="Color.Primary"
-                                                   Disabled="@_isApproverLocked" />
-                                    </MudItem>
-                                    <MudItem xs="12" md="12">
-                                        <MudTextField Typo="@_inputTypo"
-                                                      Label="Approver Comments"
-                                                      Placeholder="Enter Approver Comments"
-                                                      Variant="@_inputVariant"
-                                                      Margin="@_inputMargin"
-                                                      ReadOnly="@_isApproverLocked"
-                                                      @bind-Value="_vendorReg.ApprovalComments" />
-                                    </MudItem>
-                                    <MudDivider Class="my-2" />
+                                        <MudItem xs="6" md="6">
+                                            <MudSelect Label="Approval Status"
+                                                       Placeholder="Approval Status"
+                                                       Value="_vendorReg.ApproverStatus"
+                                                       Typo="@_inputTypo"
+                                                       ValueChanged="@(EventCallback.Factory.Create<string?>(this, OnApproverStatusChanged))"
+                                                       Variant="@_inputVariant"
+                                                       Margin="@_inputMargin"
+                                                       Class="short-field"
+                                                       ReadOnly="@_isApproverLocked">
+                                                <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                                <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+                                                <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
+                                            </MudSelect>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudTextField @bind-Value="_vendorReg.SAPVendorCode"
+                                                          Typo="@_inputTypo"
+                                                          Label="SAP Vendor Code"
+                                                          Placeholder="Enter SAP Vendor Code"
+                                                          Variant="@_inputVariant"
+                                                          Margin="@_inputMargin"
+                                                          ReadOnly="@_isApproverLocked"
+                                                          Required="@_isSAPVendorCodeRequired"
+                                                          For="@(() => _vendorReg.SAPVendorCode)"
+                                                          OnBlur="ValidateSAPVendorCodeOnBlur" />
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
 
-                                    <MudItem xs="6" Class="d-flex justify-start">
-                                        <MudButton ButtonType="ButtonType.Button"
-                                                   Variant="Variant.Filled" Color="Color.Primary"
-                                                   Disabled="@_isApproverLocked"
-                                                   OnClick="SubmitApproval">
-                                            <MudText Typo="Typo.caption">Submit Approval</MudText>
-                                        </MudButton>
-                                    </MudItem>
-                                    <MudItem xs="6" Class="d-flex justify-end">
-                                        <MudChip T="string" Color="@(_isApprover? Color.Success: Color.Warning)"
-                                                 Variant="Variant.Filled"
-                                                 Size="Size.Small"
-                                                 Class="me-2">
-                                            @(_isApprover ? "Approver" : "Not Approver")
-                                        </MudChip>
-                                    </MudItem>
-                                </MudGrid>
-                            </MudPaper>
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
+                                        </MudItem>
+                                        <MudItem xs="6" md="6">
+                                            <MudSwitch T="bool" @bind-Checked="_vendorReg.AllowInvUploadByInitiator"
+                                                       Color="Color.Primary"
+                                                       Disabled="@_isApproverLocked" />
 
-                        </MudItem>
-                    </MudGrid>
-                </MudTabPanel>
+                                        </MudItem>
+                                        <MudItem xs="12" md="12">
+                                            <MudTextField Typo="@_inputTypo"
+                                                          Label="Approver Comments"
+                                                          Placeholder="Enter Approver Comments"
+                                                          Variant="@_inputVariant"
+                                                          Margin="@_inputMargin"
+                                                          ReadOnly="@_isApproverLocked"
+                                                          @bind-Value="_vendorReg.ApprovalComments" />
+                                        </MudItem>
+                                        <MudDivider Class="my-2" />
+
+                                        <MudItem xs="6" Class="d-flex justify-start">
+                                            <MudButton ButtonType="ButtonType.Button"
+                                                       Variant="Variant.Filled" Color="Color.Primary"
+                                                       Disabled="@_isApproverLocked"
+                                                       OnClick="SubmitApproval">
+                                                <MudText Typo="Typo.caption">Submit Approval</MudText>
+                                            </MudButton>
+                                        </MudItem>
+                                        <MudItem xs="6" Class="d-flex justify-end">
+                                            <MudChip T="string" Color="@(_isApprover? Color.Success: Color.Warning)"
+                                                     Variant="Variant.Filled"
+                                                     Size="Size.Small"
+                                                     Class="me-2">
+                                                @(_isApprover ? "Approver" : "Not Approver")
+                                            </MudChip>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+
+                            </MudItem>
+                        </MudGrid>
+                    </MudTabPanel>
                 }
 
                 <div class="d-flex justify-content-between align-items-center mt-2" style="position:sticky; bottom:0; background:transparent; padding:12px 0;">
@@ -862,77 +925,24 @@ else
                         *Uploading relevant documents is mandatory if the respective registration details are provided. | Max file size: 10 MB
                     </MudText>
 
-                    <div class="d-flex align-items-center">
-                        <MudButton Variant="Variant.Outlined"
-                                   Color="Color.Default"
-                                   OnClick="OnCancel"
-                                   Disabled="@_isSaving"
-                                   Class="me-2">
-                            Cancel
-                        </MudButton>
-
-                        <MudButton ButtonType="ButtonType.Submit"
-                                   Variant="Variant.Filled"
-                                   Color="Color.Primary"
-                                   Disabled="@(_isSaving || _isReadOnly)">
-                            @if (_isSaving)
-                            {
-                                <MudProgressCircular Size="Size.Medium" Class="me-2" Indeterminate="true" />
-                                <span>Saving…</span>
-                            }
-                            else
-                            {
-                                @if (_formEditMode == "Create")
-                                {
-                                    <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.AddCircleOutline" />
-                                    <span>Submit</span>
-                                }
-                                else if (_formEditMode == "Edit")
-                                {
-                                    <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.Edit" />
-                                    <span>Update</span>
-                                }
-                            }
-                        </MudButton>
-                    </div>
                 </div>
-               @*  <div class="d-flex justify-end mt-2">
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Default"
-                               OnClick="OnCancel"
-                               Disabled="@_isSaving"
-                               Class="me-2">
-                        Cancel
-                    </MudButton>
 
-                    <!-- Submit as form submit so EditForm runs HandleSubmit -->
-                    <MudButton ButtonType="ButtonType.Submit"
-                               Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               Disabled="@(_isSaving || _isReadOnly)">
-                        @if (_isSaving)
-                        {
-                            <MudProgressCircular Size="Size.Medium" Class="me-2" Indeterminate="true" />
-                            <span>Saving…</span>
-                        }
-                        else
-                        {
-                            @if (_formEditMode == "Create")
-                            {
-                                <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.AddCircleOutline" />
-                                <span>Submit</span>
-                            }
-                            else if (_formEditMode == "Edit")
-                            {
-                                <MudIcon Size="Size.Small" Class="me-1" Icon="@Icons.Material.Filled.Edit" />
-                                <span>Update</span>
-                            }
-
-
-                        }
-                    </MudButton>
-                </div> *@
             </MudTabs>
         </EditForm>
     </MudCardContent>
 </MudCard>
+
+@code {
+    private MudTabs _tabs;
+    private MudTabPanel _panelOrgInfo;
+    private MudTabPanel _panelBankInfo;
+    private MudTabPanel _panelApproval;
+
+   
+    private Task ActivateTabObjAsync(MudTabPanel? panel)
+   {
+        if (_tabs is null || panel is null)
+            return Task.CompletedTask;
+        return _tabs.ActivatePanelAsync(panel);
+    }
+}

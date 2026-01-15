@@ -26,14 +26,15 @@ namespace OceanVMSClient.Helpers
 {
     /// <summary>
     /// Helper extensions for retrieving claim values from a <see cref="ClaimsPrincipal"/> and
-    /// for loading a simple user context (userType + ids) with localStorage fallback.
+    /// for loading a simple user context (userType + ids + role) with localStorage fallback.
     /// </summary>
     public static class ClaimsHelper
     {
         /// <summary>
         /// Result object returned by <see cref="LoadUserContextAsync(ClaimsPrincipal,System.Threading.Tasks.Task{Blazored.LocalStorage.ILocalStorageService})"/>.
+        /// Contains the discovered user type, vendor/employee ids and the user's role (if present in claims).
         /// </summary>
-        public sealed record UserContext(string? UserType, Guid? VendorId, Guid? VendorContactId, Guid? EmployeeId);
+        public sealed record UserContext(string? UserType, Guid? VendorId, Guid? VendorContactId, Guid? EmployeeId, string? Role);
 
         /// <summary>
         /// Retrieves the value of a claim by trying multiple matching strategies:
@@ -61,8 +62,12 @@ namespace OceanVMSClient.Helpers
         }
 
         /// <summary>
-        /// Loads a small user context (userType, vendorId, vendorContactId, employeeId) by reading claims first
+        /// Loads a small user context (userType, vendorId, vendorContactId, employeeId, role) by reading claims first
         /// and falling back to values stored in Blazored.LocalStorage. Designed for use in components/pages.
+        /// Examples:
+        ///   var ctx = await user.LoadUserContextAsync(localStorage);
+        ///   var vendorId = ctx.VendorId;
+        ///   var role = ctx.Role;
         /// </summary>
         /// <param name="user">Claims principal (may be null).</param>
         /// <param name="localStorage">Blazored local storage service (may be null).</param>
@@ -74,6 +79,11 @@ namespace OceanVMSClient.Helpers
             var vendorId = ParseGuid(user.GetClaimValue("vendorPK") ?? user.GetClaimValue("vendorId"));
             var vendorContactId = ParseGuid(user.GetClaimValue("vendorContactId") ?? user.GetClaimValue("vendorContact"));
             var employeeId = ParseGuid(user.GetClaimValue("empPK") ?? user.GetClaimValue("EmployeeId"));
+
+            // Role: try common role claim names (reuses GetClaimValue matching rules)
+            var role = user.GetClaimValue(ClaimTypes.Role)      // "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+                       ?? user.GetClaimValue("role")
+                       ?? user.GetClaimValue("roles");
 
             // Fallback to local storage when values are missing and localStorage provided
             if (string.IsNullOrWhiteSpace(userType) && localStorage != null)
@@ -123,7 +133,7 @@ namespace OceanVMSClient.Helpers
                 }
             }
 
-            return new UserContext(userType, vendorId, vendorContactId, employeeId);
+            return new UserContext(userType, vendorId, vendorContactId, employeeId, role);
         }
 
         // internal helper

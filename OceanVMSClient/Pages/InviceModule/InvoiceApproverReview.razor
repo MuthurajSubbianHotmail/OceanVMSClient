@@ -3,7 +3,7 @@
 <MudPaper Class="pa-4">
     <EditForm EditContext="_editContext">
         <DataAnnotationsValidator />
-        <ValidationSummary />
+        
 
         <MudGrid GutterSize="2" AlignItems="Center" Spacing="1">
             <!-- Left column: reviewer & invoice meta -->
@@ -30,11 +30,29 @@
                                                  InvoiceDate="@(_invoiceDto?.InvoiceDate)"
                                                  InvoiceValue="@(_invoiceDto?.InvoiceValue)"
                                                  InvoiceTaxValue="@(_invoiceDto?.InvoiceTaxValue)"
-                                                 InvoiceTotalValue="@(_invoiceDto?.InvoiceTotalValue)" />
+                                                 InvoiceTotalValue="@(_invoiceDto?.InvoiceTotalValue)"
+                                                 PrevReviewerName="@_previousReviewInfo.PreviousReviewerName"
+                                                 PrevApprovedAmount="@_previousReviewInfo.PrevApprovedAmount"
+                                                 PrevWithheldAmount="@_previousReviewInfo.PrevWithheldAmount" />
 
                         <MudDivider />
 
                         <!-- Approved / Withheld fields: stack on mobile, side-by-side on sm+ -->
+
+                        <MudItem xs="6" sm="4" Class="field-block">
+                            <MudSelect Label="Approval"
+                                       Typo="Typo.caption"
+                                       Value="_approverCompleteDto.ApproverReviewStatus"
+                                       ValueChanged="@(EventCallback.Factory.Create<string>(this, OnApproverReviewStatusChanged))"
+                                       Variant="@_variant"
+                                       Margin="Margin.Dense"
+                                       Class="short-field"
+                                       Disabled="!CanEditApprovedAmount()"
+                                       Required="true">
+                                <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
+                                <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Approved Amount"
@@ -49,7 +67,6 @@
                                           Class="short-field"
                                           ReadOnly="!CanEditApprovedAmount()" />
                         </MudItem>
-                        <MudItem xs="12" sm="6" md="4" Class="field-block" />
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
                                           Label="Withheld Amount"
@@ -74,7 +91,9 @@
                                           Adornment="Adornment.End"
                                           AdornmentIcon="Icons.Material.Filled.Info"
                                           Margin="@_margin"
-                                          ReadOnly="!CanEditApprovedAmount()" />
+                                          ReadOnly="!CanEditApprovedAmount()"
+                                          OnBlur="OnApproverWithheldReasonBlur" />
+                            <ValidationMessage For="@(() => _approverCompleteDto.ApproverWithheldReason)" />
                         </MudItem>
 
                         <MudItem xs="12" Class="field-block">
@@ -91,20 +110,7 @@
                                           ReadOnly="!CanEditApprovedAmount()" />
                         </MudItem>
 
-                        <MudItem xs="6" sm="6" Class="field-block">
-                            <MudSelect Label="Approval"
-                                        Typo="Typo.caption"
-                                       Value="_approverCompleteDto.ApproverReviewStatus"
-                                       ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _approverCompleteDto.ApproverReviewStatus = v))"
-                                       Variant="@_variant"
-                                       Margin="Margin.Dense"
-                                       Class="short-field"
-                                       Disabled="!CanEditApprovedAmount()"
-                                       Required="true">
-                                <MudSelectItem Value="@("Approved")">Approved</MudSelectItem>
-                                <MudSelectItem Value="@("Rejected")">Rejected</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
+                        
                         <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
                             <InvFileUploader DocType="ApproverAttachment"
                                              OnChange="OnSupportingFileUploaded"
@@ -150,6 +156,7 @@
                 </MudButton>
             </MudItem>
         </MudGrid>
+        <ValidationSummary />
     </EditForm>
 </MudPaper>
 @code {

@@ -1,0 +1,110 @@
+﻿@page "/diagnostics/service-worker"
+@using MudBlazor
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4">
+    <MudText Typo="Typo.h6">Service Worker diagnostics</MudText>
+    <MudDivider Class="my-2" />
+
+    <MudText>Supported: @(_status?.Supported.ToString() ?? "unknown")</MudText>
+    <MudText>Registered: @(_status?.Registered.ToString() ?? "unknown")</MudText>
+    <MudText>Waiting: @(_status?.Waiting.ToString() ?? "unknown")</MudText>
+    <MudText>Installing: @(_status?.Installing.ToString() ?? "unknown")</MudText>
+    <MudText>Active: @(_status?.Active.ToString() ?? "unknown")</MudText>
+    <MudText>Scope: @(_status?.Scope ?? "n/a")</MudText>
+
+    <MudDivider Class="my-2" />
+
+    <MudStack Direction="Row" Spacing="2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ActivateUpdate">Activate waiting update</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="RefreshStatus">Refresh status</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="ClearCaches">Clear caches & unregister</MudButton>
+    </MudStack>
+
+    <MudDivider Class="my-2" />
+    <MudText Typo="Typo.caption">Use this page only for diagnostics or recovery. Clearing caches will log out users and remove offline data.</MudText>
+</MudPaper>
+
+@code {
+    private SWStatus? _status;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshStatus();
+    }
+
+    private async Task RefreshStatus()
+    {
+        try
+        {
+            var result = await JS.InvokeAsync<object>("getServiceWorkerStatus");
+            // map dynamic result
+            var json = System.Text.Json.JsonSerializer.Serialize(result);
+            _status = System.Text.Json.JsonSerializer.Deserialize<SWStatus>(json);
+        }
+        catch
+        {
+            _status = null;
+            Snackbar.Add("Failed to read service worker status", Severity.Warning);
+        }
+        StateHasChanged();
+    }
+
+    private async Task ActivateUpdate()
+    {
+        try
+        {
+            var activated = await JS.InvokeAsync<bool>("activateUpdate");
+            if (activated)
+            {
+                Snackbar.Add("Activated waiting update. Page will reload when the new SW takes control.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("No waiting worker found. Nothing to activate.", Severity.Info);
+            }
+        }
+        catch
+        {
+            Snackbar.Add("Failed to activate update.", Severity.Error);
+        }
+    }
+
+    private async Task ClearCaches()
+    {
+        var ok = await DialogService.ShowMessageBox("Confirm", "This will unregister service workers and clear all caches for this origin. Continue?", yesText: "Yes", noText: "No");
+        if (ok != true) return;
+
+        try
+        {
+            var cleared = await JS.InvokeAsync<bool>("clearServiceWorkerAndCaches");
+            if (cleared)
+            {
+                Snackbar.Add("Caches cleared and service workers unregistered. Reloading...", Severity.Success);
+                await JS.InvokeVoidAsync("location.reload", true);
+            }
+            else
+            {
+                Snackbar.Add("Operation not supported in this browser.", Severity.Warning);
+            }
+        }
+        catch
+        {
+            Snackbar.Add("Failed to clear caches.", Severity.Error);
+        }
+    }
+
+    // local DTO matching the JS status object
+    private class SWStatus
+    {
+        public bool Supported { get; set; }
+        public bool Registered { get; set; }
+        public bool Waiting { get; set; }
+        public bool Installing { get; set; }
+        public bool Active { get; set; }
+        public string? Scope { get; set; }
+    }
+
+    [Inject] IDialogService DialogService { get; set; } = default!;
+}

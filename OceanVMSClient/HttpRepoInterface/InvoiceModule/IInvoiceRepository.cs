@@ -25,5 +25,6 @@ namespace OceanVMSClient.HttpRepoInterface.InvoiceModule
         Task<InvoiceDto> UpdateInvoiceApproverApproval(InvApproverReviewCompleteDto invApproverReviewCompleteDto);
         Task<InvoiceDto> UpdateInvoiceAPReview(InvAPApproverReviewCompleteDto invAPReviewCompleteDto);
         Task<string?> UploadInvoiceFile(MultipartFormDataContent content);
+        Task<PagingResponse<InvoiceDto>> GetInvoicesWithAPReviewNotNAAsync(InvoiceParameters invoiceParameters);
     }
 }

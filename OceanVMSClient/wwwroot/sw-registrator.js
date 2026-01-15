@@ -51,6 +51,30 @@ window.reloadPage = () => {
   location.reload(true);
 };
 
+// Diagnostic helper: return registration state
+window.getServiceWorkerStatus = async () => {
+  if (!('serviceWorker' in navigator)) return { supported: false };
+  const reg = await navigator.serviceWorker.getRegistration();
+  return {
+    supported: true,
+    registered: !!reg,
+    waiting: !!(reg && reg.waiting),
+    installing: !!(reg && reg.installing),
+    active: !!(reg && reg.active),
+    scope: reg ? reg.scope : null
+  };
+};
+
+// Diagnostic helper: unregister all SWs and delete caches (use for recovery)
+window.clearServiceWorkerAndCaches = async () => {
+  if (!('serviceWorker' in navigator)) return false;
+  const regs = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(regs.map(r => r.unregister()));
+  const keys = await caches.keys();
+  await Promise.all(keys.map(k => caches.delete(k)));
+  return true;
+};
+
 // When the controlling SW changes, reload once so page loads new assets
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {

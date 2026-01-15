@@ -256,5 +256,18 @@ namespace OceanVMSClient.Pages.POModule
             };
             DialogService.Show<InvoiceListOfPO>("Invoices", parameters, options);
         }
+
+        private void newInvoice(Guid vendorId, Guid purchaseOrderId)
+        {
+            // Basic validation
+            if (vendorId == Guid.Empty || purchaseOrderId == Guid.Empty)
+            {
+                Console.WriteLine("Invalid vendor or purchase order id for new invoice.");
+                return;
+            }
+
+            // Navigate to create-invoice page — adjust route as your app expects
+            NavigationManager.NavigateTo($"/newinvoice/{vendorId}/{purchaseOrderId}");
+        }
     }
 }

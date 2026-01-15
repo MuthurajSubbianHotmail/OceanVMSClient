@@ -1,0 +1,30 @@
+﻿@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<MudButton Color="Color.Inherit" OnClick="RequestActivate"><MudText Typo="Typo.caption">Update to latest</MudText></MudButton>
+
+@code {
+    private async Task RequestActivate()
+    {
+        try
+        {
+            // Ask the SW to skipWaiting; returns true if a waiting worker was found
+            var activated = await JS.InvokeAsync<bool>("activateUpdate");
+            if (activated)
+            {
+                Snackbar.Add("Update activated. The page will reload automatically.", Severity.Success);
+                // controllerchange listener in sw-registrator.js will reload the page.
+            }
+            else
+            {
+                // No waiting worker — maybe assets already match; reload to be safe
+                Snackbar.Add("No immediate update found; reloading to ensure latest files.", Severity.Info);
+                await JS.InvokeVoidAsync("location.reload");
+            }
+        }
+        catch
+        {
+            Snackbar.Add("Failed to activate update. Try reloading the page.", Severity.Error);
+        }
+    }
+}
