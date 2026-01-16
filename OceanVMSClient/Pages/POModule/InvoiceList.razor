@@ -21,7 +21,16 @@
                                       Margin="Margin.Dense"
                                       Class="filter-control" />
                     </MudItem>
-
+                    <MudItem xs="12" sm="2" md="2">
+                        <MudTextField T="string" Label="Project Code"
+                                      Typo="Typo.caption"
+                            Placeholder="Project Code"
+                                      @bind-Value="ProjectCode"
+                                      DebounceInterval="300"
+                                      OnDebounceIntervalElapsed="@( (string s) => OnSearch() )"
+                                      Margin="Margin.Dense"
+                                      Class="filter-control" />
+                    </MudItem>
                     <MudItem xs="12" sm="2" md="2">
                         <MudTextField T="string" Label="SAP PO No"
                                       Typo="Typo.caption"
@@ -43,7 +52,7 @@
                                       Class="filter-control" />
                     </MudItem>
 
-                    <MudItem xs="12" sm="2" md="2">
+                    <MudItem xs="12" sm="1" md="1">
                         <MudTextField T="decimal?"
                                       Typo="Typo.caption"
                             Label="Min Total"
@@ -54,7 +63,7 @@
                                       Margin="Margin.Dense"
                                          Class="filter-control" />
                     </MudItem>
-                    <MudItem xs="12" sm="2" md="2">
+                    <MudItem xs="12" sm="1" md="1">
                         <MudTextField T="decimal?" Label="Max Total"
                                          Placeholder="Max"
                                       Typo="Typo.caption"
@@ -98,6 +107,7 @@
             <MudTh Style="background-color: cornflowerblue;">Invoice.Ref</MudTh>
             <MudTh Style="background-color: cornflowerblue;">Inv.Date</MudTh>
             <MudTh Style="background-color: cornflowerblue;">Vendor</MudTh>
+            <MudTh Style="background-color: cornflowerblue;">Project</MudTh>
             <MudTh Style="background-color: cornflowerblue;">SAP.PO.No</MudTh>
             <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">PO.Date</MudTh>
             <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">PO.Total</MudTh>
@@ -118,15 +128,14 @@
                 </MudText>
             </MudTd>
             <MudTd>@context.VendorName</MudTd>
+            <MudTd>@context.ProjectCode</MudTd>
             <MudTd>
                 <MudLink Typo="Typo.caption" Href="@($"ViewPurchaseOrder/{context.PurchaseOrderId}")" Color="Color.Primary" Underline="Underline.Hover">
                     @context.SAPPONumber
                 </MudLink>
             </MudTd>
             <MudTd Align="Align.Right" Class="flex-nowrap">
-                
-                    @FormatDate(context.SAPPODate)
-                
+                @FormatDate(context.SAPPODate)
             </MudTd>
             <MudTd Align="Align.Right">
                 <MudText Typo="Typo.caption">
@@ -272,6 +281,7 @@
     private decimal? minInvoiceTotal;
     private decimal? maxInvoiceTotal;
     private string? vendorName;
+    private string? ProjectCode;
 
     private readonly int[] _pageSize_option = { 15, 25, 50 };
 

@@ -53,28 +53,30 @@
                         </MudItem>
                         <!-- Approved / Withheld fields: stack on mobile, side-by-side on sm+ -->
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
-                            <MudTextField T="decimal?"
+                            <MudNumericField T="decimal?"
                                           Label="Approved Amount"
                                           Placeholder=""
                                           Typo="Typo.caption"
-                                          Value="_InitiatorCompleteDto.InitiatorApprovedAmount"
-                                          ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnInitiatorApprovedAmountChanged))"
+                                             Value="_InitiatorCompleteDto.InitiatorApprovedAmount"
+                                             ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnInitiatorApprovedAmountChanged))"
                                           Variant="@_variant"
-                                          Adornment="Adornment.Start"
+                                          Adornment="Adornment.End"
                                           AdornmentText="₹"
                                           Margin="@_margin"
                                           Class="short-field"
-                                          ReadOnly="@(!CanEditApprovedAmount())" />
+                                          ReadOnly="@(!CanEditApprovedAmount())"
+                                          OnBlur="OnApprovedAmountBlur" />
+                            <ValidationMessage For="@(() => _InitiatorCompleteDto.InitiatorApprovedAmount)" />
                         </MudItem>
-
+                        @* Value="_InitiatorCompleteDto.InitiatorApprovedAmount" *@
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
-                            <MudTextField T="decimal?"
+                            <MudNumericField T="decimal?"
                                           Label="Withheld Amount"
                                           Placeholder=""
                                           Typo="Typo.caption"
                                           Value="_InitiatorCompleteDto.InitiatorWithheldAmount"
                                           Variant="@_variant"
-                                          Adornment="Adornment.Start"
+                                          Adornment="Adornment.End"
                                           AdornmentText="₹"
                                           Margin="@_margin"
                                           Class="short-field"
@@ -83,7 +85,7 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Withheld Reason"
-                                          Placeholder=""
+                                          Placeholder="Withheld Reason"
                                           Typo="Typo.caption"
                                           Value="_InitiatorCompleteDto.InitiatorWithheldReason"
                                           ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _InitiatorCompleteDto.InitiatorWithheldReason = v))"
@@ -98,7 +100,7 @@
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Remarks"
-                                          Placeholder=""
+                                          Placeholder="Enter remarks"
                                           Typo="Typo.caption"
                                           Value="_InitiatorCompleteDto.InitiatorReviewComment"
                                           ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _InitiatorCompleteDto.InitiatorReviewComment = v))"
@@ -107,11 +109,13 @@
                                           Adornment="Adornment.End"
                                           AdornmentIcon="Icons.Material.Filled.Info"
                                           Lines="2"
-                                          ReadOnly="@(!CanEditApprovedAmount())" />
+                                          ReadOnly="@(!CanEditApprovedAmount())"
+                                          OnBlur="OnRemarksBlur" />
+                            <ValidationMessage For="@(() => _InitiatorCompleteDto.InitiatorReviewComment)" />
                         </MudItem>
 
                         
-                        <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
+                        <MudItem xs="6" sm="6" Class="d-flex justify-start align-content-center">
                             <InvFileUploader DocType="InitiatorAttachment"
                                              OnChange="OnSupportingFileUploaded"
                                              Disabled="@(!CanEditApprovedAmount())"

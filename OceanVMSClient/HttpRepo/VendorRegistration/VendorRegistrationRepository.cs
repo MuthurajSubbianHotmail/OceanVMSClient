@@ -372,7 +372,7 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
         {
             if (vendorId == Guid.Empty) return Guid.Empty;
 
-            var response = await _httpClient.GetAsync($"vendorregistrationform/{vendorId}");
+            var response = await _httpClient.GetAsync($"vendorregistrationform/vendor/{vendorId}");
             var content = await response.Content.ReadAsStringAsync();
 
             // If the request was not successful, treat as not found
@@ -444,6 +444,99 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
             }
         }
 
-       
+        public async Task<(bool Exists, string? VendorName)> SAPVendorCodeExistsAsync(string sapVendorCode, Guid? excludeId = null)
+        {
+            if (string.IsNullOrWhiteSpace(sapVendorCode))
+                return (false, null);
+
+            var url = $"vendors/by-sapcode/{Uri.EscapeDataString(sapVendorCode)}";
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.GetAsync(url);
+            }
+            catch
+            {
+                // Network/HTTP call failed — treat as "not found" for client validation purposes
+                return (false, null);
+            }
+
+            // Treat 404 / 204 / empty content as "not found" (do not throw)
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                return (false, null);
+
+            string content;
+            try
+            {
+                content = await response.Content.ReadAsStringAsync();
+            }
+            catch
+            {
+                return (false, null);
+            }
+
+            if (!response.IsSuccessStatusCode || string.IsNullOrWhiteSpace(content))
+            {
+                // Don't throw for non-success here — return "not found" so UI accepts new codes.
+                return (false, null);
+            }
+
+            try
+            {
+                using var doc = JsonDocument.Parse(content);
+                var root = doc.RootElement;
+
+                IEnumerable<JsonElement> candidates()
+                {
+                    if (root.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var el in root.EnumerateArray()) yield return el;
+                        yield break;
+                    }
+
+                    if (root.ValueKind == JsonValueKind.Object)
+                    {
+                        if (root.TryGetProperty("items", out var itemsProp) && itemsProp.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var el in itemsProp.EnumerateArray()) yield return el;
+                            yield break;
+                        }
+
+                        yield return root;
+                    }
+                }
+
+                foreach (var item in candidates())
+                {
+                    if (item.ValueKind != JsonValueKind.Object) continue;
+
+                    // skip excluded id
+                    if (excludeId.HasValue && item.TryGetProperty("id", out var idProp))
+                    {
+                        if (Guid.TryParse(idProp.ToString(), out var gid) && gid == excludeId.Value)
+                            continue;
+                    }
+
+                    // Try common name fields
+                    string? vendorName = null;
+                    if (item.TryGetProperty("organizationName", out var orgProp) && orgProp.ValueKind == JsonValueKind.String)
+                        vendorName = orgProp.GetString();
+                    else if (item.TryGetProperty("vendorName", out var vnProp) && vnProp.ValueKind == JsonValueKind.String)
+                        vendorName = vnProp.GetString();
+                    else if (item.TryGetProperty("name", out var nameProp) && nameProp.ValueKind == JsonValueKind.String)
+                        vendorName = nameProp.GetString();
+
+                    return (true, string.IsNullOrWhiteSpace(vendorName) ? null : vendorName);
+                }
+
+                return (false, null);
+            }
+            catch (JsonException)
+            {
+                // parsing failed — treat as not found instead of throwing
+                return (false, null);
+            }
+        }
     }
 }

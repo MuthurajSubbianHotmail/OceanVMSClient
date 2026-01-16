@@ -267,30 +267,28 @@ namespace OceanVMSClient.Pages.RegisterVendors
         {
             try
             {
-                // safe defaults: lock everything
+                // Conservative defaults: lock everything until we determine role-based rules.
                 _isReadOnly = true;
                 _isReviewLocked = true;
                 _isApproverLocked = true;
-                //_isReviewer = false;
-                //_isApprover = false;
 
                 // Resolve auth state synchronously because this runs during init
                 var authState = AuthState?.GetAwaiter().GetResult();
                 var user = authState?.User;
 
-                // If no user is logged in -> lock review/approval and exit early
+                // CASE 1: New Vendor Registration (no user logged in)
+                // - Anonymous user should be able to edit all form fields to create a registration
+                // - Approval/Review tabs must remain locked
                 if (user == null || user.Identity == null || user.Identity.IsAuthenticated == false)
                 {
-                    _isApproverLocked = true;
-                    _isReviewLocked = true;
-                    _isReadOnly = true;
+                    _isReadOnly = false;         // allow editing of form for registration
+                    _isReviewLocked = true;      // cannot edit review fields
+                    _isApproverLocked = true;    // cannot edit approval fields
                     return;
                 }
 
-                // determine role/userType from previously loaded context (LoadUserContextAsync sets _userType/_userRole)
+                // Determine whether the current user is a vendor (role or userType)
                 var role = (_userRole ?? string.Empty).Trim();
-                //var isVendorType = (!string.IsNullOrWhiteSpace(_userType) && _userType.Contains("VENDOR", StringComparison.OrdinalIgnoreCase))
-                //                   || (!string.IsNullOrWhiteSpace(role) && role.IndexOf("VENDOR", StringComparison.OrdinalIgnoreCase) >= 0);
 
                 static bool HasVendorToken(string? input)
                 {
@@ -299,18 +297,17 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     var parts = input.Split(separators, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim());
                     foreach (var part in parts)
                     {
-                        // split part into words by common separators so "Vendor Approver", "VENDOR_APPROVER" and "Vendor-Approver" match
                         var words = part.Split(new[] { ' ', '_', '-' }, StringSplitOptions.RemoveEmptyEntries);
                         if (words.Any(w => string.Equals(w, "VENDOR", StringComparison.OrdinalIgnoreCase)))
                             return true;
                     }
                     return false;
                 }
-                var isVendorType = false;
-                isVendorType = (!string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase))
+
+                var isVendorType = (!string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase))
                                    || HasVendorToken(role);
 
-                // compute responder identity (may be used to allow vendor responder edits until approved)
+                // Determine a simple responder identity (used to allow vendor-only edits on their own record)
                 var username = user.Identity?.Name
                                ?? user.FindFirst("username")?.Value
                                ?? user.FindFirst("email")?.Value
@@ -323,63 +320,87 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
                 var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
 
-                // If user is a vendor type -> lock review/approval and prevent acting as reviewer/approver
+                // CASE 4: Vendor Edit
+                // - Vendors can edit their own registration until it is Approved.
+                // - Vendors cannot review or approve.
                 if (isVendorType)
                 {
-                    _isApproverLocked = true;
                     _isReviewLocked = true;
-                    //_isReviewer = false;
-                    //_isApprover = false;
+                    _isApproverLocked = true;
 
-                    // vendor responder may edit their own form until it's approved
-                    _isReadOnly = isResponder ? !string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase) : true;
+                    // Vendor can edit only when this record belongs to them and it is not approved
+                    _isReadOnly = !(isResponder && !string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase));
                     return;
                 }
 
-                // Non-vendor flows: core form fields remain read-only (only vendor responder edits core data)
-                _isReadOnly = true;
-
-                // Reviewer rules: reviewers cannot approve
-                if (_isReviewer)
-                {
-                    _isReviewLocked = !string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase);
-                    _isApproverLocked = true;
-                }
-
-                // Approver rules
-                if (_isApprover)
-                {
-                    if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isApproverLocked = true;
-                    }
-                    else if (string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // approver may act only when their status is Pending
-                        _isApproverLocked = true;
-                    }
-                    else if (string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _isApproverLocked = false;
-                    }
-
-                    // approver should not change review fields
-                    _isReviewLocked = true;
-                }
-                else
-                {
-                    // ensure approver section locked when user is not approver
-                    _isApproverLocked = true;
-                }
-            }
-            catch
-            {
-                // conservative fallback
+                // Non-vendor users from here on (reviewers/approvers/internal)
+                // Default: make core form read-only unless the user's role explicitly allows editing (approver).
                 _isReadOnly = true;
                 _isReviewLocked = true;
                 _isApproverLocked = true;
-                _isReviewer = false;
-                _isApprover = false;
+
+                // CASE 2: Reviewer flow
+                // - Reviewer may edit only Review Status and Review Comments (i.e., review fields) while approver has not acted.
+                // - If the reviewer has set ReviewerStatus = "Rejected" then the process ends and approver must remain locked.
+                if (_isReviewer)
+                {
+                    // Allow reviewer to edit review fields only while approver hasn't approved/rejected
+                    var approverHasActed = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+                                           || string.Equals(approverStatus, "Rejected", StringComparison.OrdinalIgnoreCase);
+
+                    _isReviewLocked = approverHasActed; // lock review if approver already acted
+                    _isApproverLocked = true;            // reviewer cannot approve
+
+                    // If reviewer already rejected, ensure approver remains locked (process ends).
+                    if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isApproverLocked = true;
+                        _isReviewLocked = false; // reviewer can still see/edit review comment/status (to record reasons)
+                    }
+
+                    // Keep core form read-only for reviewer
+                    _isReadOnly = true;
+                    return;
+                }
+
+                // CASE 3: Approver flow
+                // - Approver may edit all fields except the Review Section.
+                // - Approver should be allowed to act only if reviewer has Approved (and not if reviewer Rejected).
+                if (_isApprover)
+                {
+                    // If reviewer explicitly rejected -> approver must not act
+                    if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isApproverLocked = true;
+                        _isReviewLocked = false; // reviewer section remains visible but not editable by approver
+                        _isReadOnly = true;      // approver cannot edit core fields
+                        return;
+                    }
+
+                    // Approver may act only when reviewer has approved; otherwise approver cannot submit final approval.
+                    var reviewerApproved = string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                    _isApproverLocked = !reviewerApproved;
+
+                    // Approver should not edit review fields
+                    _isReviewLocked = true;
+
+                    // When approver allowed, they can edit form (per requirement "Approver should be able to Edit all fields except Review Section")
+                    _isReadOnly = _isApproverLocked; // read-only if approver is locked, editable if unlocked
+                    return;
+                }
+
+                // Other internal users (neither vendor, reviewer nor approver)
+                // Keep conservative defaults: read-only core form, review/approval locked.
+                _isReadOnly = true;
+                _isReviewLocked = true;
+                _isApproverLocked = true;
+            }
+            catch
+            {
+                // conservative fallback on any error
+                _isReadOnly = true;
+                _isReviewLocked = true;
+                _isApproverLocked = true;
             }
         }
 
@@ -1178,6 +1199,20 @@ namespace OceanVMSClient.Pages.RegisterVendors
                             _messageStore?.Add(fieldId, "This field is required.");
                     }
                 }
+
+                // Enforce SAP Vendor Code format here so any validation path catches 7-digit values
+                if (string.Equals(propertyName, nameof(_vendorReg.SAPVendorCode), StringComparison.Ordinal))
+                {
+                    var sapVal = (value as string) ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(sapVal))
+                    {
+                        var sapPattern = @"^\d{8}$";
+                        if (!Regex.IsMatch(sapVal.Trim(), sapPattern))
+                        {
+                            _messageStore?.Add(fieldId, "SAP Vendor Code must be exactly 8 numeric digits.");
+                        }
+                    }
+                }
             }
 
             // Refresh validation UI
@@ -1580,7 +1615,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 // Use corrected pattern for CIN start (L or U) and remaining groups
                 var cinPattern = @"^(?:L|U)[0-9]{5}[A-Za-z]{2}[0-9]{4}[A-Za-z]{3}[0-9]{6}$";
                 if (!Regex.IsMatch(cin, cinPattern, RegexOptions.IgnoreCase))
-                    _messageStore?.Add(fieldId, "CIN must match the expected format (e.g. L00000AA0000AAA000000).");
+                    _messageStore?.Add(fieldId, "CIN must match the expected format (e.g. L01631KA2010PTC096843).");
             }
             else
             {
@@ -1834,8 +1869,67 @@ namespace OceanVMSClient.Pages.RegisterVendors
         {
             // ensure latest bound value is applied before validating
             await Task.Yield();
-            await ValidateField(nameof(_vendorReg.SAPVendorCode));
+
+            if (_editContext == null || _vendorReg == null)
+                return;
+
+            var fieldName = nameof(_vendorReg.SAPVendorCode);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            // clear previous messages for this field
+            _messageStore?.Clear(fieldId);
+
+            var sap = (_vendorReg.SAPVendorCode ?? string.Empty).Trim();
+
+            // If the field is required for approval enforce presence
+            if (string.IsNullOrWhiteSpace(sap))
+            {
+                if (_isSAPVendorCodeRequired)
+                    _messageStore?.Add(fieldId, "SAP Vendor Code is required when Approval Status is Approved.");
+            }
+            else
+            {
+                // Format: exactly 8 numeric digits
+                var sapPattern = @"^\d{8}$";
+                if (!Regex.IsMatch(sap, sapPattern))
+                {
+                    _messageStore?.Add(fieldId, "SAP Vendor Code must be exactly 8 numeric digits.");
+                }
+                else
+                {
+                    // normalized value back to model if changed
+                    if (!string.Equals(_vendorReg.SAPVendorCode, sap, StringComparison.Ordinal))
+                    {
+                        _vendorReg.SAPVendorCode = sap;
+                        _editContext?.NotifyFieldChanged(fieldId);
+                    }
+
+                    // Server-side uniqueness check (exclude current registration when editing)
+                    try
+                    {
+                        var excludeId = _formEditMode == "Edit" ? _vendorReg.Id : (Guid?)null;
+                        var (exists, vendorName) = await VendorRegistrationFormRepository.SAPVendorCodeExistsAsync(sap, excludeId);
+                        if (exists)
+                        {
+                            var msg = string.IsNullOrWhiteSpace(vendorName)
+                                ? "SAP Vendor Code already in use."
+                                : $"SAP Vendor Code already in use by '{vendorName}'.";
+                            _messageStore?.Add(fieldId, msg);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "SAP vendor code existence check failed.");
+                        // don't block user on remote check failure
+                    }
+                }
+            }
+
+            // refresh validation UI
+            _editContext.NotifyValidationStateChanged();
         }
+
+
         // Submit handler and validation
         private async Task HandleSubmit(EditContext editContext)
         {
@@ -1885,7 +1979,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             {
                 var cinPattern = @"^(?:L|U)[0-9]{5}[A-Za-z]{2}[0-9]{4}[A-Za-z]{3}[0-9]{6}$";
                 if (!Regex.IsMatch(_vendorReg.CIN.Trim(), cinPattern, RegexOptions.IgnoreCase))
-                    validationResults.Add(new ValidationResult("CIN format is invalid. Expected pattern starting with 'L' or 'U' followed by the registration groups.", new[] { nameof(_vendorReg.CIN) }));
+                    validationResults.Add(new ValidationResult("CIN format is invalid. Expected format: L01631KA2010PTC096843", new[] { nameof(_vendorReg.CIN) }));
             }
 
 
@@ -2065,6 +2159,62 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 return;
             }
 
+            // If SAPVendorCode is required, validate it here (only on approval)
+            if (_isSAPVendorCodeRequired)
+            {
+                var fieldName = nameof(_vendorReg.SAPVendorCode);
+                var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+                _messageStore?.Clear(fieldId);
+
+                var sap = (_vendorReg.SAPVendorCode ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(sap))
+                {
+                    _messageStore?.Add(fieldId, "SAP Vendor Code is required when Approval Status is Approved.");
+                    _editContext?.NotifyValidationStateChanged();
+                    Snackbar.Add("Please provide SAP Vendor Code before approving.", Severity.Warning);
+                    return;
+                }
+
+                var sapPattern = @"^\d{8}$";
+                if (!Regex.IsMatch(sap, sapPattern))
+                {
+                    _messageStore?.Add(fieldId, "SAP Vendor Code must be exactly 8 numeric digits.");
+                    _editContext?.NotifyValidationStateChanged();
+                    Snackbar.Add("SAP Vendor Code must be exactly 8 numeric digits.", Severity.Warning);
+                    return;
+                }
+
+                // normalize/store the trimmed value back to the model
+                if (!string.Equals(_vendorReg.SAPVendorCode, sap, StringComparison.Ordinal))
+                {
+                    _vendorReg.SAPVendorCode = sap;
+                    _editContext?.NotifyFieldChanged(fieldId);
+                }
+
+                // Server-side uniqueness check before approving
+                try
+                {
+                    var excludeId = _formEditMode == "Edit" ? _vendorReg.Id : (Guid?)null;
+                    var (exists, vendorName) = await VendorRegistrationFormRepository.SAPVendorCodeExistsAsync(sap, excludeId);
+                    if (exists)
+                    {
+                        var message = string.IsNullOrWhiteSpace(vendorName)
+                            ? "SAP Vendor Code already in use. Cannot approve."
+                            : $"SAP Vendor Code already in use by '{vendorName}'. Cannot approve.";
+                        _messageStore?.Add(fieldId, message);
+                        _editContext?.NotifyValidationStateChanged();
+                        Snackbar.Add(message, Severity.Warning);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "SAP vendor code existence check failed during approval.");
+                    Snackbar.Add("Unable to verify SAP Vendor Code uniqueness. Try again later.", Severity.Warning);
+                    return;
+                }
+            }
+
             // ask for confirmation before saving review comments
             var confirmed = await DialogService.ShowMessageBox(
                 "Confirm your Approval",
@@ -2176,6 +2326,10 @@ namespace OceanVMSClient.Pages.RegisterVendors
         {
             var dto = new VendorRegistrationFormUpdateDto();
             ApplyCommonProperties(dto);
+            dto.RegistrationNo = _vendorReg.RegistrationNo;
+            dto.RegistrationDate = _vendorReg.RegistrationDate;
+            dto.D365VendorId = _vendorReg.D365VendorId.ToString();
+            dto.SAPVendorCode = _vendorReg.SAPVendorCode;
             return dto;
         }
 

@@ -20,5 +20,7 @@ namespace OceanVMSClient.HttpRepoInterface.VendorRegistration
         Task<string> ReviewVendorRegistrationFormAsync(Guid vendorRegistrationFormId, VendorRegistrationFormReviewDto reviewDto);
         Task<bool> OrganizationNameExistsAsync(string organizationName);
         Task<Guid> GetVendorRegistrationByVendorIdAsync(Guid vendorId);
+
+        Task<(bool Exists, string? VendorName)> SAPVendorCodeExistsAsync(string sapVendorCode, Guid? excludeId = null);
     }
 }

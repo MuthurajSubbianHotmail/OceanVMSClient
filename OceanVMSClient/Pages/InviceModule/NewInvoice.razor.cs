@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using MudBlazor;
 using System.Globalization; // added
+using Microsoft.AspNetCore.Components.Web;
 
 namespace OceanVMSClient.Pages.InviceModule
 {
@@ -373,6 +374,9 @@ namespace OceanVMSClient.Pages.InviceModule
         private async Task OnInvoiceValueChanged(decimal? value)
         {
             _invoiceForCreationDto.InvoiceValue = value ?? 0m;
+
+           
+
             RecalculateInvoiceTotal();
 
             // immediate validation: ensure total <= invoice balance (if PO present)
@@ -399,6 +403,7 @@ namespace OceanVMSClient.Pages.InviceModule
         private async Task OnInvoiceTaxValueChanged(decimal? value)
         {
             _invoiceForCreationDto.InvoiceTaxValue = value ?? 0m;
+
             RecalculateInvoiceTotal();
 
             // immediate validation: ensure total <= invoice balance (if PO present)
@@ -422,7 +427,7 @@ namespace OceanVMSClient.Pages.InviceModule
             await InvokeAsync(StateHasChanged);
         }
 
-        private const long MaxFileSize = 3 * 1024 * 1024; // 3 MB
+        private const long MaxFileSize = 10 * 1024 * 1024; // 10 MB
         private byte[]? _uploadedInvoiceFile;
         private string? _uploadedFileName;
         private string? _uploadedFileContentType;
@@ -472,6 +477,41 @@ namespace OceanVMSClient.Pages.InviceModule
             await InvokeAsync(StateHasChanged);
         }
 
+        // new: validate sign relationship on blur of InvoiceValue
+        private Task OnInvoiceValueBlur(FocusEventArgs _)
+        {
+            ValidateTaxSignAgainstInvoice();
+            return Task.CompletedTask;
+        }
+
+        // new: validate sign relationship on blur of InvoiceTaxValue
+        private Task OnInvoiceTaxBlur(FocusEventArgs _)
+        {
+            ValidateTaxSignAgainstInvoice();
+            return Task.CompletedTask;
+        }
+
+        private void ValidateTaxSignAgainstInvoice()
+        {
+            if (_messageStore == null || _editContext == null) return;
+
+            var taxField = new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceTaxValue));
+            _messageStore.Clear(taxField);
+
+            var invoiceVal = _invoiceForCreationDto.InvoiceValue;
+            var taxVal = _invoiceForCreationDto.InvoiceTaxValue;
+
+            if (invoiceVal < 0m && taxVal >= 0m)
+            {
+                _messageStore.Add(taxField, "Invoice tax must be negative when invoice value is negative.");
+            }
+            else if (invoiceVal >= 0m && taxVal < 0m)
+            {
+                _messageStore.Add(taxField, "Invoice tax must be positive when invoice value is positive.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+        }
         private void ClearFile()
         {
             _uploadedInvoiceFile = null;
@@ -558,11 +598,11 @@ namespace OceanVMSClient.Pages.InviceModule
             }
 
             // Invoice total must be > 0
-            if (!(_invoiceForCreationDto.InvoiceTotalValue > 0m))
-            {
-                _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceTotalValue)), "Invoice total must be greater than zero.");
-                isValid = false;
-            }
+            //if (!(_invoiceForCreationDto.InvoiceTotalValue > 0m))
+            //{
+            //    _messageStore.Add(new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceTotalValue)), "Invoice total must be greater than zero.");
+            //    isValid = false;
+            //}
 
             // Ensure invoice total does not exceed PO invoice balance (when PO details available)
             if (PurchaseOrderDetails?.InvoiceBalanceValue.HasValue == true)

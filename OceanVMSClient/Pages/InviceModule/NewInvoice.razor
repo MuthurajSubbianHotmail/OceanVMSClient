@@ -35,6 +35,7 @@
                                                          CoerceText="true"
                                                          Clearable="@(!isVendorProvided)"
                                                          Disabled="@isVendorProvided"
+                                                         OnBlur="@( (Microsoft.AspNetCore.Components.Web.FocusEventArgs e) => OnInvoiceValueBlur(e) )"
                                                          Margin="Margin.Dense" />
 
                                     </MudItem>
@@ -47,6 +48,7 @@
                                                       @bind-Value="PurchaseOrderNumber"
                                                       Clearable="@(!isPurchaseOrderProvided)"
                                                       Disabled="@isPurchaseOrderProvided"
+                                                      OnBlur="@((Microsoft.AspNetCore.Components.Web.FocusEventArgs e) => OnInvoiceTaxBlur(e))"
                                                       Margin="Margin.Dense" />
                                         <ValidationMessage For="@(() => _invoiceForCreationDto.PurchaseOrderId)" />
                                     </MudItem>
@@ -61,33 +63,39 @@
                                     </MudItem>
 
                                     <MudItem xs="12" sm="6">
-                                        <MudTextField T="decimal?"
-                                                      Label="Invoice Item Value"
-                                                      Variant="Variant.Outlined"
-                                                      FullWidth="true"
-                                                      Adornment="Adornment.End"
-                                                      AdornmentText="₹"
-                                                      Value="_invoiceForCreationDto.InvoiceValue"
-                                                      ValueChanged="@( (decimal? v) => OnInvoiceValueChanged(v) )"
-                                                      ValueExpression="() => _invoiceForCreationDto.InvoiceValue"
-                                                      Immediate="true"
-                                                      Margin="Margin.Dense" />
+                                        <MudNumericField T="decimal?"
+                                                         Label="Invoice Item Value"
+                                                         Variant="Variant.Outlined"
+                                                         FullWidth="true"
+                                                         Adornment="Adornment.End"
+                                                         AdornmentText="₹"
+                                                         Min="@( -1000000000m )"
+                                                         Value="_invoiceForCreationDto.InvoiceValue"
+                                                         ValueChanged="@( (decimal? v) => OnInvoiceValueChanged(v) )"
+                                                         ValueExpression="() => _invoiceForCreationDto.InvoiceValue"
+                                                         OnBlur="@( (Microsoft.AspNetCore.Components.Web.FocusEventArgs e) => OnInvoiceValueBlur(e) )"
+                                                         Margin="Margin.Dense" />
+                                        @* 
+Value="_invoiceForCreationDto.InvoiceValue"
+                                        *@
                                         <ValidationMessage For="@(() => _invoiceForCreationDto.InvoiceValue)" />
                                     </MudItem>
 
                                     <MudItem xs="12" sm="6">
-                                        <MudTextField T="decimal?"
-                                                      Label="Invoice Tax Value"
-                                                      Variant="Variant.Outlined"
-                                                      FullWidth="true"
-                                                      Adornment="Adornment.End"
-                                                      AdornmentText="₹"
-                                                      Value="_invoiceForCreationDto.InvoiceTaxValue"
-                                                      ValueChanged="@( (decimal? v) => OnInvoiceTaxValueChanged(v) )"
-                                                      ValueExpression="() => _invoiceForCreationDto.InvoiceTaxValue"
-                                                      Immediate="true"
-                                                      Margin="Margin.Dense" />
+                                        <MudNumericField T="decimal?"
+                                                         Label="Invoice Tax Value"
+                                                         Variant="Variant.Outlined"
+                                                         FullWidth="true"
+                                                         Adornment="Adornment.End"
+                                                         AdornmentText="₹"
+                                                         Min="@( -1000000000m )"
+                                                         Value="_invoiceForCreationDto.InvoiceTaxValue"
+                                                         ValueChanged="@( (decimal? v) => OnInvoiceTaxValueChanged(v) )"
+                                                         ValueExpression="() => _invoiceForCreationDto.InvoiceTaxValue"
+                                                         OnBlur="@( (Microsoft.AspNetCore.Components.Web.FocusEventArgs e) => OnInvoiceTaxBlur(e) )"
+                                                         Margin="Margin.Dense" />
                                         <ValidationMessage For="@(() => _invoiceForCreationDto.InvoiceTaxValue)" />
+                                        @* Value="_invoiceForCreationDto.InvoiceTaxValue" *@
                                     </MudItem>
 
                                     <MudItem xs="12">

@@ -766,12 +766,7 @@ else
                                                 <MudSelectItem Value="@("Pending")">Pending</MudSelectItem>
                                             </MudSelect>
                                         </MudItem>
-                                        <MudItem xs="6" md="6">
-                                            @* <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
-                                        <MudSwitch T="bool" @bind-Checked="_vendorReg.AllowInvUploadByInitiator"
-                                                   Color="Color.Primary"
-                                                   Disabled="@_isReviewLocked" /> *@
-                                        </MudItem>
+
                                         <MudItem xs="12" md="12">
                                             <MudTextField Typo="@_inputTypo"
                                                           Label="Review Comments"
@@ -781,6 +776,7 @@ else
                                                           ReadOnly="@_isReviewLocked"
                                                           @bind-Value="_vendorReg.ReviewComments" />
                                         </MudItem>
+
                                         <MudDivider Class="my-2" />
 
                                         <MudItem xs="6" Class="d-flex justify-start">
@@ -807,7 +803,6 @@ else
                             <MudItem id="Approval Panel" xs="6" md="6">
 
                                 <MudPaper Height="100%" Elevation="1" Class="ms-2 me-4 pa-2">
-                                    <MudText>Is Required: @(_isSAPVendorCodeRequired)</MudText>
                                     <MudGrid GutterSize="1" Spacing="0">
                                         <MudText Typo="Typo.h6" Color="Color.Info">Approval Details</MudText>
                                         <MudDivider Class="my-2" />
@@ -866,6 +861,7 @@ else
                                         <MudItem xs="6" md="6">
                                             <MudTextField @bind-Value="_vendorReg.SAPVendorCode"
                                                           Typo="@_inputTypo"
+                                                          MaxLength="8"
                                                           Label="SAP Vendor Code"
                                                           Placeholder="Enter SAP Vendor Code"
                                                           Variant="@_inputVariant"
@@ -876,8 +872,7 @@ else
                                                           OnBlur="ValidateSAPVendorCodeOnBlur" />
                                         </MudItem>
                                         <MudItem xs="6" md="6">
-
-                                            <MudText Typo="Typo.subtitle2" Color="Color.Info">Allow Invoice Upload by Initiator </MudText>
+                                            <MudText Typo="_inputTypo">Allow Invoice Upload by Initiator</MudText>
                                         </MudItem>
                                         <MudItem xs="6" md="6">
                                             <MudSwitch T="bool" @bind-Checked="_vendorReg.AllowInvUploadByInitiator"
@@ -924,7 +919,6 @@ else
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-start">
                         *Uploading relevant documents is mandatory if the respective registration details are provided. | Max file size: 10 MB
                     </MudText>
-
                 </div>
 
             </MudTabs>
@@ -937,10 +931,8 @@ else
     private MudTabPanel _panelOrgInfo;
     private MudTabPanel _panelBankInfo;
     private MudTabPanel _panelApproval;
-
-   
     private Task ActivateTabObjAsync(MudTabPanel? panel)
-   {
+    {
         if (_tabs is null || panel is null)
             return Task.CompletedTask;
         return _tabs.ActivatePanelAsync(panel);

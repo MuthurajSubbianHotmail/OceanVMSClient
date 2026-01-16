@@ -318,6 +318,8 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
                 query["PaymentStatus"] = parameters.PaymentStatus;
             if (parameters.ProjectId.HasValue && parameters.ProjectId.Value != Guid.Empty)
                 query["ProjectId"] = parameters.ProjectId.Value.ToString();
+            if (!string.IsNullOrEmpty(parameters.ProjectCode))
+                query["ProjectCode"] = parameters.ProjectCode;
 
 
             return query.ToString();

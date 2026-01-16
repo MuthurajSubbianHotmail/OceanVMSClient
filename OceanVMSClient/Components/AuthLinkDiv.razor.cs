@@ -76,7 +76,7 @@ namespace OceanVMSClient.Components
         private void NavigateToLogout()
         {
             isPanelOpen = false;
-            NavigationManager.NavigateTo("Logout");
+            NavigationManager.NavigateTo("/logout");
         }
 
         protected override async Task OnAfterRenderAsync(bool firstRender)

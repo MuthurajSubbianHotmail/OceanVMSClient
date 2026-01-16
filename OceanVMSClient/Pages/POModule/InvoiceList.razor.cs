@@ -105,6 +105,7 @@ namespace OceanVMSClient.Pages.POModule
                 _invoiceParameters.SAPPONumber = string.IsNullOrWhiteSpace(sapPoNo) ? null : sapPoNo;
                 _invoiceParameters.InvoiceRefNo = string.IsNullOrWhiteSpace(invoiceRefNo) ? null : invoiceRefNo;
                 _invoiceParameters.VendorName = string.IsNullOrWhiteSpace(vendorName) ? null : vendorName;
+                _invoiceParameters.ProjectCode = string.IsNullOrWhiteSpace(ProjectCode) ? null : ProjectCode;
                 if (minInvoiceTotal.HasValue || maxInvoiceTotal.HasValue)
                 {
                     _invoiceParameters.MinTotalValue = minInvoiceTotal;
@@ -239,6 +240,7 @@ namespace OceanVMSClient.Pages.POModule
             public int PageNumber { get; set; } = 1;
             public int PageSize { get; set; } = 15;
             public string? InvoiceRefNo { get; set; }
+            public string? ProjectCode { get; set; }
             public DateTime? InvoiceFromDate { get; set; }
             public DateTime? InvoiceToDate { get; set; }
             public string? SAPPoNo { get; set; }
