@@ -774,7 +774,10 @@ else
                                                           Variant="@_inputVariant"
                                                           Margin="@_inputMargin"
                                                           ReadOnly="@_isReviewLocked"
-                                                          @bind-Value="_vendorReg.ReviewComments" />
+                                                          @bind-Value="_vendorReg.ReviewComments"
+                                                          For="@(() => _vendorReg.ReviewComments)"
+                                                          OnBlur="@(() => ValidateReviewCommentsOnBlur())"
+                                                          Required="@(string.Equals(_vendorReg.ReviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))" />
                                         </MudItem>
 
                                         <MudDivider Class="my-2" />
@@ -881,13 +884,18 @@ else
 
                                         </MudItem>
                                         <MudItem xs="12" md="12">
-                                            <MudTextField Typo="@_inputTypo"
-                                                          Label="Approver Comments"
-                                                          Placeholder="Enter Approver Comments"
-                                                          Variant="@_inputVariant"
-                                                          Margin="@_inputMargin"
-                                                          ReadOnly="@_isApproverLocked"
-                                                          @bind-Value="_vendorReg.ApprovalComments" />
+                                            <MudItem xs="12" md="12">
+                                                <MudTextField Typo="@_inputTypo"
+                                                              Label="Approver Comments"
+                                                              Placeholder="Enter Approver Comments"
+                                                              Variant="@_inputVariant"
+                                                              Margin="@_inputMargin"
+                                                              ReadOnly="@_isApproverLocked"
+                                                              @bind-Value="_vendorReg.ApprovalComments"
+                                                              For="@(() => _vendorReg.ApprovalComments)"
+                                                              OnBlur="@(() => ValidateApprovalCommentsOnBlur())"
+                                                              Required="@(string.Equals(_vendorReg.ApproverStatus, "Rejected", StringComparison.OrdinalIgnoreCase))" />
+                                            </MudItem>
                                         </MudItem>
                                         <MudDivider Class="my-2" />
 

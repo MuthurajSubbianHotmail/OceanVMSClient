@@ -320,6 +320,26 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
                 var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
 
+                // If reviewer has rejected the registration then approver actions must be locked.
+                // Set this globally so any user who would see the Approver tab finds it locked.
+                if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                {
+                    _isApproverLocked = true;
+                    // do not return here — allow reviewer branch to run so reviewer can still edit review fields;
+                    // other role-specific logic will honour _isApproverLocked.
+                }
+
+                // If the registration has already been approved by the approver, lock everything.
+                // Approver may edit approval fields while performing the approval action, but
+                // when the stored status is "Approved" (i.e. record reopened after approval) it must be read-only.
+                if (string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    _isReadOnly = true;
+                    _isReviewLocked = true;
+                    _isApproverLocked = true;
+                    return;
+                }
+
                 // CASE 4: Vendor Edit
                 // - Vendors can edit their own registration until it is Approved.
                 // - Vendors cannot review or approve.
@@ -328,8 +348,14 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     _isReviewLocked = true;
                     _isApproverLocked = true;
 
-                    // Vendor can edit only when this record belongs to them and it is not approved
-                    _isReadOnly = !(isResponder && !string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase));
+                    // Vendor can edit only when this record belongs to them,
+                    // reviewer has NOT acted (still Pending), and it is not approved by approver.
+                    var reviewerHasActed = string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+                                          || string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase);
+
+                    _isReadOnly = !(isResponder
+                                    && !string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+                                    && !reviewerHasActed);
                     return;
                 }
 
@@ -1268,11 +1294,12 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             try
             {
-                // call repository to check existence
-                var exists = await VendorRegistrationFormRepository.OrganizationNameExistsAsync(orgName);
+                // Check if a registration exists with same Organization Name + GST (exclude current when editing)
+                var excludeId = _formEditMode == "Edit" ? _vendorReg.Id : (Guid?)null;
+                var exists = await OrganizationWithGstExistsAsync(orgName, _vendorReg.GSTNO, excludeId);
                 if (exists)
                 {
-                    _messageStore?.Add(fieldId, "Organization Name already registered.");
+                    _messageStore?.Add(fieldId, "A vendor registration with the same Organization Name and GSTIN already exists.");
                 }
             }
             catch (Exception ex)
@@ -1508,9 +1535,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
             return Task.CompletedTask;
         }
 
-        private Task ValidateGSTOnBlur()
+        private async Task ValidateGSTOnBlur()
         {
-            if (_editContext == null || _vendorReg == null) return Task.CompletedTask;
+            if (_editContext == null || _vendorReg == null) return;
 
             var fieldName = nameof(VendorRegistrationFormDto.GSTNO);
             var fieldId = new FieldIdentifier(_vendorReg, fieldName);
@@ -1533,7 +1560,31 @@ namespace OceanVMSClient.Pages.RegisterVendors
             {
                 var gstPattern = @"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$";
                 if (!Regex.IsMatch(gst, gstPattern, RegexOptions.IgnoreCase))
+                {
                     _messageStore?.Add(fieldId, "Enter a valid GSTIN (e.g. 27ABCDE1234F1Z5).");
+                }
+                else
+                {
+                    // Combined Organization+GST uniqueness check (run on GST blur as well)
+                    try
+                    {
+                        var excludeId = _formEditMode == "Edit" ? _vendorReg.Id : (Guid?)null;
+                        var orgName = (_vendorReg.OrganizationName ?? string.Empty).Trim();
+                        var exists = await OrganizationWithGstExistsAsync(orgName, _vendorReg.GSTNO, excludeId);
+                        if (exists)
+                        {
+                            // attach message to both GST and Organization fields so user sees conflict clearly
+                            _messageStore?.Add(fieldId, "A vendor registration with the same Organization Name and GSTIN already exists.");
+                            var orgFieldId = new FieldIdentifier(_vendorReg, nameof(VendorRegistrationFormDto.OrganizationName));
+                            _messageStore?.Add(orgFieldId, "A vendor registration with the same Organization Name and GSTIN already exists.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Organization+GST existence check failed during GST blur validation.");
+                        // do not block user on transient errors
+                    }
+                }
             }
             else
             {
@@ -1544,9 +1595,10 @@ namespace OceanVMSClient.Pages.RegisterVendors
             }
 
             _editContext.NotifyValidationStateChanged();
-            UpdateRegistrationSection1Validity();
 
-            return Task.CompletedTask;
+            // update section/organization validity as appropriate
+            UpdateRegistrationSection1Validity();
+            UpdateOrganizationSectionValidity();
         }
         private Task ValidateTANOnBlur()
         {
@@ -1864,7 +1916,57 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _editContext.NotifyValidationStateChanged();
         }
 
+        private Task ValidateReviewCommentsOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null)
+                return Task.CompletedTask;
 
+            var fieldName = nameof(VendorRegistrationFormDto.ReviewComments);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            // Clear previous messages for this field
+            _messageStore?.Clear(fieldId);
+
+            var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
+            if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(_vendorReg.ReviewComments))
+                {
+                    _messageStore?.Add(fieldId, "Review comments are required when status is Rejected.");
+                }
+            }
+
+            // Ensure UI shows updated validation messages
+            _editContext.NotifyValidationStateChanged();
+
+            return Task.CompletedTask;
+        }
+
+        private Task ValidateApprovalCommentsOnBlur()
+        {
+            if (_editContext == null || _vendorReg == null)
+                return Task.CompletedTask;
+
+            var fieldName = nameof(VendorRegistrationFormDto.ApprovalComments);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            // Clear previous messages for this field
+            _messageStore?.Clear(fieldId);
+
+            var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
+            if (string.Equals(approverStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(_vendorReg.ApprovalComments))
+                {
+                    _messageStore?.Add(fieldId, "Approval comments are required when status is Rejected.");
+                }
+            }
+
+            // Ensure UI shows updated validation messages
+            _editContext.NotifyValidationStateChanged();
+
+            return Task.CompletedTask;
+        }
         private async Task ValidateSAPVendorCodeOnBlur(FocusEventArgs _)
         {
             // ensure latest bound value is applied before validating
@@ -1904,23 +2006,24 @@ namespace OceanVMSClient.Pages.RegisterVendors
                         _editContext?.NotifyFieldChanged(fieldId);
                     }
 
-                    // Server-side uniqueness check (exclude current registration when editing)
+                    // Server-side uniqueness check before approving
                     try
                     {
                         var excludeId = _formEditMode == "Edit" ? _vendorReg.Id : (Guid?)null;
                         var (exists, vendorName) = await VendorRegistrationFormRepository.SAPVendorCodeExistsAsync(sap, excludeId);
                         if (exists)
                         {
-                            var msg = string.IsNullOrWhiteSpace(vendorName)
-                                ? "SAP Vendor Code already in use."
-                                : $"SAP Vendor Code already in use by '{vendorName}'.";
-                            _messageStore?.Add(fieldId, msg);
+                            var message = string.IsNullOrWhiteSpace(vendorName)
+                                ? "SAP Vendor Code already in use. Cannot approve."
+                                : $"SAP Vendor Code already in use by '{vendorName}'. Cannot approve.";
+                            _messageStore?.Add(fieldId, message);
                         }
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogWarning(ex, "SAP vendor code existence check failed.");
-                        // don't block user on remote check failure
+                        Logger.LogWarning(ex, "SAP vendor code existence check failed during approval.");
+                        Snackbar.Add("Unable to verify SAP Vendor Code uniqueness. Try again later.", Severity.Warning);
+                        return;
                     }
                 }
             }
@@ -1929,7 +2032,44 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _editContext.NotifyValidationStateChanged();
         }
 
+        private async Task<bool> OrganizationWithGstExistsAsync(string organizationName, string? gstNo, Guid? excludeId = null)
+        {
+            if (string.IsNullOrWhiteSpace(organizationName) && string.IsNullOrWhiteSpace(gstNo))
+                return false;
 
+            try
+            {
+                var parameters = new VendorRegistrationFormParameters
+                {
+                    OrganizationName = (organizationName ?? string.Empty).Trim(),
+                    PageNumber = 1,
+                    PageSize = 100
+                };
+
+                var resp = await VendorRegistrationFormRepository.GetAllVendorRegistration(parameters);
+                var items = resp?.Items ?? Enumerable.Empty<VendorRegistrationFormDto>();
+
+                var orgNormalized = (organizationName ?? string.Empty).Trim();
+                var gstNormalized = (gstNo ?? string.Empty).Trim().ToUpperInvariant();
+
+                return items.Any(v =>
+                    // exclude current record when editing
+                    (excludeId == null || v.Id != excludeId.Value)
+                    // same organization name (case-insensitive trim)
+                    && !string.IsNullOrWhiteSpace(v.OrganizationName)
+                    && string.Equals(v.OrganizationName.Trim(), orgNormalized, StringComparison.OrdinalIgnoreCase)
+                    // same GST (if provided)
+                    && !string.IsNullOrWhiteSpace(v.GSTNO)
+                    && string.Equals(v.GSTNO.Trim().ToUpperInvariant(), gstNormalized, StringComparison.OrdinalIgnoreCase)
+                );
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "OrganizationWithGstExistsAsync check failed for '{Org}' / GST '{Gst}'", organizationName, gstNo);
+                // Fail-safe: do not block save on transient errors — server-side should also validate.
+                return false;
+            }
+        }
         // Submit handler and validation
         private async Task HandleSubmit(EditContext editContext)
         {
@@ -2001,7 +2141,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             if (!string.IsNullOrWhiteSpace(_vendorReg.UDYAMRegNo))
             {
                 var udyamPattern = @"^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$";
-                if (!Regex.IsMatch(_vendorReg.UDYAMRegNo.Trim().ToUpperInvariant(), udyamPattern))
+                if (!Regex.IsMatch(_vendorReg.UDYAMRegNo, udyamPattern))
                     validationResults.Add(new ValidationResult("UDYAM format is invalid. Expected UDYAM-LL-NN-NNNNNNN (e.g. UDYAM-AB-12-1234567).", new[] { nameof(_vendorReg.UDYAMRegNo) }));
             }
 
@@ -2012,8 +2152,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
             if (!string.IsNullOrWhiteSpace(_vendorReg.PFNo))
             {
                 var pfPattern = @"^[A-Z]{5}[0-9]{10}$";
-                if (!Regex.IsMatch(_vendorReg.PFNo.Trim().ToUpperInvariant(), pfPattern))
-                    validationResults.Add(new ValidationResult("PF format is invalid.", new[] { nameof(_vendorReg.PFNo) }));
+                if (!Regex.IsMatch(_vendorReg.PFNo, pfPattern))
+                    validationResults.Add(new ValidationResult("PF format example PYBOM0046564000", new[] { nameof(_vendorReg.PFNo) }));
             }
 
             if (_isESIRequired && string.IsNullOrWhiteSpace(_vendorReg.ESIRegNo))
@@ -2037,6 +2177,26 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             if (_isSAPVendorCodeRequired && string.IsNullOrWhiteSpace(_vendorReg.SAPVendorCode))
                 validationResults.Add(new ValidationResult("SAP Vendor Code is required when Approval Status is Approved.", new[] { nameof(_vendorReg.SAPVendorCode) }));
+
+            if (string.Equals((_vendorReg.ReviewerStatus ?? "Pending").Trim(), "Rejected", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(_vendorReg.ReviewComments))
+            {
+                validationResults.Add(new ValidationResult("Review Comments are required when review status is Rejected.", new[] { nameof(_vendorReg.ReviewComments) }));
+            }
+            if (string.Equals((_vendorReg.ApproverStatus ?? "Pending").Trim(), "Rejected", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(_vendorReg.ApprovalComments))
+            {
+                validationResults.Add(new ValidationResult("Approval Comments are required when approval status is Rejected.", new[] { nameof(_vendorReg.ApprovalComments) }));
+            }
+
+            // Combined Organization+GST uniqueness check (prevent duplicate registrations)
+            var excludeIdForCheck = _formEditMode == "Edit" ? _vendorReg.Id : (Guid?)null;
+            var orgGstExists = await OrganizationWithGstExistsAsync(_vendorReg.OrganizationName ?? string.Empty, _vendorReg.GSTNO, excludeIdForCheck);
+            if (orgGstExists)
+            {
+                validationResults.Add(new ValidationResult("A vendor registration with the same Organization Name and GSTIN already exists.", new[] { nameof(_vendorReg.OrganizationName), nameof(_vendorReg.GSTNO) }));
+            }
+
             _messageStore?.Clear();
             if (validationResults.Any())
             {
@@ -2106,6 +2266,18 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 Logger.LogWarning("SubmitReview called but _vendorReg was null.");
                 return;
             }
+            // Validate that review comments are provided if status is Rejected
+            var reviewerStatus = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
+            if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(_vendorReg.ReviewComments))
+            {
+                var fieldId = new FieldIdentifier(_vendorReg, nameof(_vendorReg.ReviewComments));
+                _messageStore?.Clear(fieldId);
+                _messageStore?.Add(fieldId, "Review comments are required when status is Rejected.");
+                _editContext?.NotifyValidationStateChanged();
+                Snackbar.Add("Reviewer comments are required before taking further action.", Severity.Warning);
+                return;
+            }
 
             // ask for confirmation before saving review comments
             var confirmed = await DialogService.ShowMessageBox(
@@ -2159,6 +2331,17 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 return;
             }
 
+            var approverStatus = (_vendorReg.ApproverStatus ?? "Pending").Trim();
+            if (string.Equals(approverStatus, "Rejected", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(_vendorReg.ApprovalComments))
+            {
+                var fieldId = new FieldIdentifier(_vendorReg, nameof(_vendorReg.ApprovalComments));
+                _messageStore?.Clear(fieldId);
+                _messageStore?.Add(fieldId, "Approval comments are required when status is Rejected.");
+                _editContext?.NotifyValidationStateChanged();
+                Snackbar.Add("Approver comments are required before taking further action.", Severity.Warning);
+                return;
+            }
             // If SAPVendorCode is required, validate it here (only on approval)
             if (_isSAPVendorCodeRequired)
             {
@@ -2202,9 +2385,6 @@ namespace OceanVMSClient.Pages.RegisterVendors
                             ? "SAP Vendor Code already in use. Cannot approve."
                             : $"SAP Vendor Code already in use by '{vendorName}'. Cannot approve.";
                         _messageStore?.Add(fieldId, message);
-                        _editContext?.NotifyValidationStateChanged();
-                        Snackbar.Add(message, Severity.Warning);
-                        return;
                     }
                 }
                 catch (Exception ex)
@@ -2272,11 +2452,11 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             if (_userType == null || _userType == "VENDOR")
             {
-                // vendor responder cannot edit if approver has approved
-                _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                // vendor responder cannot edit if reviewer has acted (Approved/Rejected) or if approver has approved
+                var reviewerActed = !string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+                _isReadOnly = reviewerActed || string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
                 _isApproverLocked = true;
                 _isReviewLocked = true;
-
             }
 
             StateHasChanged();
@@ -2300,7 +2480,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
             if (_userType == null || _userType == "VENDOR")
             {
                 // vendor responder cannot edit if approver has approved
-                _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                var reviewerActed = !string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase);
+                _isReadOnly = reviewerActed || string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
                 _isApproverLocked = true;
                 _isReviewLocked = true;
             }
@@ -2330,6 +2511,15 @@ namespace OceanVMSClient.Pages.RegisterVendors
             dto.RegistrationDate = _vendorReg.RegistrationDate;
             dto.D365VendorId = _vendorReg.D365VendorId.ToString();
             dto.SAPVendorCode = _vendorReg.SAPVendorCode;
+
+            // Preserve existing reviewer fields so an approver's non-review edits do not reset review status.
+            // We copy the values from the loaded model (_vendorReg) rather than any UI inputs to avoid
+            // accidentally overwriting review data.
+            dto.ReviewerId = _vendorReg.ReviewerId;
+            dto.ReviewDate = _vendorReg.ReviewDate;
+            dto.ReviewComments = _vendorReg.ReviewComments;
+            dto.ReviewerStatus = _vendorReg.ReviewerStatus;
+
             return dto;
         }
 
