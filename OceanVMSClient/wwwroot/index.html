@@ -36,6 +36,34 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
+
+    <script>
+        (function () {
+            // Best-effort: set app.bootVersion before Blazor starts.
+            // Cache-bust and use no-store to avoid stale copies.
+            fetch('./version.json?cb=' + Date.now(), { cache: 'no-store' })
+                .then(function (r) {
+                    if (!r.ok) return null;
+                    return r.json();
+                })
+                .then(function (json) {
+                    try {
+                        var v = null;
+                        if (json) {
+                            if (typeof json.appVersion === 'string') v = json.appVersion;
+                            else if (typeof json.version === 'string') v = json.version;
+                        }
+                        // store empty string when unknown so code sees a value
+                        localStorage.setItem('app.bootVersion', v ?? '');
+                    } catch (e) {
+                        try { localStorage.setItem('app.bootVersion', ''); } catch { }
+                    }
+                })
+                .catch(function () {
+                    try { localStorage.setItem('app.bootVersion', ''); } catch { }
+                });
+        })();
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <!--Register service worker for PWA-->

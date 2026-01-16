@@ -155,7 +155,7 @@
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
                            OnClick="SaveDecision"
-                           Disabled="@(!CanEditApprovedAmount())">
+                           Disabled="@(!CanEditApprovedAmount() || _isSubmitting || _initiatorSaved)">
                     Submit Review
                 </MudButton>
             </MudItem>

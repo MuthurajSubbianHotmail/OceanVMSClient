@@ -6,6 +6,7 @@ using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
 using System;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace OceanVMSClient.Pages.InviceModule
 {
@@ -15,8 +16,11 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public InvoiceDto? _invoiceDto { get; set; }
         [Parameter] public PurchaseOrderDto? _PODto { get; set; }
 
-        // Internal DTO used when completing Validator review
-        [Parameter] public InvValidatorReviewCompleteDto _validatorCompleteDto { get; set; } = new();
+        // EventCallback to notify parent that the review was saved
+        [Parameter] public EventCallback<InvoiceDto?> OnSaved { get; set; }
+
+        // Internal DTO used when completing validator review
+        [Parameter] public InvValidatorReviewCompleteDto _ValidatorcompleteDto { get; set; } = new();
 
         // repository + UI feedback + logger
         [Inject] private IInvoiceRepository InvoiceRepository { get; set; } = default!;
@@ -24,9 +28,6 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] private ILogger<InvoiceValidatorReview> Logger { get; set; } = default!;
 
         // Cascading parameters (UI theme / user context)
-        //[CascadingParameter] public Margin _margin { get; set; } = Margin.Dense;
-        //[CascadingParameter] public Variant _variant { get; set; } = Variant.Text;
-        //[CascadingParameter] public Color _labelColor { get; set; } = Color.Default;
         [CascadingParameter] public Color _valueColor { get; set; } = Color.Default;
         [CascadingParameter] public Typo _labelTypo { get; set; } = Typo.subtitle2;
         [CascadingParameter] public Typo _valueTypo { get; set; } = Typo.body2;
@@ -37,19 +38,20 @@ namespace OceanVMSClient.Pages.InviceModule
         [Parameter] public Guid _LoggedInVendorID { get; set; } = Guid.Empty;
         [Parameter] public string _CurrentRoleName { get; set; } = string.Empty;
         [Parameter] public bool _isInvAssigned { get; set; } = false;
-        [Parameter] public bool _IsValidator { get; set; } = false;
+        [Parameter] public bool _isValidator { get; set; } = false;
+
+        // Track previous review amounts/info (from other roles) - helper struct
         private (Guid? PreviousReviewerId, string? PreviousReviewerName, decimal? PrevApprovedAmount, decimal? PrevWithheldAmount) _previousReviewInfo = (null, null, null, null);
 
         // small state
         private bool _validatorSaved = false;
+        private bool _isSubmitting = false;
+        private bool _validatorApprovedEdited = false;
 
         // EditContext used for client-side DataAnnotations validation
         private EditContext? _editContext;
         private ValidationMessageStore? _messageStore;
         private bool _editContextSubscribed = false;
-
-        // Add this field to the class to define the OnSaved EventCallback
-        [Parameter] public EventCallback<InvoiceDto?> OnSaved { get; set; }
 
         #region Display helpers (computed properties)
         private string FormatCurrency(decimal? value) => value?.ToString("C") ?? "-";
@@ -70,16 +72,16 @@ namespace OceanVMSClient.Pages.InviceModule
         {
             base.OnParametersSet();
 
-            // Load previous review info first so mapping/defaults can use it
+            // Load previous validator review info before mapping
             _previousReviewInfo = InvoiceReviewHelpers.GetPreviousReviewInfo(_invoiceDto, "validator");
 
             // Map server invoice values into working DTO when component opens
             MapFromInvoiceDto();
 
             // ensure EditContext tracks current working DTO so DataAnnotationsValidator works
-            if (_editContext == null || _editContext.Model != _validatorCompleteDto)
+            if (_editContext == null || _editContext.Model != _ValidatorcompleteDto)
             {
-                _editContext = new EditContext(_validatorCompleteDto);
+                _editContext = new EditContext(_ValidatorcompleteDto);
                 _messageStore = new ValidationMessageStore(_editContext);
                 _editContextSubscribed = false; // force subscription below
             }
@@ -88,9 +90,14 @@ namespace OceanVMSClient.Pages.InviceModule
             if (_editContext != null && !_editContextSubscribed)
             {
                 // validate on form submit
-                _editContext.OnValidationRequested += (sender, args) => ValidateWithheldReason();
+                _editContext.OnValidationRequested += (sender, args) =>
+                {
+                    ValidateWithheldReason();
+                    ValidateRejectedRemarks();
+                    ValidateApprovedAmount();
+                };
 
-                // DO NOT validate on every field change — only on blur or submit
+                // DO NOT validate on every field change — only on blur or submit per request
                 _editContextSubscribed = true;
             }
 
@@ -98,7 +105,7 @@ namespace OceanVMSClient.Pages.InviceModule
             EnsureDefaultValidatorAmounts();
 
             // If server already indicates review completed, lock UI
-            _validatorSaved = IsValidationReviewCompleted();
+            _validatorSaved = IsValidatorReviewCompleted();
         }
         #endregion
 
@@ -118,58 +125,79 @@ namespace OceanVMSClient.Pages.InviceModule
         #region Validation / defaults / mapping
         private void MapFromInvoiceDto()
         {
-            if (_invoiceDto == null || _validatorCompleteDto == null)
+            if (_invoiceDto == null || _ValidatorcompleteDto == null)
                 return;
 
-            // populate only when the working DTO is empty (to avoid overwriting user edits)
-            if (_validatorCompleteDto.InvoiceId == Guid.Empty || _validatorCompleteDto.InvoiceId != _invoiceDto.Id)
+            // Only map if the ValidatorID does not match or is empty (approx "new" mapping)
+            if (_ValidatorcompleteDto.ValidatorID == Guid.Empty || _ValidatorcompleteDto.ValidatorID != (_invoiceDto.ValidatorD365ID ?? Guid.Empty))
             {
-                _validatorCompleteDto.InvoiceId = _invoiceDto.Id;
-                _validatorCompleteDto.ValidatorID = _invoiceDto.ValidatorID ?? Guid.Empty;
-                _validatorCompleteDto.ValidatorApprovedAmount = _invoiceDto.ValidatorApprovedAmount;
-                _validatorCompleteDto.ValidatorWithheldAmount = _invoiceDto.ValidatorWithheldAmount;
-                _validatorCompleteDto.ValidatorWithheldReason = _invoiceDto.ValidatorWithheldReason;
-                _validatorCompleteDto.ValidatorReviewComment = _invoiceDto.ValidatorReviewComment;
-                _validatorCompleteDto.ValidatorReviewStatus = _invoiceDto.ValidatorReviewStatus;
+                _ValidatorcompleteDto.ValidatorID = _invoiceDto.ValidatorD365ID ?? Guid.Empty;
+                _ValidatorcompleteDto.ValidatorWithheldReason = _invoiceDto.ValidatorWithheldReason;
+                _ValidatorcompleteDto.ValidatorReviewComment = _invoiceDto.ValidatorReviewComment;
+                _ValidatorcompleteDto.ValidatorReviewStatus = _invoiceDto.ValidatorReviewStatus;
 
-                // Apply business rules for amounts based on current status
+                // Set amounts according to current status and available previous values
                 ApplyAmountsBasedOnStatus();
             }
         }
 
         private void OnValidatorReviewStatusChanged(string? newStatus)
         {
-            if (_validatorCompleteDto == null)
+            if (_ValidatorcompleteDto == null)
                 return;
 
-            _validatorCompleteDto.ValidatorReviewStatus = newStatus?.Trim();
+            // reset user-edit flag when status changes
+            _validatorApprovedEdited = false;
 
-            // Apply business rules for amounts when status changes
-            if (string.Equals(_validatorCompleteDto.ValidatorReviewStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+            _ValidatorcompleteDto.ValidatorReviewStatus = newStatus?.Trim();
+
+            if (string.Equals(_ValidatorcompleteDto.ValidatorReviewStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
             {
-                _validatorCompleteDto.ValidatorApprovedAmount = 0m;
-                _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                _ValidatorcompleteDto.ValidatorApprovedAmount = 0m;
+                _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
             }
-            else if (string.Equals(_validatorCompleteDto.ValidatorReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(_ValidatorcompleteDto.ValidatorReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
             {
-                // Prefer previous review amounts when available, otherwise use invoice total
                 if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
                 {
-                    _validatorCompleteDto.ValidatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
-                    _validatorCompleteDto.ValidatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                    _ValidatorcompleteDto.ValidatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    _ValidatorcompleteDto.ValidatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
                 }
                 else if (_invoiceDto != null)
                 {
-                    _validatorCompleteDto.ValidatorApprovedAmount = _invoiceDto.InvoiceTotalValue;
-                    _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                    _ValidatorcompleteDto.ValidatorApprovedAmount = _invoiceDto.InvoiceTotalValue;
+                    _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
                 }
             }
             else
             {
-                // Pending or other -> reset to 0
-                _validatorCompleteDto.ValidatorApprovedAmount = 0m;
-                _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                _ValidatorcompleteDto.ValidatorApprovedAmount = 0m;
+                _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
             }
+
+            // clear related validation messages
+            if (_messageStore != null)
+            {
+                var reasonField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorWithheldReason));
+                _messageStore.Clear(reasonField);
+
+                var commentField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorReviewComment));
+                if (!string.Equals(_ValidatorcompleteDto.ValidatorReviewStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    _messageStore.Clear(commentField);
+
+                if (string.Equals(_ValidatorcompleteDto.ValidatorReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    var approvedField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorApprovedAmount));
+                    var withheldField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorWithheldAmount));
+                    _messageStore.Clear(approvedField);
+                    _messageStore.Clear(withheldField);
+                }
+
+                _editContext?.NotifyValidationStateChanged();
+            }
+
+            // enforce "Rejected => Remarks required" immediately
+            ValidateRejectedRemarks();
 
             StateHasChanged();
         }
@@ -183,7 +211,7 @@ namespace OceanVMSClient.Pages.InviceModule
         /// </summary>
         private void EnsureDefaultValidatorAmounts()
         {
-            if (_invoiceDto == null || _validatorCompleteDto == null)
+            if (_invoiceDto == null || _ValidatorcompleteDto == null)
                 return;
 
             var status = _invoiceDto.ValidatorReviewStatus?.Trim();
@@ -191,46 +219,48 @@ namespace OceanVMSClient.Pages.InviceModule
 
             if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase))
             {
-                if (!_validatorCompleteDto.ValidatorApprovedAmount.HasValue)
-                    _validatorCompleteDto.ValidatorApprovedAmount = 0m;
-                if (!_validatorCompleteDto.ValidatorWithheldAmount.HasValue)
-                    _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                if (!_ValidatorcompleteDto.ValidatorApprovedAmount.HasValue)
+                    _ValidatorcompleteDto.ValidatorApprovedAmount = 0m;
+                if (!_ValidatorcompleteDto.ValidatorWithheldAmount.HasValue)
+                    _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
 
                 return;
             }
 
             if (string.Equals(status, "Rejected", StringComparison.OrdinalIgnoreCase))
             {
-                if (!_validatorCompleteDto.ValidatorApprovedAmount.HasValue)
-                    _validatorCompleteDto.ValidatorApprovedAmount = 0m;
-                if (!_validatorCompleteDto.ValidatorWithheldAmount.HasValue)
-                    _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                if (!_ValidatorcompleteDto.ValidatorApprovedAmount.HasValue)
+                    _ValidatorcompleteDto.ValidatorApprovedAmount = 0m;
+                if (!_ValidatorcompleteDto.ValidatorWithheldAmount.HasValue)
+                    _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
 
                 return;
             }
 
             if (string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase))
             {
+                // if both previous approved and withheld are available use them
                 if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
                 {
-                    if (!_validatorCompleteDto.ValidatorApprovedAmount.HasValue)
-                        _validatorCompleteDto.ValidatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
-                    if (!_validatorCompleteDto.ValidatorWithheldAmount.HasValue)
-                        _validatorCompleteDto.ValidatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                    if (!_ValidatorcompleteDto.ValidatorApprovedAmount.HasValue)
+                        _ValidatorcompleteDto.ValidatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    if (!_ValidatorcompleteDto.ValidatorWithheldAmount.HasValue)
+                        _ValidatorcompleteDto.ValidatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
                 }
                 else
                 {
-                    if (!_validatorCompleteDto.ValidatorApprovedAmount.HasValue)
-                        _validatorCompleteDto.ValidatorApprovedAmount = total;
-                    if (!_validatorCompleteDto.ValidatorWithheldAmount.HasValue)
-                        _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                    // fallback: approved := invoice total, withheld := 0
+                    if (!_ValidatorcompleteDto.ValidatorApprovedAmount.HasValue)
+                        _ValidatorcompleteDto.ValidatorApprovedAmount = total;
+                    if (!_ValidatorcompleteDto.ValidatorWithheldAmount.HasValue)
+                        _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
                 }
             }
         }
 
         private void ApplyAmountsBasedOnStatus()
         {
-            if (_invoiceDto == null || _validatorCompleteDto == null)
+            if (_invoiceDto == null || _ValidatorcompleteDto == null)
                 return;
 
             var status = _invoiceDto.ValidatorReviewStatus?.Trim();
@@ -238,30 +268,39 @@ namespace OceanVMSClient.Pages.InviceModule
 
             if (string.Equals(status, "Pending", StringComparison.OrdinalIgnoreCase))
             {
-                _validatorCompleteDto.ValidatorApprovedAmount = 0m;
-                _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                // Only set defaults when DTO fields are not already set to preserve user edits
+                if (!_ValidatorcompleteDto.ValidatorApprovedAmount.HasValue)
+                    _ValidatorcompleteDto.ValidatorApprovedAmount = 0m;
+                if (!_ValidatorcompleteDto.ValidatorWithheldAmount.HasValue)
+                    _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
+
                 return;
             }
 
             if (string.Equals(status, "Rejected", StringComparison.OrdinalIgnoreCase))
             {
-                // Per requested rule: both should be 0 when rejected
-                _validatorCompleteDto.ValidatorApprovedAmount = 0m;
-                _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                // When rejected we explicitly set both to 0 per rules
+                _ValidatorcompleteDto.ValidatorApprovedAmount = 0m;
+                _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
                 return;
             }
 
             if (string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase))
             {
+                // Prefer previous review amounts when available. Otherwise set defaults only when DTO fields are unset.
                 if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
                 {
-                    _validatorCompleteDto.ValidatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
-                    _validatorCompleteDto.ValidatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                    if (!_ValidatorcompleteDto.ValidatorApprovedAmount.HasValue)
+                        _ValidatorcompleteDto.ValidatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    if (!_ValidatorcompleteDto.ValidatorWithheldAmount.HasValue)
+                        _ValidatorcompleteDto.ValidatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
                 }
                 else
                 {
-                    _validatorCompleteDto.ValidatorApprovedAmount = total;
-                    _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                    if (!_ValidatorcompleteDto.ValidatorApprovedAmount.HasValue)
+                        _ValidatorcompleteDto.ValidatorApprovedAmount = total;
+                    if (!_ValidatorcompleteDto.ValidatorWithheldAmount.HasValue)
+                        _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
                 }
             }
         }
@@ -278,14 +317,14 @@ namespace OceanVMSClient.Pages.InviceModule
         /// </summary>
         private void ValidateWithheldReason()
         {
-            if (_editContext == null || _messageStore == null || _validatorCompleteDto == null)
+            if (_editContext == null || _messageStore == null || _ValidatorcompleteDto == null)
                 return;
 
-            var reasonField = new FieldIdentifier(_validatorCompleteDto, nameof(_validatorCompleteDto.ValidatorWithheldReason));
+            var reasonField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorWithheldReason));
             _messageStore.Clear(reasonField);
 
-            var withheld = _validatorCompleteDto.ValidatorWithheldAmount.GetValueOrDefault(0m);
-            if (withheld != 0m && string.IsNullOrWhiteSpace(_validatorCompleteDto.ValidatorWithheldReason))
+            var withheld = _ValidatorcompleteDto.ValidatorWithheldAmount.GetValueOrDefault(0m);
+            if (withheld != 0m && string.IsNullOrWhiteSpace(_ValidatorcompleteDto.ValidatorWithheldReason))
             {
                 _messageStore.Add(reasonField, "Withheld reason is required when Withheld Amount is not zero.");
             }
@@ -295,38 +334,175 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private void OnValidatorApprovedAmountChanged(decimal? newValue)
         {
-            if (_invoiceDto == null || _validatorCompleteDto == null)
+            if (!CanEditApprovedAmount())
+                return;
+
+            if (_invoiceDto == null || _ValidatorcompleteDto == null)
                 return;
 
             decimal total = _invoiceDto.InvoiceTotalValue;
-            decimal approved = newValue.GetValueOrDefault(0m);
+            decimal requestedApproved = newValue ?? _ValidatorcompleteDto.ValidatorApprovedAmount.GetValueOrDefault();
 
-            if (approved < 0m) approved = 0m;
-            if (approved > total) approved = total;
+            // mark user edit so status/default logic won't overwrite
+            _validatorApprovedEdited = true;
 
-            _validatorCompleteDto.ValidatorApprovedAmount = approved;
-            _validatorCompleteDto.ValidatorWithheldAmount = total - approved;
+            _ValidatorcompleteDto.ValidatorApprovedAmount = requestedApproved;
+            _ValidatorcompleteDto.ValidatorWithheldAmount = total - requestedApproved;
 
-            // Clear withheld-reason validation while user is changing amounts
+            // clear related validation messages similar to Initiator behavior
             if (_messageStore != null)
             {
-                var reasonField = new FieldIdentifier(_validatorCompleteDto, nameof(_validatorCompleteDto.ValidatorWithheldReason));
+                var reasonField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorWithheldReason));
                 _messageStore.Clear(reasonField);
+
+                var approvedField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorApprovedAmount));
+                var withheldField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorWithheldAmount));
+
+                if (_ValidatorcompleteDto.ValidatorWithheldAmount.GetValueOrDefault(0m) == 0m)
+                {
+                    _messageStore.Clear(approvedField);
+                    _messageStore.Clear(withheldField);
+                }
+
                 _editContext?.NotifyValidationStateChanged();
             }
 
             StateHasChanged();
         }
 
+        private async Task OnValidatorApprovedAmountBlur(FocusEventArgs e)
+        {
+            // yield to allow Mud numeric field handlers to complete updates
+            await Task.Yield();
+            ValidateApprovedAmount();
+        }
+
+        /// <summary>
+        /// Validate Approved and Withheld amounts according to rules:
+        /// - sign-aware restrictions
+        /// - if no previous amounts exist enforce approved + withheld == total (rounded to 2 decimals)
+        /// - approved must not exceed previous approved when previous exists (sign-aware)
+        /// Messages are added to the ValidationMessageStore so they appear in ValidationSummary and next to fields.
+        /// </summary>
+        private void ValidateApprovedAmount()
+        {
+            if (_editContext == null || _messageStore == null || _ValidatorcompleteDto == null || _invoiceDto == null)
+                return;
+
+            var approvedField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorApprovedAmount));
+            var withheldField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorWithheldAmount));
+
+            // Clear previous messages for these fields (defensive)
+            _messageStore.Clear(approvedField);
+            _messageStore.Clear(withheldField);
+
+            // Determine effective status: prefer working DTO value, fallback to invoice's persisted status
+            var status = _ValidatorcompleteDto.ValidatorReviewStatus?.Trim();
+            if (string.IsNullOrWhiteSpace(status))
+                status = _invoiceDto.ValidatorReviewStatus?.Trim();
+
+            // If the current status is Rejected, amounts are intentionally zero — clear any stale amount messages and skip invariants.
+            if (!string.IsNullOrWhiteSpace(status) && status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                // Also clear any other leftover messages to be safe
+                _messageStore.Clear();
+                _editContext.NotifyValidationStateChanged();
+                return;
+            }
+
+            decimal total = _invoiceDto.InvoiceTotalValue;
+            decimal approved = _ValidatorcompleteDto.ValidatorApprovedAmount.GetValueOrDefault(0m);
+            decimal withheld = _ValidatorcompleteDto.ValidatorWithheldAmount.GetValueOrDefault(0m);
+
+            // Sign consistency: approved/withheld should follow invoice sign (or be zero)
+            if (total > 0m)
+            {
+                if (approved < 0m)
+                    _messageStore.Add(approvedField, "Approved Amount cannot be negative when Invoice Total is positive.");
+                if (withheld < 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount cannot be negative when Invoice Total is positive.");
+            }
+            else if (total < 0m)
+            {
+                if (approved > 0m)
+                    _messageStore.Add(approvedField, "Approved Amount cannot be positive when Invoice Total is negative (debit note).");
+                if (withheld > 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount cannot be positive when Invoice Total is negative (debit note).");
+            }
+            else // total == 0
+            {
+                if (approved != 0m)
+                    _messageStore.Add(approvedField, "Approved Amount must be zero when Invoice Total is zero.");
+                if (withheld != 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount must be zero when Invoice Total is zero.");
+            }
+
+            // If there are no previous review amounts require strict equality (within 2-decimal tolerance)
+            if (!_previousReviewInfo.PrevApprovedAmount.HasValue && !_previousReviewInfo.PrevWithheldAmount.HasValue)
+            {
+                if (Math.Round(approved + withheld - total, 2) != 0m)
+                    _messageStore.Add(approvedField, "Approved Amount + Withheld Amount must equal Invoice Total.");
+
+                if (total > 0m && approved > total)
+                    _messageStore.Add(approvedField, $"Approved Amount cannot exceed Invoice Total ({FormatCurrency(total)}).");
+                if (total < 0m && approved < total)
+                    _messageStore.Add(approvedField, $"Approved Amount cannot be less than Invoice Total ({FormatCurrency(total)}).");
+            }
+
+            // Previous-approved constraints (sign-aware)
+            if (_previousReviewInfo.PrevApprovedAmount.HasValue)
+            {
+                var prev = _previousReviewInfo.PrevApprovedAmount.Value;
+                if (prev > 0m && approved > prev)
+                    _messageStore.Add(approvedField, $"Approved Amount cannot exceed previous approved amount ({FormatCurrency(prev)}).");
+                if (prev < 0m && approved < prev)
+                    _messageStore.Add(approvedField, $"Approved Amount cannot be less than previous approved amount ({FormatCurrency(prev)}).");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+        }
+
+        private void OnRemarksBlur(FocusEventArgs e)
+        {
+            ValidateRejectedRemarks();
+        }
+
+        /// <summary>
+        /// Ensure Remarks (ValidatorReviewComment) is required when status == "Rejected".
+        /// Adds/clears messages using the ValidationMessageStore so messages appear in ValidationSummary
+        /// and next to the Remarks field.
+        /// </summary>
+        private void ValidateRejectedRemarks()
+        {
+            if (_editContext == null || _messageStore == null || _ValidatorcompleteDto == null)
+                return;
+
+            var commentField = new FieldIdentifier(_ValidatorcompleteDto, nameof(_ValidatorcompleteDto.ValidatorReviewComment));
+            _messageStore.Clear(commentField);
+
+            var status = _ValidatorcompleteDto.ValidatorReviewStatus?.Trim();
+            if (!string.IsNullOrWhiteSpace(status)
+                && status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(_ValidatorcompleteDto.ValidatorReviewComment))
+            {
+                _messageStore.Add(commentField, "Remarks are required when status is Rejected.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+        }
         #endregion
 
         #region Permissions / read-only
-        private bool IsValidationReviewRequired => _invoiceDto?.IsValidatorReviewRequired ?? false;
+        private bool IsValidatorReviewRequired => _invoiceDto?.IsValidatorReviewRequired ?? false;
 
         private bool CanEditApprovedAmount()
         {
-            // must be Validator
-            if (!_IsValidator)
+            // Do not allow edits if the invoice itself is in "Rejected" status
+            if (IsInvoiceStatusRejected)
+                return false;
+
+            // must be validator
+            if (!_isValidator)
                 return false;
 
             // must be assigned to this invoice
@@ -343,13 +519,13 @@ namespace OceanVMSClient.Pages.InviceModule
                 return false;
 
             // if server indicates review already completed, disallow edit
-            if (IsValidationReviewCompleted())
+            if (IsValidatorReviewCompleted())
                 return false;
 
             return true;
         }
 
-        private bool IsValidationReviewCompleted()
+        private bool IsValidatorReviewCompleted()
         {
             var status = _invoiceDto?.ValidatorReviewStatus?.Trim();
             if (string.IsNullOrWhiteSpace(status))
@@ -361,12 +537,30 @@ namespace OceanVMSClient.Pages.InviceModule
         }
 
         // UI read-only helper used by markup
-        private bool IsReadOnly => _validatorSaved || IsValidationReviewCompleted();
+        private bool IsReadOnly => _validatorSaved || IsValidatorReviewCompleted() || IsInvoiceStatusRejected;
+
+        // Added helper to detect invoice-level "Rejected" status (place inside the Permissions / read-only region)
+        private bool IsInvoiceStatusRejected =>
+            string.Equals(_invoiceDto?.InvoiceStatus?.Trim(), "Rejected", StringComparison.OrdinalIgnoreCase);
         #endregion
 
         #region Actions
         private async Task SaveDecision()
         {
+            // Prevent double submit / show appropriate message
+            if (_isSubmitting)
+            {
+                Snackbar.Add("Review submission is already in progress. Please wait...", Severity.Info);
+                return;
+            }
+
+            if (_validatorSaved)
+            {
+                Snackbar.Add("Review has already been submitted.", Severity.Info);
+                return;
+            }
+
+            _isSubmitting = true;
             try
             {
                 if (_invoiceDto == null)
@@ -374,8 +568,13 @@ namespace OceanVMSClient.Pages.InviceModule
                     Snackbar.Add("Invoice not loaded.", Severity.Error);
                     return;
                 }
+                if (IsInvoiceStatusRejected)
+                {
+                    Snackbar.Add("This invoice is in 'Rejected' status and cannot be edited.", Severity.Warning);
+                    return;
+                }
 
-                var status = _validatorCompleteDto.ValidatorReviewStatus?.Trim();
+                var status = _ValidatorcompleteDto.ValidatorReviewStatus?.Trim();
                 if (string.IsNullOrWhiteSpace(status) ||
                     !(status.Equals("Approved", StringComparison.OrdinalIgnoreCase) || status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)))
                 {
@@ -383,74 +582,111 @@ namespace OceanVMSClient.Pages.InviceModule
                     return;
                 }
 
-                // Conditional validation
                 decimal total = _invoiceDto.InvoiceTotalValue;
 
                 if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Approved amount is required and must be > 0 and <= total
-                    if (!_validatorCompleteDto.ValidatorApprovedAmount.HasValue)
+                    if (!_ValidatorcompleteDto.ValidatorApprovedAmount.HasValue)
                     {
                         Snackbar.Add("Approved amount is required when status is Approved.", Severity.Warning);
                         return;
                     }
-
-                    var approvedValue = _validatorCompleteDto.ValidatorApprovedAmount.GetValueOrDefault(0m);
-                    if (approvedValue <= 0m)
-                    {
-                        Snackbar.Add("Approved amount must be greater than zero.", Severity.Warning);
-                        return;
-                    }
-
-                    if (approvedValue > total)
-                    {
-                        Snackbar.Add("Approved amount cannot exceed invoice total.", Severity.Warning);
-                        // clamp and show recalculation
-                        _validatorCompleteDto.ValidatorApprovedAmount = total;
-                        _validatorCompleteDto.ValidatorWithheldAmount = 0m;
-                        StateHasChanged();
-                        return;
-                    }
-
-                    // recalc withheld
-                    _validatorCompleteDto.ValidatorWithheldAmount = total - approvedValue;
                 }
                 else // Rejected
                 {
-                    // Remarks / comment required on rejection
-                    if (string.IsNullOrWhiteSpace(_validatorCompleteDto.ValidatorReviewComment))
+                    if (string.IsNullOrWhiteSpace(_ValidatorcompleteDto.ValidatorReviewComment))
                     {
                         Snackbar.Add("Remarks are required when status is Rejected.", Severity.Warning);
                         return;
                     }
 
-                    // Per requested rule: when rejected both approved and withheld should be 0
-                    _validatorCompleteDto.ValidatorApprovedAmount = 0m;
-                    _validatorCompleteDto.ValidatorWithheldAmount = 0m;
+                    // When rejected both approved and withheld should be 0
+                    _ValidatorcompleteDto.ValidatorApprovedAmount = 0m;
+                    _ValidatorcompleteDto.ValidatorWithheldAmount = 0m;
+                }
+
+                // Run final client-side validations
+                ValidateApprovedAmount();
+                ValidateWithheldReason();
+                ValidateRejectedRemarks();
+
+                // If there are validation messages, do not persist
+                if (_editContext != null && _editContext.GetValidationMessages().Any())
+                {
+                    Snackbar.Add("Please correct validation errors before submitting.", Severity.Warning);
+                    return;
+                }
+
+                // All client validation passed: ensure withheld is consistent (defensive)
+                if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    var approvedValue = _ValidatorcompleteDto.ValidatorApprovedAmount.GetValueOrDefault(0m);
+
+                    // Enforce sign-aware bounds against invoice (do not auto-correct; treat as validation)
+                    if (total < 0m && approvedValue < total)
+                    {
+                        Snackbar.Add("Approved amount cannot be less than invoice total.", Severity.Warning);
+                        return;
+                    }
+                    if (total > 0m && approvedValue > total)
+                    {
+                        Snackbar.Add("Approved amount cannot exceed invoice total.", Severity.Warning);
+                        return;
+                    }
+
+                    // Validate against previous approved amount (if present) - sign-aware
+                    if (_previousReviewInfo.PrevApprovedAmount.HasValue)
+                    {
+                        var prev = _previousReviewInfo.PrevApprovedAmount.Value;
+                        if (prev > 0m && approvedValue > prev)
+                        {
+                            Snackbar.Add($"Approved amount cannot exceed previous approved amount ({FormatCurrency(prev)}).", Severity.Warning);
+                            return;
+                        }
+                        if (prev < 0m && approvedValue < prev)
+                        {
+                            Snackbar.Add($"Approved amount cannot be less than previous approved amount ({FormatCurrency(prev)}).", Severity.Warning);
+                            return;
+                        }
+                    }
+
+                    // Recalculate withheld to ensure persisted object is consistent with the invariant
+                    _ValidatorcompleteDto.ValidatorWithheldAmount = total - approvedValue;
+                }
+
+                // Final canonical invariant check (strict equality within 2 decimals) unless Rejected
+                var effectiveStatus = _ValidatorcompleteDto.ValidatorReviewStatus?.Trim();
+                if (!string.Equals(effectiveStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                {
+                    var approvedFinal = _ValidatorcompleteDto.ValidatorApprovedAmount.GetValueOrDefault(0m);
+                    var withheldFinal = _ValidatorcompleteDto.ValidatorWithheldAmount.GetValueOrDefault(0m);
+                    if (Math.Round(approvedFinal + withheldFinal - total, 2) != 0m)
+                    {
+                        Snackbar.Add("Approved Amount + Withheld Amount must equal Invoice Total.", Severity.Warning);
+                        return;
+                    }
                 }
 
                 // Defensive validation: withheld reason must be present when withheld amount != 0
-                if (_validatorCompleteDto.ValidatorWithheldAmount.GetValueOrDefault(0m) != 0m
-                    && string.IsNullOrWhiteSpace(_validatorCompleteDto.ValidatorWithheldReason))
+                if (_ValidatorcompleteDto.ValidatorWithheldAmount.GetValueOrDefault(0m) != 0m
+                    && string.IsNullOrWhiteSpace(_ValidatorcompleteDto.ValidatorWithheldReason))
                 {
                     Snackbar.Add("Withheld reason is required when Withheld Amount is not zero.", Severity.Warning);
-                    // ensure validation message is shown in form (OnValidationRequested already wired for submit)
-                    ValidateWithheldReason();
+                    ValidateWithheldReason(); // ensure message is shown inline
                     return;
                 }
 
                 // Ensure invoice id is set
-                _validatorCompleteDto.InvoiceId = _invoiceDto.Id;
+                _ValidatorcompleteDto.InvoiceId = _invoiceDto.Id;
 
                 // If ValidatorID not provided, set from cascading employee id if available
-                if (_validatorCompleteDto.ValidatorID == Guid.Empty && _LoggedInEmployeeID != Guid.Empty)
-                    _validatorCompleteDto.ValidatorID = _LoggedInEmployeeID;
+                if (_ValidatorcompleteDto.ValidatorID == Guid.Empty && _LoggedInEmployeeID != Guid.Empty)
+                    _ValidatorcompleteDto.ValidatorID = _LoggedInEmployeeID;
 
                 // Persist via repository (returns updated InvoiceDto)
-                var refreshed = await InvoiceRepository.UpdateInvoiceValidatorApproval(_validatorCompleteDto);
+                var refreshed = await InvoiceRepository.UpdateInvoiceValidatorApproval(_ValidatorcompleteDto);
                 if (refreshed != null)
                 {
-                    // Re-fetch full invoice from server to ensure all display fields (like ValidatorName) are populated
                     try
                     {
                         var full = await InvoiceRepository.GetInvoiceById(refreshed.Id);
@@ -458,7 +694,6 @@ namespace OceanVMSClient.Pages.InviceModule
                     }
                     catch (Exception ex)
                     {
-                        // If re-fetch fails, fall back to the update response
                         Logger.LogWarning(ex, "Failed to re-fetch invoice after validator update; using response object.");
                         _invoiceDto = refreshed;
                     }
@@ -475,7 +710,6 @@ namespace OceanVMSClient.Pages.InviceModule
                 if (OnSaved.HasDelegate)
                     await OnSaved.InvokeAsync(_invoiceDto);
 
-                // preserve existing legacy handler behaviour if present
                 if (this is IInvoiceValidatorReviewHandlers handlers)
                     await handlers.SaveAsync();
 
@@ -483,8 +717,13 @@ namespace OceanVMSClient.Pages.InviceModule
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error saving Validator review for Invoice ID {InvoiceId}", _invoiceDto?.Id);
-                Snackbar.Add("An error occurred while saving the Validator review.", Severity.Error);
+                Logger.LogError(ex, "Error saving validator review for Invoice ID {InvoiceId}", _invoiceDto?.Id);
+                Snackbar.Add("An error occurred while saving the validator review.", Severity.Error);
+            }
+            finally
+            {
+                // allow retry only when save failed; when success _validatorSaved should be true and button disabled
+                _isSubmitting = false;
             }
         }
 
@@ -503,9 +742,9 @@ namespace OceanVMSClient.Pages.InviceModule
         }
         #endregion
 
-        private Task OnSupportingFileUploaded(string? url)
+        private Task OnSupportingFileUploaded(String? url)
         {
-            _validatorCompleteDto.ValidatorReviewAttachment = url ?? string.Empty;
+            _ValidatorcompleteDto.ValidatorReviewAttachment = url ?? string.Empty;
             return Task.CompletedTask;
         }
     }

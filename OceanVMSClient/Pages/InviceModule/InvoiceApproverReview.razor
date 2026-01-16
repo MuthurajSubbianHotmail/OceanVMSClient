@@ -65,7 +65,9 @@
                                           AdornmentText="₹"
                                           Margin="@_margin"
                                           Class="short-field"
-                                          ReadOnly="!CanEditApprovedAmount()" />
+                                          ReadOnly="!CanEditApprovedAmount()"
+                                          OnBlur="OnApproverApprovedAmountBlur" />
+                            <ValidationMessage For="@(() => _approverCompleteDto.ApproverApprovedAmount)" />
                         </MudItem>
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
                             <MudTextField T="decimal?"
@@ -107,18 +109,19 @@
                                           Adornment="Adornment.End"
                                           AdornmentIcon="Icons.Material.Filled.Info"
                                           Lines="2"
-                                          ReadOnly="!CanEditApprovedAmount()" />
+                                          ReadOnly="!CanEditApprovedAmount()"
+                                          OnBlur="OnRemarksBlur" />
+                            <ValidationMessage For="@(() => _approverCompleteDto.ApproverReviewComment)" />
                         </MudItem>
 
                         
-                        <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
+                        <MudItem xs="6" sm="6" Class="d-flex justify-start align-content-center">
                             <InvFileUploader DocType="ApproverAttachment"
                                              OnChange="OnSupportingFileUploaded"
                                              Disabled="@(!CanEditApprovedAmount())"
                                              Label="Supporting Document" />
 
                         </MudItem>
-                        <MudItem xs="6" sm="6" Class="field-block" />
 
                         <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
                             <MudLink Href="@_invoiceDto.ApproverReviewAttachment">
@@ -137,8 +140,7 @@
 
             <!-- Right column: PO & SLA summary -->
             <MudItem xs="12" sm="6">
-                <InvStatusComponent _invoiceDto="_invoiceDto"
-                                    _PODto="_PODto"
+                <InvStatusComponent _invoiceDto="_invoiceDto" _PODto="_PODto"
                                     CurrentTab="Approver"
                                     AssignmentDate="@(_invoiceDto?.ApproverReviewAssigedOn?.ToString("dd-MMM-yyyy") ?? string.Empty)"
                                     SLADays="@_invoiceDto?.ApproverReviewSLADays"

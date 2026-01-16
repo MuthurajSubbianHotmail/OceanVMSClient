@@ -1,6 +1,9 @@
 ﻿@using MudBlazor
 @inject IJSRuntime JS
 @inject IDialogService DialogService
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
 @code {
     private DotNetObjectReference<UpdateNotification>? _objRef;
@@ -15,11 +18,59 @@
     [JSInvokable(nameof(OnUpdateAvailable))]
     public async Task OnUpdateAvailable()
     {
+        // Try to read latest version.json from server and boot version from localStorage
+        string? latest = null;
+        string? boot = null;
+
+        try
+        {
+            latest = await ReadVersionAsync();
+        }
+        catch
+        {
+            latest = null;
+        }
+
+        try
+        {
+            boot = await JS.InvokeAsync<string>("localStorage.getItem", "app.bootVersion");
+        }
+        catch
+        {
+            boot = null;
+        }
+
+        static string? NormalizeVersion(string? v)
+        {
+            if (string.IsNullOrWhiteSpace(v)) return null;
+            v = v.Trim();
+            if (v.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+                v = v[1..];
+            return v;
+        }
+
+        var normLatest = NormalizeVersion(latest);
+        var normBoot = NormalizeVersion(boot);
+
+        // If we have no useful version information, or both versions are present and equal, skip prompting.
+        if (string.IsNullOrWhiteSpace(normLatest))
+        {
+            // nothing meaningful fetched from server
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(normBoot) &&
+            string.Equals(normLatest, normBoot, StringComparison.OrdinalIgnoreCase))
+        {
+            // versions match — do not show the dialog
+            return;
+        }
+
         // Show a dialog to the user. Pass versions if you have them (null is acceptable).
         var parameters = new DialogParameters
         {
-            { "BootVersion", null },
-            { "LatestVersion", null }
+            { "BootVersion", boot },
+            { "LatestVersion", latest }
         };
 
         var options = new DialogOptions { CloseButton = false, BackdropClick = true };
@@ -43,6 +94,31 @@
                 await JS.InvokeVoidAsync("reloadPage");
             }
         }
+    }
+
+    private async Task<string?> ReadVersionAsync()
+    {
+        try
+        {
+            var uri = $"{NavigationManager.BaseUri.TrimEnd('/')}/version.json?cb={DateTime.UtcNow.Ticks}";
+            using var response = await Http.GetAsync(uri);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return null;
+
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("appVersion", out var appVer) && appVer.ValueKind == System.Text.Json.JsonValueKind.String)
+                return appVer.GetString();
+            if (doc.RootElement.TryGetProperty("version", out var ver) && ver.ValueKind == System.Text.Json.JsonValueKind.String)
+                return ver.GetString();
+        }
+        catch
+        {
+            // ignore errors
+        }
+        return null;
     }
 
     public void Dispose()

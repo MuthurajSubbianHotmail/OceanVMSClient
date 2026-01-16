@@ -480,7 +480,8 @@ namespace OceanVMSClient.Pages.InviceModule
         // new: validate sign relationship on blur of InvoiceValue
         private Task OnInvoiceValueBlur(FocusEventArgs _)
         {
-            ValidateTaxSignAgainstInvoice();
+            //ValidateTaxSignAgainstInvoice();
+            ValidateNegativeInvoiceAgainstPrevious();
             return Task.CompletedTask;
         }
 
@@ -488,6 +489,7 @@ namespace OceanVMSClient.Pages.InviceModule
         private Task OnInvoiceTaxBlur(FocusEventArgs _)
         {
             ValidateTaxSignAgainstInvoice();
+            ValidateNegativeInvoiceAgainstPrevious();
             return Task.CompletedTask;
         }
 
@@ -501,13 +503,36 @@ namespace OceanVMSClient.Pages.InviceModule
             var invoiceVal = _invoiceForCreationDto.InvoiceValue;
             var taxVal = _invoiceForCreationDto.InvoiceTaxValue;
 
-            if (invoiceVal < 0m && taxVal >= 0m)
+            // Only flag when tax has an opposite sign (zero is allowed)
+            if (invoiceVal < 0m && taxVal > 0m)
             {
                 _messageStore.Add(taxField, "Invoice tax must be negative when invoice value is negative.");
             }
-            else if (invoiceVal >= 0m && taxVal < 0m)
+            else if (invoiceVal > 0m && taxVal < 0m)
             {
                 _messageStore.Add(taxField, "Invoice tax must be positive when invoice value is positive.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+        }
+
+        private void ValidateNegativeInvoiceAgainstPrevious()
+        {
+            if (_messageStore == null || _editContext == null) return;
+
+            var totalField = new FieldIdentifier(_invoiceForCreationDto, nameof(_invoiceForCreationDto.InvoiceTotalValue));
+            _messageStore.Clear(totalField);
+
+            // Use PreviousInvoiceValue from PurchaseOrderDetails per requirement
+            if (PurchaseOrderDetails?.PreviousInvoiceValue.HasValue == true)
+            {
+                var prev = PurchaseOrderDetails.PreviousInvoiceValue.Value;
+                var total = _invoiceForCreationDto.InvoiceTotalValue;
+
+                if (total < 0m && Math.Abs(total) > prev)
+                {
+                    _messageStore.Add(totalField, $"Negative invoice absolute total cannot exceed previous invoice value ({prev:N2}).");
+                }
             }
 
             _editContext.NotifyValidationStateChanged();

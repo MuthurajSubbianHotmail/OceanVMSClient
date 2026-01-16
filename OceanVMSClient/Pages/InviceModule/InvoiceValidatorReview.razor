@@ -39,7 +39,7 @@
                         <MudItem xs="6" sm="4" Class="field-block">
                             <MudSelect Label="Approval"
                                        Typo="Typo.caption"
-                                       Value="_validatorCompleteDto.ValidatorReviewStatus"
+                                       Value="_ValidatorcompleteDto.ValidatorReviewStatus"
                                        ValueChanged="@(EventCallback.Factory.Create<string>(this, OnValidatorReviewStatusChanged))"
                                        Variant="@_variant"
                                        Margin="Margin.Dense"
@@ -56,14 +56,16 @@
                                           Label="Approved Amount"
                                           Placeholder=""
                                           Typo="Typo.caption"
-                                          Value="_validatorCompleteDto.ValidatorApprovedAmount"
+                                          Value="_ValidatorcompleteDto.ValidatorApprovedAmount"
                                           ValueChanged="@(EventCallback.Factory.Create<decimal?>(this, OnValidatorApprovedAmountChanged))"
                                           Variant="@_variant"
                                           Adornment="Adornment.Start"
                                           AdornmentText="₹"
                                           Margin="@_margin"
                                           Class="short-field"
-                                          ReadOnly="!CanEditApprovedAmount()" />
+                                          ReadOnly="!CanEditApprovedAmount()"
+                                          OnBlur="OnValidatorApprovedAmountBlur" />
+                            <ValidationMessage For="@(() => _ValidatorcompleteDto.ValidatorApprovedAmount)" />
                         </MudItem>
 
                         <MudItem xs="12" sm="6" md="4" Class="field-block">
@@ -71,7 +73,7 @@
                                           Label="Withheld Amount"
                                           Placeholder=""
                                           Typo="Typo.caption"
-                                          Value="_validatorCompleteDto.ValidatorWithheldAmount"
+                                          Value="_ValidatorcompleteDto.ValidatorWithheldAmount"
                                           Variant="@_variant"
                                           Adornment="Adornment.Start"
                                           AdornmentText="₹"
@@ -84,40 +86,40 @@
                             <MudTextField Label="Withheld Reason"
                                           Placeholder="Withheld Reason"
                                           Typo="Typo.caption"
-                                          Value="_validatorCompleteDto.ValidatorWithheldReason"
-                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _validatorCompleteDto.ValidatorWithheldReason = v))"
+                                          Value="_ValidatorcompleteDto.ValidatorWithheldReason"
+                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _ValidatorcompleteDto.ValidatorWithheldReason = v))"
                                           Variant="@_variant"
                                           Adornment="Adornment.End"
                                           AdornmentIcon="Icons.Material.Filled.Info"
                                           Margin="@_margin"
                                           ReadOnly="!CanEditApprovedAmount()"
                                           OnBlur="OnValidatorWithheldReasonBlur" />
-                                          <ValidationMessage For="@(() => _validatorCompleteDto.ValidatorWithheldReason)" />
+                            <ValidationMessage For="@(() => _ValidatorcompleteDto.ValidatorWithheldReason)" />
                         </MudItem>
 
                         <MudItem xs="12" Class="field-block">
                             <MudTextField Label="Remarks"
                                           Placeholder="Remarks if any"
                                           Typo="Typo.caption"
-                                          Value="_validatorCompleteDto.ValidatorReviewComment"
-                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _validatorCompleteDto.ValidatorReviewComment = v))"
+                                          Value="_ValidatorcompleteDto.ValidatorReviewComment"
+                                          ValueChanged="@(EventCallback.Factory.Create<string>(this, v => _ValidatorcompleteDto.ValidatorReviewComment = v))"
                                           Variant="@_variant"
                                           Margin="@_margin"
                                           Adornment="Adornment.End"
                                           AdornmentIcon="Icons.Material.Filled.Info"
                                           Lines="2"
-                                          ReadOnly="!CanEditApprovedAmount()" />
+                                          ReadOnly="!CanEditApprovedAmount()"
+                                          OnBlur="OnRemarksBlur" />
                         </MudItem>
 
                         
-                        <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
+                        <MudItem xs="6" sm="6" Class="d-flex justify-start align-content-center">
                             <InvFileUploader DocType="ValidatorAttachment"
                                              OnChange="OnSupportingFileUploaded"
                                              Disabled="@(!CanEditApprovedAmount())"
                                              Label="Supporting Document" />
 
                         </MudItem>
-                        <MudItem xs="6" sm="6" Class="field-block" />
 
                         <MudItem xs="6" sm="6" Class="d-flex justify-end align-content-center">
                             <MudLink Href="@_invoiceDto.ValidatorReviewAttachment">

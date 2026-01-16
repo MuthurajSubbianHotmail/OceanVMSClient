@@ -75,9 +75,6 @@
                                                          ValueExpression="() => _invoiceForCreationDto.InvoiceValue"
                                                          OnBlur="@( (Microsoft.AspNetCore.Components.Web.FocusEventArgs e) => OnInvoiceValueBlur(e) )"
                                                          Margin="Margin.Dense" />
-                                        @* 
-Value="_invoiceForCreationDto.InvoiceValue"
-                                        *@
                                         <ValidationMessage For="@(() => _invoiceForCreationDto.InvoiceValue)" />
                                     </MudItem>
 
@@ -95,7 +92,6 @@ Value="_invoiceForCreationDto.InvoiceValue"
                                                          OnBlur="@( (Microsoft.AspNetCore.Components.Web.FocusEventArgs e) => OnInvoiceTaxBlur(e) )"
                                                          Margin="Margin.Dense" />
                                         <ValidationMessage For="@(() => _invoiceForCreationDto.InvoiceTaxValue)" />
-                                        @* Value="_invoiceForCreationDto.InvoiceTaxValue" *@
                                     </MudItem>
 
                                     <MudItem xs="12">

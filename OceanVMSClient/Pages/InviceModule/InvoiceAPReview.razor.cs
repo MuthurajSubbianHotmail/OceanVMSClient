@@ -5,6 +5,9 @@ using MudBlazor;
 using OceanVMSClient.HttpRepoInterface.InvoiceModule;
 using Shared.DTO.POModule;
 using OceanVMSClient.Helpers;
+using System;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace OceanVMSClient.Pages.InviceModule
 {
@@ -44,6 +47,7 @@ namespace OceanVMSClient.Pages.InviceModule
 
         // small state
         private bool _apApproverSaved = false;
+        private bool _isSubmitting = false;
 
         // store originals so we can show "only changed" values
         private decimal? _originalAPApprovedAmount;
@@ -92,8 +96,13 @@ namespace OceanVMSClient.Pages.InviceModule
             // subscribe editContext events once
             if (_editContext != null && !_editContextSubscribed)
             {
-                // validate on form submit
-                _editContext.OnValidationRequested += (sender, args) => ValidateWithheldReason();
+                // validate on form submit: with AP we validate withheld reason, rejected remarks and approved amount
+                _editContext.OnValidationRequested += (sender, args) =>
+                {
+                    ValidateWithheldReason();
+                    ValidateRejectedRemarks();
+                    ValidateApprovedAmount();
+                };
 
                 // DO NOT validate on every field change — only on blur or submit per request
                 _editContextSubscribed = true;
@@ -226,6 +235,33 @@ namespace OceanVMSClient.Pages.InviceModule
             StateHasChanged();
         }
 
+        private void OnAPWithheldReasonBlur(FocusEventArgs e)
+        {
+            ValidateWithheldReason();
+        }
+
+        /// <summary>
+        /// Validate that APWithheldReason is present when APWithheldAmount != 0.
+        /// Uses ValidationMessageStore so messages appear in ValidationSummary and next to fields.
+        /// Only adds messages; clearing is done by callers when immediate hide is desired.
+        /// </summary>
+        private void ValidateWithheldReason()
+        {
+            if (_editContext == null || _messageStore == null || _apApproverCompleteDto == null)
+                return;
+
+            var reasonField = new FieldIdentifier(_apApproverCompleteDto, nameof(_apApproverCompleteDto.APWithheldReason));
+            _messageStore.Clear(reasonField);
+
+            var withheld = _apApproverCompleteDto.APWithheldAmount.GetValueOrDefault(0m);
+            if (withheld != 0m && string.IsNullOrWhiteSpace(_apApproverCompleteDto.APWithheldReason))
+            {
+                _messageStore.Add(reasonField, "Withheld reason is required when Withheld Amount is not zero.");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+        }
+
         /// <summary>
         /// Called when user changes the APReviewStatus dropdown -- updates amounts immediately per rules.
         /// Mirrors InvoiceApproverReview behavior and clears withheld reason messages while changing status.
@@ -275,28 +311,122 @@ namespace OceanVMSClient.Pages.InviceModule
             StateHasChanged();
         }
 
-        private void OnAPWithheldReasonBlur(FocusEventArgs e)
+        private void OnAPApprovedAmountBlur(FocusEventArgs e)
         {
-            ValidateWithheldReason();
+            // yield to allow Mud field handlers to complete updates
+            _ = Task.Run(async () =>
+            {
+                await Task.Yield();
+                ValidateApprovedAmount();
+            });
         }
 
         /// <summary>
-        /// Validate that APWithheldReason is present when APWithheldAmount != 0.
-        /// Uses ValidationMessageStore so messages appear in ValidationSummary and next to fields.
-        /// Only adds messages; clearing is done by callers when immediate hide is desired.
+        /// Validate Approved and Withheld amounts according to rules (sign-aware, previous-review constraints, equality invariant).
+        /// Adds messages to ValidationMessageStore so they appear in ValidationSummary and next to fields.
         /// </summary>
-        private void ValidateWithheldReason()
+        private void ValidateApprovedAmount()
+        {
+            if (_editContext == null || _messageStore == null || _apApproverCompleteDto == null || _invoiceDto == null)
+                return;
+
+            var approvedField = new FieldIdentifier(_apApproverCompleteDto, nameof(_apApproverCompleteDto.APApprovedAmount));
+            var withheldField = new FieldIdentifier(_apApproverCompleteDto, nameof(_apApproverCompleteDto.APWithheldAmount));
+
+            // Clear previous messages for these fields
+            _messageStore.Clear(approvedField);
+            _messageStore.Clear(withheldField);
+
+            var status = _apApproverCompleteDto.APReviewStatus?.Trim();
+            if (string.IsNullOrWhiteSpace(status))
+                status = _invoiceDto.APReviewStatus?.Trim();
+
+            // If rejected, skip numeric invariants
+            if (!string.IsNullOrWhiteSpace(status) && status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                _messageStore.Clear();
+                _editContext.NotifyValidationStateChanged();
+                return;
+            }
+
+            decimal total = _invoiceDto.InvoiceTotalValue;
+            decimal approved = _apApproverCompleteDto.APApprovedAmount.GetValueOrDefault(0m);
+            decimal withheld = _apApproverCompleteDto.APWithheldAmount.GetValueOrDefault(0m);
+
+            // Sign consistency checks
+            if (total > 0m)
+            {
+                if (approved < 0m)
+                    _messageStore.Add(approvedField, "Approved Amount cannot be negative when Invoice Total is positive.");
+                if (withheld < 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount cannot be negative when Invoice Total is positive.");
+            }
+            else if (total < 0m)
+            {
+                if (approved > 0m)
+                    _messageStore.Add(approvedField, "Approved Amount cannot be positive when Invoice Total is negative (debit note).");
+                if (withheld > 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount cannot be positive when Invoice Total is negative (debit note).");
+            }
+            else
+            {
+                if (approved != 0m)
+                    _messageStore.Add(approvedField, "Approved Amount must be zero when Invoice Total is zero.");
+                if (withheld != 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount must be zero when Invoice Total is zero.");
+            }
+
+            // If there are no previous review amounts require strict equality (within 2-decimal tolerance)
+            if (!_previousReviewInfo.PrevApprovedAmount.HasValue && !_previousReviewInfo.PrevWithheldAmount.HasValue)
+            {
+                if (Math.Round(approved + withheld - total, 2) != 0m)
+                    _messageStore.Add(approvedField, "Approved Amount + Withheld Amount must equal Invoice Total.");
+
+                if (total > 0m && approved > total)
+                    _messageStore.Add(approvedField, $"Approved Amount cannot exceed Invoice Total ({FormatCurrency(total)}).");
+                if (total < 0m && approved < total)
+                    _messageStore.Add(approvedField, $"Approved Amount cannot be less than Invoice Total ({FormatCurrency(total)}).");
+            }
+
+            // Previous-approved constraints (sign-aware)
+            if (_previousReviewInfo.PrevApprovedAmount.HasValue)
+            {
+                var prev = _previousReviewInfo.PrevApprovedAmount.Value;
+                if (prev > 0m && approved > prev)
+                    _messageStore.Add(approvedField, $"Approved Amount cannot exceed previous approved amount ({FormatCurrency(prev)}).");
+                if (prev < 0m && approved < prev)
+                    _messageStore.Add(approvedField, $"Approved Amount cannot be less than previous approved amount ({FormatCurrency(prev)}).");
+            }
+
+            _editContext.NotifyValidationStateChanged();
+        }
+
+        
+
+        private void OnRemarksBlur(FocusEventArgs e)
+        {
+            ValidateRejectedRemarks();
+        }
+
+        /// <summary>
+        /// Ensure Remarks (APReviewComments) is required when status == "Rejected".
+        /// Adds/clears messages using the ValidationMessageStore so messages appear in ValidationSummary
+        /// and next to the Remarks field.
+        /// </summary>
+        private void ValidateRejectedRemarks()
         {
             if (_editContext == null || _messageStore == null || _apApproverCompleteDto == null)
                 return;
 
-            var reasonField = new FieldIdentifier(_apApproverCompleteDto, nameof(_apApproverCompleteDto.APWithheldReason));
-            _messageStore.Clear(reasonField);
+            var commentField = new FieldIdentifier(_apApproverCompleteDto, nameof(_apApproverCompleteDto.APReviewComments));
+            _messageStore.Clear(commentField);
 
-            var withheld = _apApproverCompleteDto.APWithheldAmount.GetValueOrDefault(0m);
-            if (withheld != 0m && string.IsNullOrWhiteSpace(_apApproverCompleteDto.APWithheldReason))
+            var status = _apApproverCompleteDto.APReviewStatus?.Trim();
+            if (!string.IsNullOrWhiteSpace(status)
+                && status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(_apApproverCompleteDto.APReviewComments))
             {
-                _messageStore.Add(reasonField, "Withheld reason is required when Withheld Amount is not zero.");
+                _messageStore.Add(commentField, "Remarks are required when status is Rejected.");
             }
 
             _editContext.NotifyValidationStateChanged();
@@ -377,6 +507,20 @@ namespace OceanVMSClient.Pages.InviceModule
         #region Actions
         private async Task SaveDecision()
         {
+            // Prevent double submit / show appropriate message
+            if (_isSubmitting)
+            {
+                Snackbar.Add("Review submission is already in progress. Please wait...", Severity.Info);
+                return;
+            }
+
+            if (_apApproverSaved)
+            {
+                Snackbar.Add("Review has already been submitted.", Severity.Info);
+                return;
+            }
+
+            _isSubmitting = true;
             try
             {
                 if (_invoiceDto == null)
@@ -439,6 +583,18 @@ namespace OceanVMSClient.Pages.InviceModule
                     _apApproverCompleteDto.APWithheldAmount = 0m;
                 }
 
+                // Run final client-side validations
+                ValidateApprovedAmount();
+                ValidateWithheldReason();
+                ValidateRejectedRemarks();
+
+                // If there are validation messages, do not persist
+                if (_editContext != null && _editContext.GetValidationMessages().Any())
+                {
+                    Snackbar.Add("Please correct validation errors before submitting.", Severity.Warning);
+                    return;
+                }
+
                 // If withheld amount is non-zero, withheld reason must be provided
                 if (_apApproverCompleteDto.APWithheldAmount.GetValueOrDefault(0m) != 0m
                     && string.IsNullOrWhiteSpace(_apApproverCompleteDto.APWithheldReason))
@@ -494,6 +650,11 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 Logger.LogError(ex, "Error saving AP Approver review for Invoice ID {InvoiceId}", _invoiceDto?.Id);
                 Snackbar.Add("An error occurred while saving the AP Approver review.", Severity.Error);
+            }
+            finally
+            {
+                // allow retry only when save failed; when success _apApproverSaved should be true and button disabled
+                _isSubmitting = false;
             }
         }
 

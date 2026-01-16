@@ -8,6 +8,8 @@ using System;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 
 namespace OceanVMSClient.Pages.InviceModule
 {
@@ -45,6 +47,12 @@ namespace OceanVMSClient.Pages.InviceModule
         private ValidationMessageStore? _messageStore;
         private bool _editContextSubscribed = false;
 
+        // Added flag to track user edits so status/default logic won't overwrite user's approved amount.
+        private bool _initiatorApprovedEdited = false;
+
+        // Added flag to prevent double submit
+        private bool _isSubmitting = false;
+
         #region Display helpers (computed properties)
         // Use explicit India currency culture for INR symbol
         private static readonly CultureInfo _inCulture = new CultureInfo("en-IN");
@@ -67,11 +75,11 @@ namespace OceanVMSClient.Pages.InviceModule
         {
             base.OnParametersSet();
 
+            // load previous review info first so status rule can use it instead of overwriting user edits
+            _previousReviewInfo = InvoiceReviewHelpers.GetPreviousReviewInfo(_invoiceDto, "initiator");
+
             // Map server invoice values into working DTO when component opens
             MapFromInvoiceDto();
-
-            // load previous review info early so status rule can use it instead of overwriting user edits
-            _previousReviewInfo = InvoiceReviewHelpers.GetPreviousReviewInfo(_invoiceDto, "initiator");
 
             // ensure EditContext tracks current working DTO so DataAnnotationsValidator works
             if (_editContext == null || _editContext.Model != _InitiatorCompleteDto)
@@ -89,6 +97,7 @@ namespace OceanVMSClient.Pages.InviceModule
                 {
                     ValidateWithheldReason();
                     ValidateRejectedRemarks();
+                    ValidateApprovedAmount(); // ensure amounts validated at submit like checker does
                 };
 
                 // DO NOT validate on every field change — only on blur or submit per request
@@ -163,7 +172,7 @@ namespace OceanVMSClient.Pages.InviceModule
         /// <summary>
         /// Apply business rule whenever approval status changes:
         ///  - Pending  => approved = 0, withheld = 0
-        ///  - Approved => approved = invoice total, withheld = 0
+        ///  - Approved => approved = invoice total, withheld = invoice total - approved (prefer previous values if available)
         ///  - Rejected => approved = 0, withheld = 0
         /// Only clears old validation messages; message display is performed only on blur or submit.
         /// </summary>
@@ -182,22 +191,32 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 _InitiatorCompleteDto.InitiatorApprovedAmount = 0m;
                 _InitiatorCompleteDto.InitiatorWithheldAmount = 0m;
+                _initiatorApprovedEdited = false; // reset user-edit flag on status change
             }
             else if (s.Equals("Approved", StringComparison.OrdinalIgnoreCase))
             {
-                // Do not overwrite user-entered values. Apply defaults only when the working DTO fields are not set.
-                // Prefer previous review values when available (keeps consistency with other review components).
-                if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
+                // Do not overwrite user-entered approved amount once the user has edited it.
+                if (!_initiatorApprovedEdited)
                 {
-                    if (!_InitiatorCompleteDto.InitiatorApprovedAmount.HasValue)
-                        _InitiatorCompleteDto.InitiatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
-                    if (!_InitiatorCompleteDto.InitiatorWithheldAmount.HasValue)
-                        _InitiatorCompleteDto.InitiatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                    // Prefer previous review values when available (keeps consistency with other review components).
+                    if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
+                    {
+                        if (!_InitiatorCompleteDto.InitiatorApprovedAmount.HasValue)
+                            _InitiatorCompleteDto.InitiatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                        if (!_InitiatorCompleteDto.InitiatorWithheldAmount.HasValue)
+                            _InitiatorCompleteDto.InitiatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                    }
+                    else
+                    {
+                        if (!_InitiatorCompleteDto.InitiatorApprovedAmount.HasValue)
+                            _InitiatorCompleteDto.InitiatorApprovedAmount = total;
+                        if (!_InitiatorCompleteDto.InitiatorWithheldAmount.HasValue)
+                            _InitiatorCompleteDto.InitiatorWithheldAmount = total - _InitiatorCompleteDto.InitiatorApprovedAmount.GetValueOrDefault(0m);
+                    }
                 }
                 else
                 {
-                    if (!_InitiatorCompleteDto.InitiatorApprovedAmount.HasValue)
-                        _InitiatorCompleteDto.InitiatorApprovedAmount = total;
+                    // user edited approved amount — ensure withheld is in sync (do not overwrite approved)
                     if (!_InitiatorCompleteDto.InitiatorWithheldAmount.HasValue)
                         _InitiatorCompleteDto.InitiatorWithheldAmount = total - _InitiatorCompleteDto.InitiatorApprovedAmount.GetValueOrDefault(0m);
                 }
@@ -206,21 +225,19 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 _InitiatorCompleteDto.InitiatorApprovedAmount = 0m;
                 _InitiatorCompleteDto.InitiatorWithheldAmount = 0m;
+                _initiatorApprovedEdited = false; // reset flag when rejecting
             }
 
             // Clear validation messages that should no longer apply:
             if (_messageStore != null && _InitiatorCompleteDto != null)
             {
-                // Always clear withheld-reason messages here (we only show them when withheld != 0).
                 var reasonField = new FieldIdentifier(_InitiatorCompleteDto, nameof(_InitiatorCompleteDto.InitiatorWithheldReason));
                 _messageStore.Clear(reasonField);
 
-                // Remarks are required only for Rejected — clear remark message when status is not Rejected.
                 var commentField = new FieldIdentifier(_InitiatorCompleteDto, nameof(_InitiatorCompleteDto.InitiatorReviewComment));
                 if (!s.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
                     _messageStore.Clear(commentField);
 
-                // If status is Approved we can also clear amount-related messages (they are no longer applicable).
                 if (s.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                 {
                     var approvedField = new FieldIdentifier(_InitiatorCompleteDto, nameof(_InitiatorCompleteDto.InitiatorApprovedAmount));
@@ -234,24 +251,73 @@ namespace OceanVMSClient.Pages.InviceModule
         }
 
         /// <summary>
-        /// UI event handler to be wired to the approval status input (select/radio).
+        /// Handler wired to the Approval select so UI updates amounts immediately when status changes.
+        /// Mirrors InvoiceCheckerReview behavior and clears withheld reason messages while changing status.
         /// </summary>
-        private void OnInitiatorReviewStatusChanged(string? status)
+        private void OnInitiatorReviewStatusChanged(string? newStatus)
         {
             if (_InitiatorCompleteDto == null)
                 return;
 
-            _InitiatorCompleteDto.InitiatorReviewStatus = status ?? string.Empty;
-            ApplyInitiatorStatusRule(status);
+            // reset user-edit flag whenever user changes status (the status change should re-evaluate defaults)
+            _initiatorApprovedEdited = false;
 
-            // notify UI
+            _InitiatorCompleteDto.InitiatorReviewStatus = newStatus?.Trim();
+
+            // Apply business rules for amounts when status changes
+            if (string.Equals(_InitiatorCompleteDto.InitiatorReviewStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                _InitiatorCompleteDto.InitiatorApprovedAmount = 0m;
+                _InitiatorCompleteDto.InitiatorWithheldAmount = 0m;
+            }
+            else if (string.Equals(_InitiatorCompleteDto.InitiatorReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                // Prefer previous review amounts when available, otherwise use invoice total
+                if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
+                {
+                    _InitiatorCompleteDto.InitiatorApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
+                    _InitiatorCompleteDto.InitiatorWithheldAmount = _previousReviewInfo.PrevWithheldAmount;
+                }
+                else if (_invoiceDto != null)
+                {
+                    _InitiatorCompleteDto.InitiatorApprovedAmount = _invoiceDto.InvoiceTotalValue;
+                    _InitiatorCompleteDto.InitiatorWithheldAmount = 0m;
+                }
+            }
+            else
+            {
+                // Pending or other -> reset to 0
+                _InitiatorCompleteDto.InitiatorApprovedAmount = 0m;
+                _InitiatorCompleteDto.InitiatorWithheldAmount = 0m;
+            }
+
+            // Clear withheld-reason validation while changing status
+            if (_messageStore != null)
+            {
+                var reasonField = new FieldIdentifier(_InitiatorCompleteDto, nameof(_InitiatorCompleteDto.InitiatorWithheldReason));
+                _messageStore.Clear(reasonField);
+
+                var commentField = new FieldIdentifier(_InitiatorCompleteDto, nameof(_InitiatorCompleteDto.InitiatorReviewComment));
+                if (!string.Equals(_InitiatorCompleteDto.InitiatorReviewStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    _messageStore.Clear(commentField);
+
+                if (string.Equals(_InitiatorCompleteDto.InitiatorReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+                {
+                    var approvedField = new FieldIdentifier(_InitiatorCompleteDto, nameof(_InitiatorCompleteDto.InitiatorApprovedAmount));
+                    var withheldField = new FieldIdentifier(_InitiatorCompleteDto, nameof(_InitiatorCompleteDto.InitiatorWithheldAmount));
+                    _messageStore.Clear(approvedField);
+                    _messageStore.Clear(withheldField);
+                }
+
+                _editContext?.NotifyValidationStateChanged();
+            }
+
+            // Ensure the "Rejected => Remarks required" rule is enforced immediately (shows message in ValidationSummary)
+            ValidateRejectedRemarks();
+
             StateHasChanged();
         }
 
-        /// <summary>
-        /// Called when the Withheld Reason field loses focus — this is one of two moments
-        /// we want to show the validation message (the other is on form submit).
-        /// </summary>
         private void OnWithheldReasonBlur(FocusEventArgs e)
         {
             ValidateWithheldReason();
@@ -267,6 +333,7 @@ namespace OceanVMSClient.Pages.InviceModule
             await Task.Yield();
             ValidateApprovedAmount();
         }
+
         /// <summary>
         /// Validate that WithheldReason is present when WithheldAmount != 0.
         /// Uses ValidationMessageStore so messages appear in ValidationSummary and next to fields.
@@ -334,6 +401,14 @@ namespace OceanVMSClient.Pages.InviceModule
             _messageStore.Clear(approvedField);
             _messageStore.Clear(withheldField);
 
+            // If the current status is Rejected, amounts are intentionally zero — skip amount invariant checks.
+            var status = _InitiatorCompleteDto.InitiatorReviewStatus?.Trim();
+            if (!string.IsNullOrWhiteSpace(status) && status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                _editContext.NotifyValidationStateChanged();
+                return;
+            }
+
             decimal total = _invoiceDto.InvoiceTotalValue;
             decimal approved = _InitiatorCompleteDto.InitiatorApprovedAmount.GetValueOrDefault(0m);
             decimal withheld = _InitiatorCompleteDto.InitiatorWithheldAmount.GetValueOrDefault(0m);
@@ -398,6 +473,9 @@ namespace OceanVMSClient.Pages.InviceModule
 
             // Use the incoming value if present, otherwise keep the current DTO value (prevents transient resets)
             decimal requestedApproved = newValue ?? _InitiatorCompleteDto.InitiatorApprovedAmount.GetValueOrDefault();
+
+            // Mark that user edited the approved amount so status/default logic won't overwrite it.
+            _initiatorApprovedEdited = true;
 
             // IMPORTANT: Do NOT auto-adjust the user's entered approved amount.
             // We only calculate withheld as total - approved so UI shows the implied withheld,
@@ -481,6 +559,20 @@ namespace OceanVMSClient.Pages.InviceModule
         #region Actions
         private async Task SaveDecision()
         {
+            // Prevent double submit / show appropriate message
+            if (_isSubmitting)
+            {
+                Snackbar.Add("Review submission is already in progress. Please wait...", Severity.Info);
+                return;
+            }
+
+            if (_initiatorSaved)
+            {
+                Snackbar.Add("Review has already been submitted.", Severity.Info);
+                return;
+            }
+
+            _isSubmitting = true;
             try
             {
                 if (_invoiceDto == null)
@@ -503,6 +595,7 @@ namespace OceanVMSClient.Pages.InviceModule
                 // run approved/withheld validations (Rule6 wants blur, but also final validation on submit)
                 ValidateApprovedAmount();
                 ValidateWithheldReason();
+                ValidateRejectedRemarks();
 
                 if (_editContext != null && _editContext.GetValidationMessages().Any())
                 {
@@ -512,9 +605,45 @@ namespace OceanVMSClient.Pages.InviceModule
 
                 if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                 {
-                    // When approved, set approved amount to invoice total and withheld to zero
-                    //_InitiatorCompleteDto.InitiatorApprovedAmount = total;
-                    //_InitiatorCompleteDto.InitiatorWithheldAmount = 0m;
+                    // Approved amount is required when Approved
+                    if (!_InitiatorCompleteDto.InitiatorApprovedAmount.HasValue)
+                    {
+                        Snackbar.Add("Approved amount is required when status is Approved.", Severity.Warning);
+                        return;
+                    }
+
+                    var approvedValue = _InitiatorCompleteDto.InitiatorApprovedAmount.GetValueOrDefault(0m);
+
+                    // Enforce sign-aware bounds against invoice (do not auto-correct; treat as validation)
+                    if (total < 0m && approvedValue < total)
+                    {
+                        Snackbar.Add("Approved amount cannot be less than invoice total.", Severity.Warning);
+                        return;
+                    }
+                    if (total > 0m && approvedValue > total)
+                    {
+                        Snackbar.Add("Approved amount cannot exceed invoice total.", Severity.Warning);
+                        return;
+                    }
+
+                    // Validate against previous approved amount (if present) - sign-aware
+                    if (_previousReviewInfo.PrevApprovedAmount.HasValue)
+                    {
+                        var prev = _previousReviewInfo.PrevApprovedAmount.Value;
+                        if (prev > 0m && approvedValue > prev)
+                        {
+                            Snackbar.Add($"Approved amount cannot exceed previous approved amount ({FormatCurrency(prev)}).", Severity.Warning);
+                            return;
+                        }
+                        if (prev < 0m && approvedValue < prev)
+                        {
+                            Snackbar.Add($"Approved amount cannot be less than previous approved amount ({FormatCurrency(prev)}).", Severity.Warning);
+                            return;
+                        }
+                    }
+
+                    // Recalculate withheld to ensure persisted object is consistent with the invariant
+                    _InitiatorCompleteDto.InitiatorWithheldAmount = total - approvedValue;
                 }
                 else // Rejected
                 {
@@ -535,8 +664,17 @@ namespace OceanVMSClient.Pages.InviceModule
                     && string.IsNullOrWhiteSpace(_InitiatorCompleteDto.InitiatorWithheldReason))
                 {
                     Snackbar.Add("Withheld reason is required when Withheld Amount is not zero.", Severity.Warning);
-                    // ensure validation message is shown in form (OnValidationRequested already wired for submit)
+                    // ensure validation message is shown in form
                     ValidateWithheldReason();
+                    return;
+                }
+
+                // Final canonical invariant check (strict equality within 2 decimals)
+                var approvedFinal = _InitiatorCompleteDto.InitiatorApprovedAmount.GetValueOrDefault(0m);
+                var withheldFinal = _InitiatorCompleteDto.InitiatorWithheldAmount.GetValueOrDefault(0m);
+                if (Math.Round(approvedFinal + withheldFinal - total, 2) != 0m)
+                {
+                    Snackbar.Add("Approved Amount + Withheld Amount must equal Invoice Total.", Severity.Warning);
                     return;
                 }
 
@@ -574,6 +712,11 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 Logger.LogError(ex, "Error saving Initiator review for Invoice ID {InvoiceId}", _invoiceDto?.Id);
                 Snackbar.Add("An error occurred while saving the Initiator review.", Severity.Error);
+            }
+            finally
+            {
+                // allow retry only when save failed; when success _initiatorSaved is true and button will be disabled
+                _isSubmitting = false;
             }
         }
 

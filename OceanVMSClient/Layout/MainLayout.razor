@@ -134,6 +134,16 @@
                 else if (doc.RootElement.TryGetProperty("version", out var ver) && ver.ValueKind == System.Text.Json.JsonValueKind.String)
                     _appVersion = ver.GetString();
             }
+
+            // store boot-time version so other components (UpdateNotification) can show it
+            try
+            {
+                await JS.InvokeVoidAsync("localStorage.setItem", "app.bootVersion", _appVersion ?? "");
+            }
+            catch
+            {
+                // ignore JS/localStorage errors
+            }
         }
         catch
         {

@@ -1757,9 +1757,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             if (!string.IsNullOrWhiteSpace(_vendorReg.PFNo))
             {
-                var pfPattern = @"^[A-Z]{2}/[A-Z]{3}/\d{7}/\d{3}$";
+                var pfPattern = @"^[A-Z]{5}[0-9]{10}$";
                 if (!Regex.IsMatch(_vendorReg.PFNo, pfPattern))
-                    _messageStore?.Add(fieldId, "PF format should be XX/YYY/1234567/123.");
+                    _messageStore?.Add(fieldId, "PF format example PYBOM0046564000");
             }
             else
             {
@@ -2011,7 +2011,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 validationResults.Add(new ValidationResult("PF Registration Certificate document is required for the selected ownership.", new[] { nameof(_vendorReg.PFRegCertURL) }));
             if (!string.IsNullOrWhiteSpace(_vendorReg.PFNo))
             {
-                var pfPattern = @"^[A-Z]{2}[A-Z]{3}[0-9]{7}[0-9]{3}[0-9]{7}$";
+                var pfPattern = @"^[A-Z]{5}[0-9]{10}$";
                 if (!Regex.IsMatch(_vendorReg.PFNo.Trim().ToUpperInvariant(), pfPattern))
                     validationResults.Add(new ValidationResult("PF format is invalid.", new[] { nameof(_vendorReg.PFNo) }));
             }
@@ -2027,7 +2027,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     validationResults.Add(new ValidationResult("ESI format is invalid. Expected NN-NN-NNNNNN-NNN-NNNN (e.g. 12-34-123456-789-0123).", new[] { nameof(_vendorReg.ESIRegNo) }));
             }
 
-           
+
             if (!string.IsNullOrWhiteSpace(_vendorReg.IFSCCode))
             {
                 var ifscPattern = @"^[A-Z]{4}0[A-Z0-9]{6}$";
@@ -2276,7 +2276,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 _isReadOnly = string.Equals(approverStatus, "Approved", StringComparison.OrdinalIgnoreCase);
                 _isApproverLocked = true;
                 _isReviewLocked = true;
-               
+
             }
 
             StateHasChanged();

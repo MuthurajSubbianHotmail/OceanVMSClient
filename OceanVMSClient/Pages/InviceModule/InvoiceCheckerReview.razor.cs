@@ -47,6 +47,8 @@ namespace OceanVMSClient.Pages.InviceModule
 
         // small state
         private bool _checkerSaved = false;
+        private bool _isSubmitting = false;
+        private bool _checkerApprovedEdited = false;
 
         // EditContext used for client-side DataAnnotations validation
         private EditContext? _editContext;
@@ -128,10 +130,10 @@ namespace OceanVMSClient.Pages.InviceModule
             if (_invoiceDto == null || _CheckercompleteDto == null)
                 return;
 
-            // populate only when the working DTO is empty (to avoid overwriting user edits)
-            if (_CheckercompleteDto.InvoiceId == Guid.Empty || _CheckercompleteDto.InvoiceId != _invoiceDto.Id)
+            // Use a local variable to track the mapped invoice id, since InvCheckerReviewCompleteDto does not have InvoiceId
+            // Only map if the CheckerID does not match or CheckerID is empty (as a proxy for "new" mapping)
+            if (_CheckercompleteDto.CheckerID == Guid.Empty || _CheckercompleteDto.CheckerID != (_invoiceDto.CheckerID ?? Guid.Empty))
             {
-                _CheckercompleteDto.InvoiceId = _invoiceDto.Id;
                 _CheckercompleteDto.CheckerID = _invoiceDto.CheckerID ?? Guid.Empty;
                 _CheckercompleteDto.CheckerWithheldReason = _invoiceDto.CheckerWithheldReason;
                 _CheckercompleteDto.CheckerReviewComment = _invoiceDto.CheckerReviewComment;
@@ -150,9 +152,11 @@ namespace OceanVMSClient.Pages.InviceModule
             if (_CheckercompleteDto == null)
                 return;
 
+            // reset user-edit flag when status changes
+            _checkerApprovedEdited = false;
+
             _CheckercompleteDto.CheckerReviewStatus = newStatus?.Trim();
 
-            // Apply business rules for amounts when status changes
             if (string.Equals(_CheckercompleteDto.CheckerReviewStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
             {
                 _CheckercompleteDto.CheckerApprovedAmount = 0m;
@@ -160,7 +164,6 @@ namespace OceanVMSClient.Pages.InviceModule
             }
             else if (string.Equals(_CheckercompleteDto.CheckerReviewStatus, "Approved", StringComparison.OrdinalIgnoreCase))
             {
-                // Prefer previous review amounts when available, otherwise use invoice total
                 if (_previousReviewInfo.PrevApprovedAmount.HasValue && _previousReviewInfo.PrevWithheldAmount.HasValue)
                 {
                     _CheckercompleteDto.CheckerApprovedAmount = _previousReviewInfo.PrevApprovedAmount;
@@ -174,13 +177,12 @@ namespace OceanVMSClient.Pages.InviceModule
             }
             else
             {
-                // Pending or other -> reset to 0
                 _CheckercompleteDto.CheckerApprovedAmount = 0m;
                 _CheckercompleteDto.CheckerWithheldAmount = 0m;
             }
 
-            // Clear/adjust validation messages consistently with status changes
-            if (_messageStore != null && _CheckercompleteDto != null)
+            // clear related validation messages
+            if (_messageStore != null)
             {
                 var reasonField = new FieldIdentifier(_CheckercompleteDto, nameof(_CheckercompleteDto.CheckerWithheldReason));
                 _messageStore.Clear(reasonField);
@@ -199,6 +201,9 @@ namespace OceanVMSClient.Pages.InviceModule
 
                 _editContext?.NotifyValidationStateChanged();
             }
+
+            // enforce "Rejected => Remarks required" immediately
+            ValidateRejectedRemarks();
 
             StateHasChanged();
         }
@@ -334,7 +339,6 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private void OnCheckerApprovedAmountChanged(decimal? newValue)
         {
-            // Prevent programmatic/user changes when not allowed
             if (!CanEditApprovedAmount())
                 return;
 
@@ -342,23 +346,28 @@ namespace OceanVMSClient.Pages.InviceModule
                 return;
 
             decimal total = _invoiceDto.InvoiceTotalValue;
+            decimal requestedApproved = newValue ?? _CheckercompleteDto.CheckerApprovedAmount.GetValueOrDefault();
 
-            // Use the incoming value if present, otherwise keep the current DTO value (prevents transient resets)
-            decimal approved = newValue ?? _CheckercompleteDto.CheckerApprovedAmount.GetValueOrDefault();
+            // mark user edit so status/default logic won't overwrite
+            _checkerApprovedEdited = true;
 
-            // Compute withheld as total - approved (works correctly for negative totals and/or negative approved).
-            _CheckercompleteDto.CheckerApprovedAmount = approved;
-            _CheckercompleteDto.CheckerWithheldAmount = total - approved;
+            _CheckercompleteDto.CheckerApprovedAmount = requestedApproved;
+            _CheckercompleteDto.CheckerWithheldAmount = total - requestedApproved;
 
-            // Clear withheld-reason validation while user is changing amounts (message will show only on blur or submit)
+            // clear related validation messages similar to Initiator behavior
             if (_messageStore != null)
             {
                 var reasonField = new FieldIdentifier(_CheckercompleteDto, nameof(_CheckercompleteDto.CheckerWithheldReason));
                 _messageStore.Clear(reasonField);
 
-                // also clear any approved-field validation produced on previous blur
                 var approvedField = new FieldIdentifier(_CheckercompleteDto, nameof(_CheckercompleteDto.CheckerApprovedAmount));
-                _messageStore.Clear(approvedField);
+                var withheldField = new FieldIdentifier(_CheckercompleteDto, nameof(_CheckercompleteDto.CheckerWithheldAmount));
+
+                if (_CheckercompleteDto.CheckerWithheldAmount.GetValueOrDefault(0m) == 0m)
+                {
+                    _messageStore.Clear(approvedField);
+                    _messageStore.Clear(withheldField);
+                }
 
                 _editContext?.NotifyValidationStateChanged();
             }
@@ -388,56 +397,71 @@ namespace OceanVMSClient.Pages.InviceModule
             var approvedField = new FieldIdentifier(_CheckercompleteDto, nameof(_CheckercompleteDto.CheckerApprovedAmount));
             var withheldField = new FieldIdentifier(_CheckercompleteDto, nameof(_CheckercompleteDto.CheckerWithheldAmount));
 
-            // Clear previous messages for these fields
+            // Clear previous messages for these fields (defensive)
             _messageStore.Clear(approvedField);
             _messageStore.Clear(withheldField);
+
+            // Determine effective status: prefer working DTO value, fallback to invoice's persisted status
+            var status = _CheckercompleteDto.CheckerReviewStatus?.Trim();
+            if (string.IsNullOrWhiteSpace(status))
+                status = _invoiceDto.CheckerReviewStatus?.Trim();
+
+            // If the current status is Rejected, amounts are intentionally zero — clear any stale amount messages and skip invariants.
+            if (!string.IsNullOrWhiteSpace(status) && status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                // Also clear any other leftover messages to be safe (prevents stale "Approved+Withheld must equal" from earlier runs)
+                _messageStore.Clear();
+                _editContext.NotifyValidationStateChanged();
+                return;
+            }
 
             decimal total = _invoiceDto.InvoiceTotalValue;
             decimal approved = _CheckercompleteDto.CheckerApprovedAmount.GetValueOrDefault(0m);
             decimal withheld = _CheckercompleteDto.CheckerWithheldAmount.GetValueOrDefault(0m);
 
-            // Rule1 & Rule2: sign restrictions
-            if (total > 0m && approved < 0m)
+            // Sign consistency: approved/withheld should follow invoice sign (or be zero)
+            if (total > 0m)
             {
-                _messageStore.Add(approvedField, "Approved Amount cannot be negative when Invoice Total is positive.");
+                if (approved < 0m)
+                    _messageStore.Add(approvedField, "Approved Amount cannot be negative when Invoice Total is positive.");
+                if (withheld < 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount cannot be negative when Invoice Total is positive.");
             }
-            if (total < 0m && approved > 0m)
+            else if (total < 0m)
             {
-                _messageStore.Add(approvedField, "Approved Amount cannot be positive when Invoice Total is negative.");
+                if (approved > 0m)
+                    _messageStore.Add(approvedField, "Approved Amount cannot be positive when Invoice Total is negative (debit note).");
+                if (withheld > 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount cannot be positive when Invoice Total is negative (debit note).");
+            }
+            else // total == 0
+            {
+                if (approved != 0m)
+                    _messageStore.Add(approvedField, "Approved Amount must be zero when Invoice Total is zero.");
+                if (withheld != 0m)
+                    _messageStore.Add(withheldField, "Withheld Amount must be zero when Invoice Total is zero.");
             }
 
-            // If there is no previous approved/withheld amounts enforce approved + withheld == total
+            // If there are no previous review amounts require strict equality (within 2-decimal tolerance)
             if (!_previousReviewInfo.PrevApprovedAmount.HasValue && !_previousReviewInfo.PrevWithheldAmount.HasValue)
             {
-                // allow small rounding differences — compare to 2 decimals
                 if (Math.Round(approved + withheld - total, 2) != 0m)
-                {
                     _messageStore.Add(approvedField, "Approved Amount + Withheld Amount must equal Invoice Total.");
-                }
 
-                // explicit check for approved outside invoice bounds (shows validation only; does not change values)
                 if (total > 0m && approved > total)
-                {
                     _messageStore.Add(approvedField, $"Approved Amount cannot exceed Invoice Total ({FormatCurrency(total)}).");
-                }
                 if (total < 0m && approved < total)
-                {
                     _messageStore.Add(approvedField, $"Approved Amount cannot be less than Invoice Total ({FormatCurrency(total)}).");
-                }
             }
 
-            // previous approved amount constraints (sign-aware)
+            // Previous-approved constraints (sign-aware)
             if (_previousReviewInfo.PrevApprovedAmount.HasValue)
             {
                 var prev = _previousReviewInfo.PrevApprovedAmount.Value;
                 if (prev > 0m && approved > prev)
-                {
                     _messageStore.Add(approvedField, $"Approved Amount cannot exceed previous approved amount ({FormatCurrency(prev)}).");
-                }
                 if (prev < 0m && approved < prev)
-                {
                     _messageStore.Add(approvedField, $"Approved Amount cannot be less than previous approved amount ({FormatCurrency(prev)}).");
-                }
             }
 
             _editContext.NotifyValidationStateChanged();
@@ -478,6 +502,10 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private bool CanEditApprovedAmount()
         {
+            // Do not allow edits if the invoice itself is in "Rejected" status
+            if (IsInvoiceStatusRejected)
+                return false;
+
             // must be checker
             if (!_isChecker)
                 return false;
@@ -514,12 +542,30 @@ namespace OceanVMSClient.Pages.InviceModule
         }
 
         // UI read-only helper used by markup
-        private bool IsReadOnly => _checkerSaved || IsCheckerReviewCompleted();
+        private bool IsReadOnly => _checkerSaved || IsCheckerReviewCompleted() || IsInvoiceStatusRejected;
+
+        // Added helper to detect invoice-level "Rejected" status (place inside the Permissions / read-only region)
+        private bool IsInvoiceStatusRejected =>
+            string.Equals(_invoiceDto?.InvoiceStatus?.Trim(), "Rejected", StringComparison.OrdinalIgnoreCase);
         #endregion
 
         #region Actions
         private async Task SaveDecision()
         {
+            // Prevent double submit / show appropriate message
+            if (_isSubmitting)
+            {
+                Snackbar.Add("Review submission is already in progress. Please wait...", Severity.Info);
+                return;
+            }
+
+            if (_checkerSaved) // assuming a saved flag exists similar to _initiatorSaved; adjust name if different
+            {
+                Snackbar.Add("Review has already been submitted.", Severity.Info);
+                return;
+            }
+
+            _isSubmitting = true;
             try
             {
                 if (_invoiceDto == null)
@@ -527,7 +573,11 @@ namespace OceanVMSClient.Pages.InviceModule
                     Snackbar.Add("Invoice not loaded.", Severity.Error);
                     return;
                 }
-
+                if (IsInvoiceStatusRejected)
+                {
+                    Snackbar.Add("This invoice is in 'Rejected' status and cannot be edited.", Severity.Warning);
+                    return;
+                }
                 var status = _CheckercompleteDto.CheckerReviewStatus?.Trim();
                 if (string.IsNullOrWhiteSpace(status) ||
                     !(status.Equals("Approved", StringComparison.OrdinalIgnoreCase) || status.Equals("Rejected", StringComparison.OrdinalIgnoreCase)))
@@ -536,12 +586,10 @@ namespace OceanVMSClient.Pages.InviceModule
                     return;
                 }
 
-                // Conditional validation
                 decimal total = _invoiceDto.InvoiceTotalValue;
 
                 if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Approved amount is required
                     if (!_CheckercompleteDto.CheckerApprovedAmount.HasValue)
                     {
                         Snackbar.Add("Approved amount is required when status is Approved.", Severity.Warning);
@@ -550,88 +598,78 @@ namespace OceanVMSClient.Pages.InviceModule
                 }
                 else // Rejected
                 {
-                    // Remarks / comment required on rejection
                     if (string.IsNullOrWhiteSpace(_CheckercompleteDto.CheckerReviewComment))
                     {
                         Snackbar.Add("Remarks are required when status is Rejected.", Severity.Warning);
                         return;
                     }
 
-                    // Per requested rule: when rejected both approved and withheld should be 0
+                    // When rejected both approved and withheld should be 0
                     _CheckercompleteDto.CheckerApprovedAmount = 0m;
                     _CheckercompleteDto.CheckerWithheldAmount = 0m;
                 }
 
-                // Run final client-side validations (same as Initiator)
+                // Run final client-side validations
                 ValidateApprovedAmount();
                 ValidateWithheldReason();
                 ValidateRejectedRemarks();
 
+                // If there are validation messages, do not persist
                 if (_editContext != null && _editContext.GetValidationMessages().Any())
                 {
                     Snackbar.Add("Please correct validation errors before submitting.", Severity.Warning);
                     return;
                 }
 
-                // Sign-aware limit checks against invoice total:
+                // All client validation passed: ensure withheld is consistent (defensive)
                 if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                 {
                     var approvedValue = _CheckercompleteDto.CheckerApprovedAmount.GetValueOrDefault(0m);
 
-                    if (total < 0m)
+                    // Enforce sign-aware bounds against invoice (do not auto-correct; treat as validation)
+                    if (total < 0m && approvedValue < total)
                     {
-                        if (approvedValue < total)
-                        {
-                            Snackbar.Add("Approved amount cannot be less than invoice total.", Severity.Warning);
-                            _CheckercompleteDto.CheckerApprovedAmount = total;
-                            _CheckercompleteDto.CheckerWithheldAmount = 0m;
-                            StateHasChanged();
-                            return;
-                        }
+                        Snackbar.Add("Approved amount cannot be less than invoice total.", Severity.Warning);
+                        return;
                     }
-                    else
+                    if (total > 0m && approvedValue > total)
                     {
-                        if (approvedValue > total)
-                        {
-                            Snackbar.Add("Approved amount cannot exceed invoice total.", Severity.Warning);
-                            _CheckercompleteDto.CheckerApprovedAmount = total;
-                            _CheckercompleteDto.CheckerWithheldAmount = 0m;
-                            StateHasChanged();
-                            return;
-                        }
+                        Snackbar.Add("Approved amount cannot exceed invoice total.", Severity.Warning);
+                        return;
                     }
 
-                    // Validate against previous approved amount (if present)
+                    // Validate against previous approved amount (if present) - sign-aware
                     if (_previousReviewInfo.PrevApprovedAmount.HasValue)
                     {
                         var prev = _previousReviewInfo.PrevApprovedAmount.Value;
-                        // Use sign-aware checks to match ValidateApprovedAmount:
                         if (prev > 0m && approvedValue > prev)
                         {
-                            Snackbar.Add($"Approved amount cannot exceed previous approved amount ({prev:C}).", Severity.Warning);
-                            // do not persist
+                            Snackbar.Add($"Approved amount cannot exceed previous approved amount ({FormatCurrency(prev)}).", Severity.Warning);
                             return;
                         }
                         if (prev < 0m && approvedValue < prev)
                         {
-                            Snackbar.Add($"Approved amount cannot be less than previous approved amount ({prev:C}).", Severity.Warning);
-                            // do not persist
+                            Snackbar.Add($"Approved amount cannot be less than previous approved amount ({FormatCurrency(prev)}).", Severity.Warning);
                             return;
                         }
                     }
 
-                    // recalc withheld
+                    // Recalculate withheld to ensure persisted object is consistent with the invariant
                     _CheckercompleteDto.CheckerWithheldAmount = total - approvedValue;
                 }
 
-                // Enforce: Approved + Withheld must not be greater than Invoice Total (works with negative totals too)
-                var approvedFinal = _CheckercompleteDto.CheckerApprovedAmount.GetValueOrDefault(0m);
-                var withheldFinal = _CheckercompleteDto.CheckerWithheldAmount.GetValueOrDefault(0m);
-                if (approvedFinal + withheldFinal > total)
+                // Replace the existing invariant check with this guarded version:
+                var effectiveStatus = _CheckercompleteDto.CheckerReviewStatus?.Trim();
+                if (!string.Equals(effectiveStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
                 {
-                    Snackbar.Add("Approved Amount + Withheld Amount must not exceed Invoice Total.", Severity.Warning);
-                    // do not persist
-                    return;
+                    // Final canonical invariant check (strict equality within 2 decimals)
+                    var approvedFinal = _CheckercompleteDto.CheckerApprovedAmount.GetValueOrDefault(0m);
+                    var withheldFinal = _CheckercompleteDto.CheckerWithheldAmount.GetValueOrDefault(0m);
+                    if (Math.Round(approvedFinal + withheldFinal - total, 2) != 0m)
+                    {
+                        Snackbar.Add("Approved Amount + Withheld Amount must equal Invoice Total.", Severity.Warning);
+                        return;
+                    }
                 }
 
                 // Defensive validation: withheld reason must be present when withheld amount != 0
@@ -639,12 +677,11 @@ namespace OceanVMSClient.Pages.InviceModule
                     && string.IsNullOrWhiteSpace(_CheckercompleteDto.CheckerWithheldReason))
                 {
                     Snackbar.Add("Withheld reason is required when Withheld Amount is not zero.", Severity.Warning);
-                    // ensure validation message is shown in form (OnValidationRequested already wired for submit)
-                    ValidateWithheldReason();
+                    ValidateWithheldReason(); // ensure message is shown inline
                     return;
                 }
 
-                // Ensure invoice id is set
+                // Ensure invoice id is set (fix for the runtime exception)
                 _CheckercompleteDto.InvoiceId = _invoiceDto.Id;
 
                 // If CheckerID not provided, set from cascading employee id if available
@@ -655,7 +692,6 @@ namespace OceanVMSClient.Pages.InviceModule
                 var refreshed = await InvoiceRepository.UpdateInvoiceCheckerReview(_CheckercompleteDto);
                 if (refreshed != null)
                 {
-                    // Re-fetch full invoice from server to ensure all display fields (like CheckerName) are populated
                     try
                     {
                         var full = await InvoiceRepository.GetInvoiceById(refreshed.Id);
@@ -663,7 +699,6 @@ namespace OceanVMSClient.Pages.InviceModule
                     }
                     catch (Exception ex)
                     {
-                        // If re-fetch fails, fall back to the update response
                         Logger.LogWarning(ex, "Failed to re-fetch invoice after checker update; using response object.");
                         _invoiceDto = refreshed;
                     }
@@ -690,6 +725,11 @@ namespace OceanVMSClient.Pages.InviceModule
                 Logger.LogError(ex, "Error saving checker review for Invoice ID {InvoiceId}", _invoiceDto?.Id);
                 Snackbar.Add("An error occurred while saving the checker review.", Severity.Error);
             }
+            finally
+            {
+                // allow retry only when save failed; when success _checkerSaved should be true and button disabled
+                _isSubmitting = false;
+            }
         }
 
         private Task Cancel()
@@ -707,7 +747,7 @@ namespace OceanVMSClient.Pages.InviceModule
         }
         #endregion
 
-        private Task OnSupportingFileUploaded(string? url)
+        private Task OnSupportingFileUploaded(String? url)
         {
             _CheckercompleteDto.CheckerReviewAttachment = url ?? string.Empty;
             return Task.CompletedTask;
