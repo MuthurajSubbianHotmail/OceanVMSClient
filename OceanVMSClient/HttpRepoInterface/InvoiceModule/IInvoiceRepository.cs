@@ -1,5 +1,6 @@
 ﻿using OceanVMSClient.Features;
 using Shared.DTO.POModule;
+using static Shared.DTO.POModule.InvAPApproverReviewCompleteDto;
 
 namespace OceanVMSClient.HttpRepoInterface.InvoiceModule
 {
@@ -26,5 +27,10 @@ namespace OceanVMSClient.HttpRepoInterface.InvoiceModule
         Task<InvoiceDto> UpdateInvoiceAPReview(InvAPApproverReviewCompleteDto invAPReviewCompleteDto);
         Task<string?> UploadInvoiceFile(MultipartFormDataContent content);
         Task<PagingResponse<InvoiceDto>> GetInvoicesWithAPReviewNotNAAsync(InvoiceParameters invoiceParameters);
+
+        Task<InvoiceStatusCountsDto> GetInvoiceStatusCountsByVendorAsync(Guid vendorId);
+        Task<InvoiceStatusCountsDto> GetInvoiceStatusCountsForApproverAsync(Guid employeeId);
+
+        Task<InvoiceStatusSlaCountsDto> GetInvoiceStatusSlaCountsForApproverAsync(Guid employeeId);
     }
 }

@@ -7,5 +7,8 @@ namespace OceanVMSClient.HttpRepoInterface.POModule
     {
         Task<(bool IsAssigned, string AssignedType)> IsInvoiceApproverAsync(Guid invoiceId, Guid employeeId);
         Task<PagingResponse<InvoiceApproverDTO>> GetInvoiceApproverByProjectIdAndType(Guid projectID, string assignedType);
+        Task<PagingResponse<InvoiceApproverDTO>> GetInvoiceApproverByEmployeeId(Guid employeeId);
+
+        Task<bool> IsEmployeeInvoiceReviewerAsync(Guid employeeId);
     }
 }

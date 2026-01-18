@@ -354,7 +354,7 @@ namespace OceanVMSClient.Pages.InviceModule
                 }
                 else
                 {
-                    Logger.LogError("Failed to create invoice. Repository returned null.");
+                    Logger.LogError("Failed to create invoice. PORepository returned null.");
                 }
             }
             catch (Exception ex)

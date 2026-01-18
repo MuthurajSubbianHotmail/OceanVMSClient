@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Web;
+using static Shared.DTO.POModule.InvAPApproverReviewCompleteDto;
 
 namespace OceanVMSClient.HttpRepo.InvoiceModule
 {
@@ -273,6 +274,45 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             };
             return pagingResponse;
         }
+
+        public async Task<InvoiceStatusCountsDto> GetInvoiceStatusCountsByVendorAsync(Guid vendorId)
+        {
+            var response = await _httpClient.GetAsync($"invoices/vendor/status-counts/{vendorId}");
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var counts = JsonSerializer.Deserialize<InvoiceStatusCountsDto>(content, _options);
+            return counts!;
+        }
+
+        public async Task<InvoiceStatusCountsDto> GetInvoiceStatusCountsForApproverAsync(Guid employeeId)
+        {
+            var response = await _httpClient.GetAsync($"invoices/approver/status-counts/{employeeId}");
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var counts = JsonSerializer.Deserialize<InvoiceStatusCountsDto>(content, _options);
+            return counts!;
+        }
+
+        public async Task<InvoiceStatusSlaCountsDto> GetInvoiceStatusSlaCountsForApproverAsync(Guid employeeId)
+        {
+            var response = await _httpClient.GetAsync($"invoices/approver/sla-counts/{employeeId}");
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var counts = JsonSerializer.Deserialize<InvoiceStatusSlaCountsDto>(content, _options);
+            return counts!;
+        }
     }
 
     public static class InvoiceParametersExtensions
@@ -325,6 +365,5 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             return query.ToString();
         }
 
-       
     }
 }

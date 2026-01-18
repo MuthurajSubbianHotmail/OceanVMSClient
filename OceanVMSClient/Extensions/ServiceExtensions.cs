@@ -42,6 +42,7 @@ namespace OceanVMSClient.Extensions
 
             //Authentication Repositories
             services.AddScoped<IAuthenticationService, AuthenticationService>();
+            services.AddScoped<IUserAdministrationRepository, UserAdministrationRepository>();
             //Data Repositories
             services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
             services.AddScoped<IInvoiceApproverRepository, InvoiceApproverRepository>();

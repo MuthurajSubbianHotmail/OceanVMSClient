@@ -7,33 +7,37 @@
           @ref="_table"
           RowsPerPage="10"
           Virtualize="true"
-          Class="invoice-table mt-3">
+          Class="invoice-table mt-0">
     <HeaderContent>
-        <MudTh>Invoice Number</MudTh>
+        <MudTh>Inv Nr</MudTh>
         <MudTh>Date</MudTh>
-        <MudTh>Supplier</MudTh>
-        <MudTh>PO No</MudTh>
-        <MudTh>Po Date</MudTh>
-        <MudTh>Total Amount</MudTh>
-        <MudTh>Current Status</MudTh>
-        <MudTh>SLA Status</MudTh>
+        <MudTh>Amount</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>SLA</MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="Invoice Number">
-            <MudLink Typo="Typo.caption" Href="@($"{invoiceViewPage}/{context.Id}")">
-                @context.InvoiceRefNo
-            </MudLink>
+            <div class="hover-wrapper">
+                <MudLink Typo="Typo.caption" Href="@($"{invoiceViewPage}/{context.Id}")">
+                    @context.InvoiceRefNo
+                </MudLink>
+
+                <div class="hover-info" role="tooltip" aria-hidden="true">
+                    <div class="hover-row"><strong>Vendor:</strong> @context.VendorName</div>
+                    <div class="hover-row"><strong>PO No:</strong> @context.SAPPONumber</div>
+                    <div class="hover-row"><strong>PO Date:</strong> @FormatDate(context.SAPPODate)</div>
+                </div>
+            </div>
         </MudTd>
-        <MudTd DataLabel="Date">@FormatDate(@context.InvoiceDate)</MudTd>
-        <MudTd DataLabel="Supplier">@context.VendorName</MudTd>
-        <MudTd DataLabel="PO No">
+        <MudTd DataLabel="Date" Style="text-wrap:nowrap">@FormatDate(@context.InvoiceDate)</MudTd>
+        @* <MudTd DataLabel="PO No">
             <MudLink Typo="Typo.caption" Href="@($"ViewPurchaseOrder/{context.PurchaseOrderId}")" Color="Color.Primary" Underline="Underline.Hover">
                 @context.SAPPONumber
             </MudLink>
         </MudTd>
-        <MudTd DataLabel="Po Date">@FormatDate(@context.SAPPODate)</MudTd>
+        <MudTd DataLabel="Po Date">@FormatDate(@context.SAPPODate)</MudTd> *@
         <MudTd DataLabel="Total Amount"><CurrencyText Amount="@context.InvoiceTotalValue" /></MudTd>
-        <MudTd DataLabel="Current Status">@context.InvoiceStatus</MudTd>
+        <MudTd DataLabel="Current Status">@TrimInvoiceStatus(context.InvoiceStatus)</MudTd>
         @switch (@context.NextActionBy)
         {
             case "Initiator":
@@ -99,3 +103,56 @@
         }
     </RowTemplate>
 </MudTable>
+
+@code {
+    private string TrimInvoiceStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+            return status ?? string.Empty;
+
+        const string prefix = "With ";
+        return status.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? status[prefix.Length..]
+            : status;
+    }
+}
+<style>
+/* Hover info styling for the Invoice Number cell */
+.hover-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.hover-info {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  max-width: 320px;
+  background: #fff;
+  color: #222;
+  padding: 8px;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  font-size: 12px;
+  z-index: 1200;
+  white-space: nowrap;
+}
+
+.hover-row {
+  margin: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Show the info box when the wrapper (or any child) is hovered */
+.hover-wrapper:hover .hover-info,
+.hover-wrapper:focus-within .hover-info {
+  display: block;
+}
+
+/* Slightly reduce size for small screens */
+
+}
+</style>

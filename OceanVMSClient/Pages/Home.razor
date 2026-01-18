@@ -2,6 +2,8 @@
 @using OceanVMSClient.Pages.Dashboard
 @using Blazored.LocalStorage
 @using System.Security.Claims
+@using OceanVMSClient.Helpers
+@using OceanVMSClient.HttpRepoInterface.POModule
 
 <PageTitle>Home</PageTitle>
 
@@ -11,22 +13,61 @@
         Loading...
     </div>
 }
-else if (string.Equals(userType, "EMPLOYEE", StringComparison.OrdinalIgnoreCase))
+else if (isVendorRoleUser)
 {
-    <ReviewerDashBoard />
+    @if (showInvReviewerAtRoot && isEmployeeInvReviewer)
+    {
+        <InvReviewerDashBoard />
+    }
+    else
+    {
+        <VendorRegistrationDashboard />
+    }
+}
+else if (isEmployeeInvReviewer)
+{
+    <InvReviewerDashBoard />
 }
 else if (string.Equals(userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
 {
-    <VendorDashBoard />
+    if (isVendorApproved)
+    {
+        <VendorDashBoard />
+    }
+    else
+    {
+        @* Intentionally blank for vendors whose VendorRegStatus is not Approved *@
+    }
+}
+
+@* Page-level switch moved to bottom so it's always available to toggle back/forth when user has both rights *@
+@if (isVendorRoleUser && isEmployeeInvReviewer)
+{
+    <div class="d-flex justify-end mt-4 align-center" style="width:100%;">
+        <label class="me-2">Show Invoice Reviewer Dashboard</label>
+        <input type="checkbox" @bind="showInvReviewerAtRoot" />
+    </div>
 }
 
 
 @code {
     [CascadingParameter] public Task<AuthenticationState> AuthState { get; set; } = default!;
     [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;
+    [Inject] public IInvoiceApproverRepository InvoiceApproverRepository { get; set; } = default!;
+    [Inject] public IVendorRepository VendorRepository { get; set; } = default!;
 
     private string? userType;
     private bool isInitialized;
+    private bool isEmployeeInvReviewer;
+
+    // New: vendor approval flag
+    private bool isVendorApproved;
+
+    // New: flag to show vendor registration dashboard for role-based users
+    private bool isVendorRoleUser;
+
+    // Root-level toggle for showing Invoice Reviewer dashboard when user has both rights
+    private bool showInvReviewerAtRoot;
 
     protected override async Task OnInitializedAsync()
     {
@@ -43,7 +84,77 @@ else if (string.Equals(userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
 
             if (user?.Identity?.IsAuthenticated == true)
             {
-                userType = GetClaimValue(user, "userType");
+                // Detect vendor review/approval roles
+                isVendorRoleUser = RoleHelper.UserIsVendorValidator(user) || RoleHelper.UserIsVendorApprover(user);
+
+                // load user context (claims + fallback to local storage) once for other checks
+                var ctx = await user.LoadUserContextAsync(LocalStorage);
+                userType = ctx.UserType;
+
+                // Determine invoice-reviewer rights independently (user may have both)
+                bool repoIsReviewer = false;
+                if (!string.IsNullOrWhiteSpace(userType) &&
+                    string.Equals(userType, "EMPLOYEE", StringComparison.OrdinalIgnoreCase) &&
+                    ctx.EmployeeId.HasValue)
+                {
+                    try
+                    {
+                        repoIsReviewer = await InvoiceApproverRepository.IsEmployeeInvoiceReviewerAsync(ctx.EmployeeId.Value);
+                    }
+                    catch
+                    {
+                        repoIsReviewer = false;
+                    }
+                }
+
+                // Role fallback (best-effort)
+                bool roleIsReviewer = RoleHelper.UserHasRole(user, r =>
+                     !string.IsNullOrWhiteSpace(r)
+                     && r.Contains("invoice", StringComparison.OrdinalIgnoreCase)
+                     && r.Contains("reviewer", StringComparison.OrdinalIgnoreCase));
+
+                isEmployeeInvReviewer = repoIsReviewer || roleIsReviewer;
+
+                // Default visible dashboard when user has both rights:
+                // - if vendor role present, default to vendor dashboard (switch off)
+                // - otherwise show invoice reviewer when they only have that right
+                if (isVendorRoleUser)
+                    showInvReviewerAtRoot = false;
+                else
+                    showInvReviewerAtRoot = isEmployeeInvReviewer;
+
+                // When user is a vendor account, check vendor registration status (unchanged)
+                if (!string.IsNullOrWhiteSpace(userType) &&
+                    string.Equals(userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
+                {
+                    Guid? vendorId = ctx.VendorId;
+
+                    // fallback to local storage if claim not present
+                    if ((!vendorId.HasValue || vendorId == Guid.Empty))
+                    {
+                        var stored = await LocalStorage.GetItemAsync<string>("vendorPK");
+                        if (Guid.TryParse(stored, out var parsed)) vendorId = parsed;
+                    }
+
+                    if (vendorId.HasValue && vendorId.Value != Guid.Empty)
+                    {
+                        try
+                        {
+                            var vendor = await VendorRepository.GetVendorById(vendorId.Value);
+                            isVendorApproved = string.Equals(vendor?.VendorRegStatus, "Approved", StringComparison.OrdinalIgnoreCase);
+                        }
+                        catch
+                        {
+                            // on error treat as not approved
+                            isVendorApproved = false;
+                        }
+                    }
+                    else
+                    {
+                        // no vendor id -> treat as not approved (hide dashboard)
+                        isVendorApproved = false;
+                    }
+                }
             }
 
             if (string.IsNullOrWhiteSpace(userType))
@@ -54,17 +165,12 @@ else if (string.Equals(userType, "VENDOR", StringComparison.OrdinalIgnoreCase))
         }
         catch
         {
-            // swallow and allow fallback to vendor view
+            // swallow and allow fallback to vendor view (treat vendor as not approved)
             userType = null;
+            isEmployeeInvReviewer = false;
+            isVendorApproved = false;
+            isVendorRoleUser = false;
+            showInvReviewerAtRoot = false;
         }
-    }
-
-    private static string? GetClaimValue(ClaimsPrincipal? user, string claimType)
-    {
-        if (user == null) return null;
-        var claim = user.Claims.FirstOrDefault(c => string.Equals(c.Type, claimType, StringComparison.OrdinalIgnoreCase))
-                    ?? user.Claims.FirstOrDefault(c => c.Type.EndsWith($"/{claimType}", StringComparison.OrdinalIgnoreCase))
-                    ?? user.Claims.FirstOrDefault(c => c.Type.EndsWith(claimType, StringComparison.OrdinalIgnoreCase));
-        return claim?.Value;
     }
 }

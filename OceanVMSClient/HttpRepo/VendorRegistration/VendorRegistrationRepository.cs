@@ -538,5 +538,20 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
                 return (false, null);
             }
         }
+        
+        public async Task<VendorRegistrationStatsDto> GetVendorRegistrationStatisticsAsync(bool onlyActive = true, bool trackChanges = false)
+        {
+            var url = $"vendorregistrationform/stats?onlyActive={onlyActive}&trackChanges={trackChanges}";
+            var response = await _httpClient.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var stats = JsonSerializer.Deserialize<VendorRegistrationStatsDto>(content, _options);
+            return stats!;
+        }
+
+
     }
 }

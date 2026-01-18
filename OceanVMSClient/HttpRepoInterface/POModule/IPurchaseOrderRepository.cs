@@ -11,5 +11,8 @@ namespace OceanVMSClient.HttpRepoInterface.PoModule
         Task<PagingResponse<PurchaseOrderDto>> GetAllPurchaseOrdersOfVendorAsync(Guid vendorId, PurchaseOrderParameters purchaseOrderParameters);
         Task<PagingResponse<PurchaseOrderDto>> GetAllPurchaseOrdersOfApproversAsync(Guid employeeId, PurchaseOrderParameters purchaseOrderParameters);
         Task<bool> IsEmployeeAssignedforRoleAsync(Guid purchaseOrderId, Guid employeeId, string roleName);
+
+        Task<PurchaseOrderInvoiceStatusCountsDto> GetPurchaseOrderInvoiceStatusCountsByVendorAsync(Guid vendorId);
+        Task<PurchaseOrderInvoiceStatusCountsDto> GetPurchaseOrderInvoiceStatusCountsByReviewerAsync(Guid employeeId);
     }
 }

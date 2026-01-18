@@ -1,0 +1,301 @@
+﻿@using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudPaper Elevation="0" Class="reviewer-dashboard pa-6">
+    <MudGrid Gutter="true">
+
+        <!-- Professional App Bar / Header -->
+        <MudItem xs="12">
+            <MudPaper Elevation="2" Class="appbar d-flex align-center justify-space-between pa-3">
+                <div class="d-flex align-center">
+                    <MudAvatar Size="Size.Large" Class="me-3 appbar-avatar" Color="Color.Primary" Variant="Variant.Filled">
+                        <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Size="Size.Medium" />
+                    </MudAvatar>
+                    <div class="d-flex flex-column">
+                        <MudText Typo="Typo.h6" Class="appbar-title">@ReviewerName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="appbar-subtitle">Overview of invoices — SLA & review status</MudText>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column align-items-end">
+                    <div class="d-flex align-center">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@OnPurchaseOrdersClick">Purchase Orders</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="ms-1" OnClick="@OnInvoicesClick">Invoices</MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" Class="ms-1" Variant="Variant.Filled" OnClick="@OnRefresh" />
+                    </div>
+                    <div class="mt-2">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Last refreshed: @(LastRefreshedAt.HasValue? LastRefreshedAt.Value.ToLocalTime().ToString("dd-MMM-yy hh:mm") : "Never")
+                        </MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <!-- KPI cards -->
+        <MudItem xs="12" Class="mt-4">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4 d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Total Invoices</MudText>
+                            <MudText Typo="Typo.h4" Color="Color.Info">@InvTotalCount</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Size="Size.Large" Color="Color.Info" />
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4 d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Under Review</MudText>
+                            <MudText Typo="Typo.h4" Color="Color.Warning">@InvUnderReviewCount</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Large" Color="Color.Warning" />
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4 d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Approved</MudText>
+                            <MudText Typo="Typo.h4" Color="Color.Success">@InvApprovedCount</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Approval Rate: use same structure/padding as other KPI cards so height matches -->
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4 d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Approval Rate</MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Primary">@InvoiceApprovalRate.ToString("0")%</MudText>
+                        </div>
+                        <MudProgressCircular Size="Size.Large" Value="@InvoiceApprovalRate" Color="Color.Success" Thickness="6" />
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Summaries -->
+        <MudItem xs="12" Class="mt-4">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="3" Class="pa-4">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Purchase Orders Summary</MudText>
+
+                        <div class="summary-row">
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">Total</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Info" Class="summary-count">@TotalPoCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled">Not Invoiced</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Warning" Class="summary-count">@NotInvoicedPOCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Secondary" Variant="Variant.Filled">Partially Invoiced</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="summary-count">@PartInvoicedPOCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Fully Invoiced</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Success" Class="summary-count">@FullyInvoicedPOCount</MudText>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="3" Class="pa-4">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Invoice Summary</MudText>
+
+                        <div class="summary-row">
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">Total</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Info" Class="summary-count">@InvTotalCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled">Under Review</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Warning" Class="summary-count">@InvUnderReviewCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Approved</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Success" Class="summary-count">@InvApprovedCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Rejected</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Error" Class="summary-count">@InvRejectedCount</MudText>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Latest invoices and SLA table (equal height) -->
+        <MudItem xs="12" Class="mt-4">
+            <MudGrid Spacing="3" Class="equal-row d-flex">
+                <MudItem xs="12" md="6" Class="d-flex">
+                    <MudPaper Elevation="3" Class="pa-3 equal-card d-flex flex-column">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Latest Invoices</MudText>
+                        <div class="content-fill">
+                            <InvoiceListDashBoard></InvoiceListDashBoard>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="6" Class="d-flex">
+                    <MudPaper Elevation="3" Class="pa-3 equal-card d-flex flex-column">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">SLA Review Breakdown</MudText>
+                        <div class="content-fill">
+                            @if (InvoiceStatusSlaCounts?.ReviewSlaCounts is null)
+                            {
+                                <MudText Typo="Typo.body2">Loading SLA data...</MudText>
+                            }
+                            else
+                            {
+                                <MudTable Items="InvoiceStatusSlaCounts.ReviewSlaCounts" Hover="true" Dense="true" Bordered="true">
+                                    <HeaderContent>
+                                        <MudTh><MudText Typo="Typo.subtitle2" Color="Color.Default">Review Type</MudText></MudTh>
+                                        <MudTh Class="text-right"><MudText Typo="Typo.subtitle2" Color="Color.Primary">Within SLA</MudText></MudTh>
+                                        <MudTh Class="text-right"><MudText Typo="Typo.subtitle2" Color="Color.Warning">Delayed</MudText></MudTh>
+                                        <MudTh Class="text-right"><MudText Typo="Typo.subtitle2" Color="Color.Error">Escalated</MudText></MudTh>
+                                        <MudTh Class="text-right"><MudText Typo="Typo.subtitle2" Color="Color.Success">Completed</MudText></MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd>@context.ReviewType</MudTd>
+                                        <MudTd Class="text-right"><MudText Color="Color.Primary">@context.WithinSlaCount</MudText></MudTd>
+                                        <MudTd Class="text-right"><MudText Color="Color.Warning">@context.DelayedCount</MudText></MudTd>
+                                        <MudTd Class="text-right"><MudText Color="Color.Error">@context.EscalatedCount</MudText></MudTd>
+                                        <MudTd Class="text-right"><MudText Color="Color.Success">@context.CompletedCount</MudText></MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            }
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+    </MudGrid>
+</MudPaper>
+
+<style>
+    .appbar {
+        border-radius: 10px;
+        background: linear-gradient(90deg, rgba(16,124,255,0.06), rgba(250,250,255,0.9));
+        align-items: center;
+        gap: 12px;
+    }
+
+    .appbar-avatar {
+        box-shadow: 0 4px 12px rgba(16,24,40,0.06);
+    }
+
+    .appbar-title {
+        font-weight: 600;
+    }
+
+    .appbar-subtitle {
+        margin-top: 2px;
+    }
+
+    .search-field {
+        width: 420px;
+        min-width: 180px;
+    }
+
+    .action-buttons .mud-badge {
+        vertical-align: middle;
+    }
+
+    .action-buttons .mud-icon-button {
+        margin-left: 6px;
+    }
+
+    /* Equal-height helpers for the Latest Invoices / SLA row */
+    .equal-row {
+        align-items: stretch;
+    }
+
+    .equal-row .mud-item.d-flex {
+        align-items: stretch;
+    }
+
+    .equal-card {
+        flex: 1 1 100%;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .content-fill {
+        flex: 1 1 auto;
+        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* Summary rows: keep label and count on one line */
+    .summary-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: nowrap;             /* prevent wrapping between label and count */
+        width: 100%;
+    }
+
+    /* Ensure chip doesn't shrink and count sticks to the right */
+    .summary-row .mud-chip {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+
+    /* summary-count aligns right and doesn't wrap */
+    .summary-row .summary-count {
+        flex: 0 0 auto;
+        margin-left: auto;             /* push count to the far right */
+        white-space: nowrap;
+        text-align: right;
+        min-width: 40px;
+    }
+
+    /* Allow graceful truncation for long labels on very small screens */
+    @@media (max-width: 420px) {
+        .summary-row { flex-wrap: wrap; }
+        .summary-row .mud-chip { max-width: 70%; overflow: hidden; text-overflow: ellipsis; }
+        .summary-row .summary-count { margin-left: 0; width: 100%; text-align: left; margin-top: 6px; }
+    }
+
+    /* small responsive tweak - keep kpi cards compact */
+    @@media (max-width: 900px) {
+        .search-field { width: 220px; }
+    }
+    @@media (max-width: 600px) {
+        .search-field { width: 140px; }
+        .appbar { gap: 8px; flex-direction: column; align-items: stretch; }
+        .action-buttons { justify-content: flex-end; }
+    }
+
+    /* ensure KPI cards have consistent visual height */
+    .kpi-card {
+        border-radius: 8px;
+        transition: transform .12s ease-in-out, box-shadow .12s;
+        min-height: 96px;              /* consistent height for all KPI cards */
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 18px rgba(16,24,40,0.08);
+    }
+</style>
+

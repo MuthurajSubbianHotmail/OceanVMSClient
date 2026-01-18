@@ -115,6 +115,53 @@ namespace OceanVMSClient.HttpRepo.POModule
             }
         }
 
+        public async Task<PagingResponse<InvoiceApproverDTO>> GetInvoiceApproverByEmployeeId(Guid employeeId)
+        {
+            var url = $"invoiceapprovers/employee/{employeeId}";
+            var response = await _httpClient.GetAsync(url);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"Request to '{url}' failed: {(int)response.StatusCode} {response.ReasonPhrase} - {content}");
+            }
+            var items = JsonSerializer.Deserialize<List<InvoiceApproverDTO>>(content, _options) ?? new List<InvoiceApproverDTO>();
+            MetaData? meta = null;
+            if (response.Headers.TryGetValues("X-Pagination", out var hdrs))
+            {
+                var hdr = hdrs.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(hdr))
+                {
+                    try
+                    {
+                        meta = JsonSerializer.Deserialize<MetaData>(hdr, _options);
+                    }
+                    catch
+                    {
+                        // ignore header parse errors
+                        meta = null;
+                    }
+                }
+            }
+            return new PagingResponse<InvoiceApproverDTO>
+            {
+                Items = items,
+                MetaData = meta
+            };
+        }
+        // NEW: Convenience helper that returns true when the employee has any invoice-approver records
+        public async Task<bool> IsEmployeeInvoiceReviewerAsync(Guid employeeId)
+        {
+            try
+            {
+                var resp = await GetInvoiceApproverByEmployeeId(employeeId);
+                return resp?.Items != null && resp.Items.Any();
+            }
+            catch
+            {
+                // On error treat as not a reviewer (fail-safe)
+                return false;
+            }
+        }
         public async Task<PagingResponse<InvoiceApproverDTO>> GetInvoiceApproverByProjectIdAndType(Guid projectID, string assignedType)
         {
             var url = $"invoiceapprovers/project/{projectID}/type/{assignedType}";

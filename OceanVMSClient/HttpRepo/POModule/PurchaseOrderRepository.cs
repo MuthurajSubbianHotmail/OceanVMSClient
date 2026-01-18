@@ -155,5 +155,29 @@ namespace OceanVMSClient.HttpRepo.POModule
             var isAssigned = JsonSerializer.Deserialize<bool>(content, _options);
             return isAssigned;
         }
+
+        public async Task<PurchaseOrderInvoiceStatusCountsDto> GetPurchaseOrderInvoiceStatusCountsByVendorAsync(Guid vendorId)
+        {
+            var response = await _httpClient.GetAsync($"purchaseorders/vendor/invoice-status-counts/{vendorId}");
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var countsDto = JsonSerializer.Deserialize<PurchaseOrderInvoiceStatusCountsDto>(content, _options);
+            return countsDto;
+        }
+
+        public async Task<PurchaseOrderInvoiceStatusCountsDto> GetPurchaseOrderInvoiceStatusCountsByReviewerAsync(Guid employeeId)
+        {
+            var response = await _httpClient.GetAsync($"purchaseorders/reviewer/invoice-status-counts/{employeeId}");
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(content);
+            }
+            var countsDto = JsonSerializer.Deserialize<PurchaseOrderInvoiceStatusCountsDto>(content, _options);
+            return countsDto;
+        }
     }
 }

@@ -1,26 +1,210 @@
-﻿
-<MudGrid>
-    <MudItem xs="12" sm="4" md="4">
-        <MudText Color="Color.Primary" Class="d-flex align-center justify-center">Purchase Orders Pending Invoice</MudText>
-        <MudPaper Elevation="3" Height="100px" Width="100%" Square="true" Class="d-flex align-center justify-center">
-            <MudText Typo="Typo.h1" Color="Color.Primary" Class="text-center">2</MudText>
-        </MudPaper>
-    </MudItem>
-    <MudItem xs="12" sm="4" md="4">
-        <MudText Color="Color.Secondary" Class="d-flex align-center justify-center">Invoices Pending Approval</MudText>
-        <MudPaper Elevation="3" Height="100px" Width="100%" Square="true" Class="d-flex align-center justify-center">
-            <MudText Typo="Typo.h1" Color="Color.Secondary" Class="text-center">5</MudText>
-        </MudPaper>
-    </MudItem>
-    <MudItem xs="12" sm="4" md="4">
-        <MudText Color="Color.Info" Class="d-flex align-center justify-center">Invoices Pending Payment</MudText>
-        <MudPaper Elevation="3" Height="100px" Width="100%" Square="true" Class="d-flex align-center justify-center">
-            <MudText Typo="Typo.h1" Color="Color.Info" Class="text-center">1</MudText>
-        </MudPaper>
-    </MudItem>
+﻿@using MudBlazor
 
-</MudGrid>
+<MudPaper Elevation="0" Class="vendor-dashboard pa-6">
+    <MudGrid Gutter="true">
+
+        <!-- Header -->
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="d-flex align-center justify-space-between pa-4 header-paper">
+                <div class="d-flex align-center">
+                    <MudAvatar Size="Size.Large" Class="me-3" Color="Color.Primary" Variant="Variant.Filled">
+                        <MudIcon Icon="@Icons.Material.Filled.Business" />
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.h5" Color="Color.Primary">@VendorName</MudText>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Code: @VendorCode</MudText>
+                    </div>
+                </div>
+                <div class="d-flex flex-column align-items-end">
+                    <div class="d-flex align-center">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@OnPurchaseOrdersClick">Purchase Orders</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="ms-1" OnClick="@OnInvoicesClick">Invoices</MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" Class="ms-1" Variant="Variant.Filled" OnClick="@OnRefresh" />
+                    </div>
+                    <div class="mt-2">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Last refreshed: @(LastRefreshedAt.HasValue? LastRefreshedAt.Value.ToLocalTime().ToString("dd-MMM-yy hh:mm") : "Never")
+                        </MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <!-- KPI cards -->
+        <MudItem xs="12" Class="mt-4">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4">
+                        <div class="d-flex justify-space-between align-center w-100">
+                            <div class="d-flex flex-column justify-center">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Total Purchase Orders</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Info">@TotalPoCount</MudText>
+                            </div>
+                            <div class="d-flex align-center align-self-end">
+                            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Large" Color="Color.Info" />
+                            </div>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4">
+                        <div class="d-flex justify-space-between align-center w-100">
+                            <div class="d-flex flex-column justify-center">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Total Invoices</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Info">@InvTotalCount</MudText>
+                            </div>
+                            <div class="d-flex align-center align-self-end">
+                            <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Size="Size.Large" Color="Color.Success" />
+                            </div>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4">
+                        <div class="d-flex justify-space-between align-center w-100">
+                            <div class="d-flex flex-column justify-center">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Open / Not Invoiced</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Warning" Class="mb-0">@NotInvoicedPOCount</MudText>
+                            </div>
+                            <div class="d-flex align-center align-self-end">
+                                <MudIcon Icon="@Icons.Material.Filled.HourglassBottom" Size="Size.Large" Color="Color.Warning" />
+                            </div>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4">
+                        <div class="d-flex justify-space-between align-center w-100">
+                            <div class="d-flex align-center">
+                                <MudProgressCircular Size="Size.Medium" Value="@InvoiceApprovalRate" Color="Color.Success" Thickness="6" Class="me-3" />
+                                <div class="d-flex flex-column justify-center">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">Invoice Approval</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-0">@InvoiceApprovalRate.ToString("0")%</MudText>
+                                </div>
+                            </div>
+                            <!-- right slot kept for consistent spacing with other KPI cards -->
+                            <div class="d-flex align-center"></div>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+        <!-- Summaries -->
+        <MudItem xs="12" Class="mt-4">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="3" Class="pa-4">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Purchase Orders Summary</MudText>
+
+                        <div class="summary-row">
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">Total</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Info" Class="ms-auto">@TotalPoCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled">Not Invoiced</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Warning" Class="ms-auto">@NotInvoicedPOCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Secondary" Variant="Variant.Filled">Partially Invoiced</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="ms-auto">@PartInvoicedPOCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Fully Invoiced</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Success" Class="ms-auto">@FullyInvoicedPOCount</MudText>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="3" Class="pa-4">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Invoice Summary</MudText>
+
+                        <div class="summary-row">
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">Total</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Info" Class="ms-auto">@InvTotalCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled">Under Review</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Warning" Class="ms-auto">@InvUnderReviewCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Approved</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Success" Class="ms-auto">@InvApprovedCount</MudText>
+                        </div>
+
+                        <div class="summary-row mt-3">
+                            <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Rejected</MudChip>
+                            <MudText Typo="Typo.h6" Color="Color.Error" Class="ms-auto">@InvRejectedCount</MudText>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+
+    </MudGrid>
+</MudPaper>
+
+<style>
+    .vendor-dashboard {
+        min-height: 100%;
+        background: linear-gradient(180deg, rgba(245,247,250,0.6), rgba(250,250,255,0.4));
+        border-radius: 8px;
+    }
+
+    .header-paper {
+        border-radius: 10px;
+    }
+
+    .kpi-card {
+        border-radius: 8px;
+        transition: transform .12s ease-in-out, box-shadow .12s;
+        min-height: 96px;              /* consistent height for all KPI cards */
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;  /* default left alignment */
+        padding: 12px;
+    }
+
+    .kpi-card.compact {
+        padding: 8px 12px;
+    }
+
+    .kpi-card .mud-progress-circular,
+    .kpi-card .mud-progress-circular svg {
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px;
+        min-height: 48px;
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 18px rgba(16,24,40,0.08);
+    }
+
+    .summary-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* small responsive tweak */
+    
+    }
+</style>
 
 @code {
+    // Note: properties such as VendorName, VendorCode and all counts are referenced from existing page model.
+    // Keep these calculations defensive if some values can be null or zero.
 
+   
 }

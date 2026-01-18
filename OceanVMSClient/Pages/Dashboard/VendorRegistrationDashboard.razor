@@ -1,0 +1,309 @@
+﻿@using System.Text.Json
+
+<MudPaper Elevation="0" Class="vendor-dashboard pa-6">
+    <MudGrid Gutter="true">
+
+        <MudItem xs="12">
+            <MudPaper Elevation="2" Class="appbar d-flex align-center justify-space-between pa-3">
+                <div class="d-flex align-center">
+                    <MudAvatar Size="Size.Large" Class="me-3 appbar-avatar" Color="Color.Primary" Variant="Variant.Filled">
+                        <MudIcon Icon="@Icons.Material.Filled.HomeRepairService" Size="Size.Medium" />
+                    </MudAvatar>
+                    <div class="d-flex flex-column">
+                        <MudText Typo="Typo.h6" Class="appbar-title">@ReviewerName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="appbar-subtitle">Vendor registration — review & approval summary</MudText>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-column align-items-end">
+                    <div class="d-flex align-center">
+                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="ms-1" OnClick="@OnVendorRegListClick">Vendor Registrations</MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary" Class="ms-1" Variant="Variant.Filled" OnClick="@Refresh" />
+                       @*  @if (IsInvoiceReviewer)
+                        {
+                            <MudSwitch Class="ms-3" T="bool" @bind-Checked="@ShowInvReviewer" Color="Color.Primary" Label="Show Invoice Reviewer Dashboard" />
+                        } *@
+                    </div>
+                    <div class="mt-2">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Last refreshed: @(LastRefreshedAt.HasValue? LastRefreshedAt.Value.ToLocalTime().ToString("dd-MMM-yy hh:mm") : "Never")
+                        </MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+
+        <!-- KPI cards -->
+        <MudItem xs="12" Class="mt-4">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4 d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Total Registrations</MudText>
+                            <!-- KPI card examples -->
+                            <MudText Typo="Typo.h4" Color="Color.Info">@(Stats?.TotalRegistrationsReceived ?? 0)</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Color="Color.Info" />
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4 d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Approved</MudText>
+                            <!-- KPI card examples -->
+                            <MudText Typo="Typo.h4" Color="Color.Success">@(Stats?.TotalApproved ?? 0)</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" />
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4 d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Rejected</MudText>
+                            <!-- KPI card examples -->
+                            <MudText Typo="Typo.h4" Color="Color.Error">@(Stats?.TotalRejected ?? 0)</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.HighlightOff" Size="Size.Large" Color="Color.Error" />
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudPaper Elevation="3" Class="kpi-card pa-4 d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary">Pending</MudText>
+                            <!-- KPI card examples -->
+                            <MudText Typo="Typo.h4" Color="Color.Warning">@(Stats?.TotalPending ?? 0)</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.HourglassBottom" Size="Size.Large" Color="Color.Warning" />
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+        <MudItem xs="12" Class="mt-4">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="3" Class="pa-4" Height="100%">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Workflow Overview</MudText>
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudList T="object" Dense="true">
+                                    <MudListItem T="object">
+                                        <MudText Typo="Typo.subtitle2">Pending Review</MudText>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Warning">@(Stats?.PendingReviewCount ?? 0)</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="object">
+                                        <MudText Typo="Typo.subtitle2">Pending Approval</MudText>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Warning">@(Stats?.PendingApprovalCount ?? 0)</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="object">
+                                        <MudText Typo="Typo.subtitle2">Review Rejected</MudText>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Error">@(Stats?.ReviewRejectedCount ?? 0)</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="object">
+                                        <MudText Typo="Typo.subtitle2">Approval Rejected</MudText>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Error">@(Stats?.ApprovalRejectedCount ?? 0)</MudText>
+                                    </MudListItem>
+                                </MudList>
+                            </MudItem>
+
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">SLA — Review</MudText>
+                                <MudStack Direction="Row" AlignItems="AlignItems.Center" Spacing="1" Class="mb-3">
+                                    <MudProgressLinear Value="@(Stats?.ReviewWithinSLA ?? 0)" Color="Color.Success" Style="width: 75%;" />
+                                    <MudText Typo="Typo.caption">@($"{Stats?.ReviewWithinSLA ?? 0}")</MudText>
+                                </MudStack>
+
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">SLA — Approval</MudText>
+                                <MudStack Direction="Row" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudProgressLinear Value="@(Stats?.ApprovalWithinSLA ?? 0)" Color="Color.Success" Style="width: 75%;" />
+                                    <MudText Typo="Typo.caption">@($"{(Stats?.ApprovalWithinSLA ?? 0)}")</MudText>
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Elevation="3" Class="pa-4">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Last 5 Pending Registrations</MudText>
+                        @if (IsLoadingLastPending)
+                        {
+                            <MudProgressCircular Indeterminate="true" />
+                        }
+                        else if (LastPending is null || !LastPending.Any())
+                        {
+                            <MudText Typo="Typo.body2">No pending registrations found.</MudText>
+                        }
+                        else
+                        {
+                            <div style="flex:1; overflow:auto;">
+                                <MudTable Dense="true" Hover="true" Items="LastPending">
+                                    <HeaderContent>
+                                        <MudTh>Organization</MudTh>
+                                        <MudTh>Responder</MudTh>
+                                        <MudTh Class="text-right">Status</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd>@context.OrganizationName</MudTd>
+                                        <MudTd>@context.ResponderFullName</MudTd>
+                                        <MudTd Class="text-right">
+                                            @{
+                                                var rev = context.ReviewerStatus?.Trim()?.ToLowerInvariant();
+                                                var app = context.ApproverStatus?.Trim()?.ToLowerInvariant();
+                                            }
+
+                                            @if (rev == "rejected")
+                                            {
+                                                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Rejected</MudChip>
+                                            }
+                                            else if (rev == "pending" || app == "pending")
+                                            {
+                                                <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled">Pending</MudChip>
+                                            }
+                                            else if (rev == "approved" || app == "approved")
+                                            {
+                                                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Approved</MudChip>
+                                            }
+                                            else if (app == "rejected")
+                                            {
+                                                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Rejected</MudChip>
+                                            }
+                                            else
+                                            {
+                                                <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined">@((context.ReviewerStatus ?? context.ApproverStatus) ?? "Unknown")</MudChip>
+                                            }
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </div>
+                        }
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudItem>
+        <!-- SLA & Workflow summary -->
+        @*  <MudItem xs="12" Class="mt-4">
+            <MudGrid Spacing="3">
+                <MudItem xs="12" md="6" Class="d-flex">
+                    <MudPaper Elevation="3" Class="pa-4 d-flex flex-column">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Workflow Overview</MudText>
+
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudList T="object" Dense="true">
+                                    <MudListItem T="object">
+                                        <MudText Typo="Typo.subtitle2">Pending Review</MudText>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Warning">@(Stats?.PendingReviewCount ?? 0)</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="object">
+                                        <MudText Typo="Typo.subtitle2">Pending Approval</MudText>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Warning">@(Stats?.PendingApprovalCount ?? 0)</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="object">
+                                        <MudText Typo="Typo.subtitle2">Review Rejected</MudText>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Error">@(Stats?.ReviewRejectedCount ?? 0)</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="object">
+                                        <MudText Typo="Typo.subtitle2">Approval Rejected</MudText>
+                                        <MudSpacer />
+                                        <MudText Typo="Typo.subtitle1" Color="Color.Error">@(Stats?.ApprovalRejectedCount ?? 0)</MudText>
+                                    </MudListItem>
+                                </MudList>
+                            </MudItem>
+
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">SLA — Review</MudText>
+                                <MudStack Direction="Row" AlignItems="AlignItems.Center" Spacing="1" Class="mb-3">
+                                    <MudProgressLinear Value="@(Stats?.ReviewWithinSLA ?? 0)" Color="Color.Success" Style="width: 75%;" />
+                                    <MudText Typo="Typo.caption">@($"{Stats?.ReviewWithinSLA ?? 0}")</MudText>
+                                </MudStack>
+
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">SLA — Approval</MudText>
+                                <MudStack Direction="Row" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudProgressLinear Value="@(Stats?.ApprovalWithinSLA ?? 0)" Color="Color.Success" Style="width: 75%;" />
+                                    <MudText Typo="Typo.caption">@($"{(Stats?.ApprovalWithinSLA ?? 0)}")</MudText>
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Last 5 pending registrations -->
+                <MudItem xs="12" md="6" Class="d-flex">
+                    <MudPaper Elevation="3" Class="pa-3 d-flex flex-column">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Last 5 Pending Registrations</MudText>
+
+                        @if (IsLoadingLastPending)
+                        {
+                            <MudProgressCircular Indeterminate="true" />
+                        }
+                        else if (LastPending is null || !LastPending.Any())
+                        {
+                            <MudText Typo="Typo.body2">No pending registrations found.</MudText>
+                        }
+                        else
+                        {
+                            <div style="flex:1; overflow:auto;">
+                                <MudTable Dense="true" Hover="true" Items="LastPending">
+                                    <HeaderContent>
+                                        <MudTh>Organization</MudTh>
+                                        <MudTh>Responder</MudTh>
+                                        <MudTh Class="text-right">Status</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd>@context.OrganizationName</MudTd>
+                                        <MudTd>@context.ResponderFullName</MudTd>
+                                        <MudTd Class="text-right">
+                                            @{
+                                                var rev = context.ReviewerStatus?.Trim()?.ToLowerInvariant();
+                                                var app = context.ApproverStatus?.Trim()?.ToLowerInvariant();
+                                            }
+
+                                            @if (rev == "rejected")
+                                            {
+                                                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Rejected</MudChip>
+                                            }
+                                            else if (rev == "pending" || app == "pending")
+                                            {
+                                                <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled">Pending</MudChip>
+                                            }
+                                            else if (rev == "approved" || app == "approved")
+                                            {
+                                                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Approved</MudChip>
+                                            }
+                                            else if (app == "rejected")
+                                            {
+                                                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled">Rejected</MudChip>
+                                            }
+                                            else
+                                            {
+                                                <MudChip T="string" Color="Color.Default" Variant="Variant.Outlined">@((context.ReviewerStatus ?? context.ApproverStatus) ?? "Unknown")</MudChip>
+                                            }
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </div>
+                        }
+                    </MudPaper>
+                </MudItem> 
+            </MudGrid>
+        </MudItem> *@
+
+        @if (ShowInvReviewer)
+        {
+            <MudItem xs="12" Class="mt-4">
+                <InvReviewerDashBoard />
+            </MudItem>
+        }
+
+    </MudGrid>
+</MudPaper>
+

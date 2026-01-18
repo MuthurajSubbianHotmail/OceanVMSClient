@@ -18,6 +18,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions; // add near top with other usings
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components.Web;
+using OceanVMSClient.HttpRepoInterface.Authentication;
 
 namespace OceanVMSClient.Pages.RegisterVendors
 {
@@ -37,6 +38,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
         [Inject] public ICompanyOwnershipRepository CompanyOwnershipRepository { get; set; } = default!;
         [Inject] public IVendorServiceRepository VendorServiceRepository { get; set; } = default!;
         [Inject] public IVendorContactRepository VendorContactRepository { get; set; } = default!;
+        [Inject] public IUserAdministrationRepository UserAdministrationRepository { get; set; } = default!;
 
         // Local storage (fallback for claims)
         [Inject] public ILocalStorageService LocalStorage { get; set; } = default!;
@@ -2302,18 +2304,37 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 var reviewResult = await VendorRegistrationFormRepository.ReviewVendorRegistrationFormAsync(_vendorReg.Id, _vendorReviewDto);
                 if (reviewResult != null)
                 {
-                    Snackbar.Add("Vendor registration reviewed.", Severity.Success);
-
-                    // lock review UI after successful submit
-                    _isReviewLocked = true;
-                    StateHasChanged();
-
-                    NavigationManager.NavigateTo($"/vendor-registrations");
+                    var reviewerStatusAfter = (_vendorReg.ReviewerStatus ?? "Pending").Trim();
+                    if (string.Equals(reviewerStatusAfter, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Snackbar.Add("Vendor registration rejected.", Severity.Success);
+                        try
+                        {
+                            var responderEmail = (_vendorReg.ResponderEmailId ?? string.Empty).Trim();
+                            if (!string.IsNullOrWhiteSpace(responderEmail))
+                            {
+                                // Lock responder account by username/email with reason "Rejected"
+                                //await UserAdministrationRepository.LockUserAsync(responderEmail, "Rejected");
+                                //Snackbar.Add("Responder account locked due to rejection.", Severity.Info);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            //Logger.LogWarning(ex, "Failed to lock responder account for {Email}", _vendorReg.ResponderEmailId);
+                            //Snackbar.Add("Failed to lock responder account automatically.", Severity.Warning);
+                        }
+                    }
                 }
                 else
                 {
-                    Snackbar.Add("Review failed: server returned no data.", Severity.Error);
+                    Snackbar.Add("Vendor registration reviewed.", Severity.Success);
                 }
+
+                // lock review UI after successful submit
+                _isReviewLocked = true;
+                StateHasChanged();
+
+                NavigationManager.NavigateTo($"/vendor-registrations");
             }
             catch (Exception ex)
             {
@@ -2419,7 +2440,33 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 var approvalResult = await VendorRegistrationFormRepository.ApproveVendorRegistrationFormAsync(_vendorReg.Id, _vendorApprovalDto);
                 if (approvalResult != null)
                 {
-                    Snackbar.Add("Vendor registration approved.", Severity.Success);
+
+
+                    // If approver rejected the registration, lock the responder's account.
+                    if (string.Equals(_vendorReg.ApproverStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Snackbar.Add("Vendor registration rejection is saved.", Severity.Success);
+                        try
+                        {
+                            var responderIdOrEmail = (_vendorReg.ResponderEmailId ?? string.Empty).Trim();
+                            if (!string.IsNullOrWhiteSpace(responderIdOrEmail))
+                            {
+                                // Use username/email directly (no GUID parsing)
+                                await UserAdministrationRepository.LockUserAsync(responderIdOrEmail, "Rejected");
+                                Snackbar.Add("Responder account locked due to rejection.", Severity.Info);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogWarning(ex, "Failed to lock responder account for {EmailOrId}", _vendorReg.ResponderEmailId);
+                            Snackbar.Add("Failed to lock responder account automatically.", Severity.Warning);
+                        }
+                    }
+                    else
+                    {
+                        Snackbar.Add("Vendor registration approved.", Severity.Success);
+                    }
+
                     NavigationManager.NavigateTo($"/vendor-registrations");
                 }
                 else
