@@ -7,132 +7,153 @@
 @using OceanVMSClient.SharedComp.Components
 @inject IDialogService DialogService
 
-<style>
-    /* Prevent wrapping for cells that should stay on one line */
-    .no-wrap {
-        white-space: nowrap;
-    }
-</style>
-
-@* <MudBreadcrumbs Items="_items" Separator="/" >
-    <ItemTemplate Context="item">
-        <MudLink Href="@item.Href">@item.Text</MudLink>
-    </ItemTemplate>
-</MudBreadcrumbs> *@
 <PageNavigation Items="_items" />
-<PageHeader Title="Purchase Orders" Class="mb-0" />
 
+<MudPaper Elevation="1" Class="po-appbar">
+    <MudGrid Spacing="0">
+        <MudItem xs="8" sm="8" md="8">
+            <div class="title">
+                <MudAvatar Size="Size.Medium" Color="Color.Primary" Variant="Variant.Filled">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" />
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.h6">Purchase Orders</MudText>
+                </div>
+            </div>
+        </MudItem>
+        <MudItem xs="4" sm="4" md="4" Class="d-flex flex-column align-items-end">
+            <div class="filter-actions">
+                <MudTooltip Text="Open filters">
+                    <MudIconButton Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" OnClick="@(() => _filtersOpen = !_filtersOpen)" />
+                </MudTooltip>
+                <MudTooltip Text="Export CSV">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportVisibleToCsv" StartIcon="@Icons.Material.Filled.Download">
+                        Export
+                    </MudButton>
+                </MudTooltip>
+            </div>
+        </MudItem>
+    </MudGrid>
+   
+</MudPaper>
 
-<MudPaper Class="pa-2 po-paper">
-    <!-- Top summary -->
-    <!-- Filters -->
+<MudCollapse Expanded="_filtersOpen">
     <MudPaper Elevation="1" Class="pa-2 po-section">
-        <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
-            <MudItem xs="12" md="12">
-                <MudGrid GutterSize="1" Spacing="1">
-                    <MudItem xs="12" sm="2" md="2">
-                        <MudTextField T="string"
-                                      Typo="Typo.caption"
-                                      Label="SAP PO No"
-                                      Placeholder="SAP PO No"
-                                      OnDebounceIntervalElapsed="@( (string s) => { sapPONo = s; return OnSearch(); } )"
-                                      DebounceInterval="500"
-                                      Margin="Margin.Dense"
-                                      Class="filter-control" />
-                    </MudItem>
+        <div class="filters-grid">
+            <div class="filters-row">
+                <div class="filter-wrap">
+                    <MudTextField T="string"
+                                  Variant="Variant.Outlined"
+                                  Dense="true"
+                                  Typo="Typo.caption"
+                                  Label="SAP PO No"
+                                  Placeholder="SAP PO No"
+                                  OnDebounceIntervalElapsed="@( (string s) => { sapPONo = s; return OnSearch(); } )"
+                                  DebounceInterval="500"
+                                  Margin="Margin.Dense"
+                                  Class="filter-control" />
+                </div>
 
-                    <MudItem xs="12" sm="2" md="2">
+                <div class="filter-wrap">
+                    <MudTextField T="string"
+                                  Variant="Variant.Outlined"
+                                  Dense="true"
+                                  Typo="Typo.caption"
+                                  Label="Vendor"
+                                  Placeholder="Vendor Name"
+                                  Value="@vendorName"
+                                  Margin="Margin.Dense"
+                                  DebounceInterval="500"
+                                  OnDebounceIntervalElapsed="@((string s) => { vendorName = s; return OnSearch(); })"
+                                  Class="filter-control" />
+                </div>
 
-                        <MudTextField T="string"
-                                      Typo="Typo.caption"
-                                      Label="Vendor"
-                                      Placeholder="Vendor Name"
-                                      Value="@vendorName"
-                                      Margin="Margin.Dense"
-                                      DebounceInterval="500"
-                                      OnDebounceIntervalElapsed="@((string s) => { vendorName = s; return OnSearch(); })"
-                                      Class="filter-control" />
+                <div class="filter-wrap">
+                    <MudTextField T="string"
+                                  Variant="Variant.Outlined"
+                                  Dense="true"
+                                  Typo="Typo.caption"
+                                  Label="Project Code"
+                                  Placeholder="Project Code"
+                                  Value="@projectCode"
+                                  Margin="Margin.Dense"
+                                  DebounceInterval="500"
+                                  OnDebounceIntervalElapsed="@((string s) => { projectCode = s; return OnSearch(); })"
+                                  Class="filter-control" />
+                </div>
 
-                    </MudItem>
-                    <MudItem xs="12" sm="2" md="2">
+                <div class="filter-wrap" style="max-width:120px;">
+                    <MudTextField T="decimal?"
+                                  Variant="Variant.Outlined"
+                                  Dense="true"
+                                  Typo="Typo.caption"
+                                  Label="Min Total"
+                                  InputType="InputType.Number"
+                                  ValueChanged="@( (decimal? v) => { minTotalValue = v; return OnSearch(); } )"
+                                  Placeholder="Min"
+                                  Clearable="true"
+                                  Margin="Margin.Dense"
+                                  Class="filter-control" />
+                </div>
 
-                        <MudTextField T="string"
-                                      Typo="Typo.caption"
-                                      Label="Project Code"
-                                      Placeholder="Project Code"
-                                      Value="@projectCode"
-                                      Margin="Margin.Dense"
-                                      DebounceInterval="500"
-                                      OnDebounceIntervalElapsed="@((string s) => { projectCode = s; return OnSearch(); })"
-                                      Class="filter-control" />
+                <div class="filter-wrap" style="max-width:120px;">
+                    <MudTextField T="decimal?"
+                                  Variant="Variant.Outlined"
+                                  Dense="true"
+                                  Typo="Typo.caption"
+                                  Label="Max Total"
+                                  InputType="InputType.Number"
+                                  ValueChanged="@( (decimal? v) => { maxTotalValue = v; return OnSearch(); } )"
+                                  Placeholder="Max"
+                                  Clearable="true"
+                                  Margin="Margin.Dense"
+                                  Class="filter-control" />
+                </div>
 
-                    </MudItem>
+                <div class="filter-wrap" style="min-width:170px; max-width:220px;">
+                    <MudSelect T="string"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Label="Invoice Status"
+                               Placeholder=""
+                               Typo="Typo.caption"
+                               Value="selectedInvoiceStatus"
+                               ValueChanged="OnInvoiceStatusChanged"
+                               Margin="Margin.Dense"
+                               Class="filter-control">
+                        @foreach (var status in invoiceStatuses)
+                        {
+                            <MudSelectItem Value="@status">@status</MudSelectItem>
+                        }
+                    </MudSelect>
+                </div>
 
-                    <MudItem xs="12" sm="1" md="1">
-                        <MudTextField T="decimal?"
-                                      Typo="Typo.caption"
-                                      Label="Min Total"
-                                      InputType="InputType.Number"
-                                      ValueChanged="@( (decimal? v) => { minTotalValue = v; return OnSearch(); } )"
-                                      Placeholder="Min"
-                                      Clearable="true"
-                                      Margin="Margin.Dense"
-                                      Class="filter-control" />
-                    </MudItem>
-                    <MudItem xs="12" sm="1" md="1">
-                        <MudTextField T="decimal?"
-                                      Typo="Typo.caption"
-                                      Label="Max Total"
-                                      InputType="InputType.Number"
-                                      ValueChanged="@( (decimal? v) => { maxTotalValue = v; return OnSearch(); } )"
-                                      Placeholder="Max"
-                                      Clearable="true"
-                                      Margin="Margin.Dense"
-                                      Class="filter-control" />
-                    </MudItem>
-                    <MudItem xs="12" sm="2" md="2">
-                        <MudSelect T="string"
-                                   Label="Invoice Status"
-                                   Placeholder=""
-                                   Typo="Typo.caption"
-                                   Value="selectedInvoiceStatus"
-                                   ValueChanged="OnInvoiceStatusChanged"
-                                   Margin="Margin.Dense"
-                                   Class="filter-control">
-                            @foreach (var status in invoiceStatuses)
-                            {
-                                <MudSelectItem Value="@status">@status</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" sm="2" md="2">
+                <div class="filter-wrap" style="min-width:230px; max-width:320px;">
+                    <div class="date-range-picker">
+                        <MudIcon Class="date-icon" Icon="@Icons.Material.Filled.DateRange" />
                         <MudDateRangePicker @ref="_dateRangePicker"
+                                            Variant="Variant.Outlined"
+                                            Dense="true"
                                             DateRangeChanged="OnDateRangeSearch"
-                                            Placeholder="Select Date Range"
+                                            Placeholder="Select date range"
                                             DateFormat="dd-MMM-yy"
                                             TitleDateFormat="MMMM dd"
                                             Margin="Margin.Dense"
-                                            Variant="Variant.Text"
-                                            Label="PO Date Range"
                                             Clearable="true"
                                             AutoClose="true"
-                                            Style="font-size: 0.7rem;"
-                                            Class="filter-control">
-                            <PickerActions>
-                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearDateRange">Clear</MudButton>
-                            </PickerActions>
-                        </MudDateRangePicker>
-                    </MudItem>
-
-
-                </MudGrid>
-            </MudItem>
-
-
-        </MudGrid>
+                                            Class="filter-control"
+                                            Style="min-width:180px;" />
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ClearDateRange" StartIcon="@Icons.Material.Filled.Clear">
+                            Clear
+                        </MudButton>
+                    </div>
+                </div>
+            </div>
+        </div>
     </MudPaper>
+</MudCollapse>
 
-    <!-- Table -->
+<MudPaper Class="pa-2 po-paper mt-3">
     <MudTable T="PurchaseOrderDto"
               ServerData="GetServerData"
               Hover="true"
@@ -147,22 +168,18 @@
               FixedFooter="true"
               Striped="true">
         <HeaderContent>
-            @* <MudTh Class="col-type">Type</MudTh> *@
-            <MudTh Class="col-pono" Style="background-color: cornflowerblue;">PONo</MudTh>
-            <MudTh Style="background-color: cornflowerblue;">PO.Date</MudTh>
-            <MudTh Style="background-color: cornflowerblue;">Supplier</MudTh>
-            <MudTh Style="background-color: cornflowerblue;">Project</MudTh>
-            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">Item.Value</MudTh>
-            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">Tax.Value</MudTh>
-            <MudTh Align="Align.Right" Style="background-color: cornflowerblue;">Total.Value</MudTh>
-            <MudTh Style="background-color: cornflowerblue;">Inv.Status</MudTh>
-            <MudTh Style="background-color: cornflowerblue"> Details </MudTh>
+            <MudTh Class="col-pono po-header-cell">PONo</MudTh>
+            <MudTh Class="po-header-cell">PO.Date</MudTh>
+            <MudTh Class="po-header-cell">Supplier</MudTh>
+            <MudTh Class="po-header-cell">Project</MudTh>
+            <MudTh Class="po-header-cell" Align="Align.Right">Item.Value</MudTh>
+            <MudTh Class="po-header-cell" Align="Align.Right">Tax.Value</MudTh>
+            <MudTh Class="po-header-cell" Align="Align.Right">Total.Value</MudTh>
+            <MudTh Class="po-header-cell">Inv.Status</MudTh>
+            <MudTh Class="po-header-cell"> Details </MudTh>
         </HeaderContent>
 
         <RowTemplate>
-            @* <MudTd>
-                <MudText Typo="Typo.subtitle2" Class="cell-text">@context.PoTypeName</MudText>
-            </MudTd> *@
             <MudTd>
                 <MudLink Typo="Typo.body2" Class="cell-link" Href="@($"ViewPurchaseOrder/{context.Id}")" Color="Color.Primary" Underline="Underline.Hover">
                     @context.SAPPONumber
@@ -213,95 +230,98 @@
         <ChildRowContent Context="row">
             @if (IsRowExpanded(row.Id))
             {
-                <MudTd ColSpan="9" Class="child-row-td">
+                <MudTd ColSpan="12" Class="child-row-td">
                     <MudPaper Class="pa-3 child-row-paper" Elevation="1">
-                        <MudGrid GutterSize="2" AlignItems="AlignItems.Center">
-                            <MudItem xs="4" sm="4">
-                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">PO Details</MudText>
-                                <MudDivider Class="my-1" />
+                        <!-- Header row: compact PO meta + actions -->
+                        <div class="child-row-actions d-flex justify-space-between align-center">
+                            <div class="d-flex align-center po-meta">
+                                <MudAvatar Size="Size.Medium" Color="Color.Primary" Variant="Variant.Filled" Class="me-3">
+                                    <MudIcon Icon="@Icons.Material.Filled.Description" />
+                                </MudAvatar>
+                                <div>
+                                    <MudText Typo="Typo.subtitle1">@row.SAPPONumber</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@row.VendorName — @row.ProjectCode</MudText>
+                                </div>
+                            </div>
 
-                                <MudItem>
-                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">
-                                        Project
-                                    </MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Info">
-                                        @row.ProjectName
-                                    </MudText>
+                            <div class="d-flex gap-2">
+                                <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Visibility" OnClick="@(() => ShowInvoices(row.Id))">
+                                    View Invoices
+                                </MudButton>
+                                <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small" StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="@(() => newInvoice(row.VendorId, row.Id))"
+                                           Disabled="@(!GetCanCreateInvoiceForRow(row) || isDetailsLoading || isActionInProgress)">
+                                    Create Invoice
+                                </MudButton>
+                            </div>
+                        </div>
 
-                                </MudItem>
-                                <MudDivider Class="my-1" />
-                                <MudItem>
-                                    <MudText Typo="Typo.subtitle2" Color="Color.Default">
-                                        Supplier
-                                    </MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Info">
-                                        @row.VendorName
-                                    </MudText>
-                                </MudItem>
+                        <!-- Cards with compact KPIs -->
+                        <MudGrid GutterSize="2" Class="child-row-grid">
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Elevation="0" Class="small-card">
+                                    <div class="d-flex align-center gap-2">
+                                        <MudAvatar Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">
+                                            <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Size="Size.Small" />
+                                        </MudAvatar>
+                                        <div>
+                                            <div class="label">Invoiced</div>
+                                            <div class="value"><CurrencyText Amount="@row.InvoicedTotal" /></div>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Count: @(row.InvoiceCount ?? 0)</MudText>
+                                        </div>
+                                    </div>
+                                </MudPaper>
                             </MudItem>
 
-                            <MudItem xs="6" sm="6">
-                                <MudText Typo="Typo.subtitle2" Color="Color.Primary">Invoice Details</MudText>
-                                <MudDivider Class="my-1" />
-                                <MudGrid GutterSize="1">
-                                    <MudItem xs="6" sm="6">
-
-                                        <MudItem>
-
-                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">
-                                                Invoice Count
-                                            </MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Info">
-                                                @row.PreviousInvoiceCount
-                                            </MudText>
-                                        </MudItem>
-                                        <MudDivider Class="my-1" />
-                                        <MudItem>
-                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">
-                                                Previous Invoices
-                                            </MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Info">
-                                                <CurrencyText Amount="@row.PreviousInvoiceValue" />
-                                            </MudText>
-                                        </MudItem>
-                                    </MudItem>
-
-                                    <MudItem xs="6" sm="6">
-                                        <MudItem>
-                                            <MudText Typo="Typo.subtitle2" Color="Color.Default">
-                                                Invoice Balance
-                                            </MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Info">
-                                                <CurrencyText Amount="@row.InvoiceBalanceValue" />
-                                            </MudText>
-                                        </MudItem>
-                                        <MudDivider Class="my-1" />
-                                    </MudItem>
-                                </MudGrid>
-
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Elevation="0" Class="small-card">
+                                    <div class="d-flex align-center gap-2">
+                                        <MudAvatar Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">
+                                            <MudIcon Icon="@Icons.Material.Filled.HourglassTop" Size="Size.Small" />
+                                        </MudAvatar>
+                                        <div>
+                                            <div class="label">Under Review</div>
+                                            <div class="value">
+                                                <CurrencyText Amount="@(
+                                                    (row.InvoicedTotal ?? 0m)
+                                                    - ((row.ApprovedTotal ?? 0m) + (row.RejectedTotal ?? 0m))
+                                                )" />
+                                            </div>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Count: @(row.UnderReviewInvoiceCount ?? 0)</MudText>
+                                        </div>
+                                    </div>
+                                </MudPaper>
                             </MudItem>
 
-                            <MudItem xs="2" sm="2">
-                                <MudItem Class="d-flex justify-content-end">
-                                    <MudButton Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small"
-                                               StartIcon="@Icons.Material.Filled.Add"
-                                               OnClick="@(() => newInvoice(row.VendorId, row.Id))"
-                                               Disabled="@(!GetCanCreateInvoiceForRow(row) || isDetailsLoading || isActionInProgress)"
-                                               Style="width: 200px;">
-                                        Create Invoice
-                                    </MudButton>
-                                </MudItem>
-                                <MudDivider Class="my-1" />
-                                <MudItem Class="d-flex justify-content-end">
-                                    <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small"
-                                               StartIcon="@Icons.Material.Filled.Visibility"
-                                               Style="width: 200px;"
-                                               OnClick="@(() => ShowInvoices(row.Id))">
-                                        View Invoices
-                                    </MudButton>
-                                </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Elevation="0" Class="small-card">
+                                    <div class="d-flex align-center gap-2">
+                                        <MudAvatar Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" />
+                                        </MudAvatar>
+                                        <div>
+                                            <div class="label">Approved</div>
+                                            <div class="value"><CurrencyText Amount="@row.ApprovedTotal" /></div>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Invoices: @(row.ApprovedInvoiceCount ?? 0)</MudText>
+                                        </div>
+                                    </div>
+                                </MudPaper>
                             </MudItem>
 
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudPaper Elevation="0" Class="small-card">
+                                    <div class="d-flex align-center gap-2">
+                                        <MudAvatar Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">
+                                            <MudIcon Icon="@Icons.Material.Filled.HighlightOff" Size="Size.Small" />
+                                        </MudAvatar>
+                                        <div>
+                                            <div class="label">Rejected</div>
+                                            <div class="value"><CurrencyText Amount="@row.RejectedTotal" /></div>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Count: @(row.RejectedInvoiceCount ?? 0)</MudText>
+                                        </div>
+                                    </div>
+                                </MudPaper>
+                            </MudItem>
                         </MudGrid>
                     </MudPaper>
                 </MudTd>
@@ -312,15 +332,7 @@
             <MudTablePager PageSizeOptions="@_pageSizeOption" RowsPerPageString="POs Per Page" />
         </PagerContent>
     </MudTable>
-    <MudDivider Class="mt-2" />
-    <MudItem xs="12" Class="d-flex justify-end">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ExportVisibleToCsv">
-            Export CSV
-        </MudButton>
-    </MudItem>
 </MudPaper>
-
-
 
 @code {
     private List<BreadcrumbItem> _items = new()
@@ -329,11 +341,11 @@
         new BreadcrumbItem("Purchase Orders", href: "/POList", disabled: false),
     };
 
+    // Controls
+    private bool _filtersOpen = true;
+
     // Add these fields to fix CS0103 errors
     private bool CanCreateInvoice { get; set; } = true;
     private bool isDetailsLoading { get; set; } = false;
     private bool isActionInProgress { get; set; } = false;
-
-    // Add this method to fix CS0103
-
 }

@@ -1,164 +1,224 @@
-﻿/* Refreshed visual design for POList: clearer hierarchy, compact toolbar, and polished table */
-
-/* Card */
-.po-paper {
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,250,252,0.98));
-    border-radius: 10px;
-    box-shadow: 0 6px 18px rgba(15,23,42,0.06);
-    padding: 1rem;
+﻿/* Prevent wrapping for cells that should stay on one line */
+.no-wrap {
+    white-space: nowrap;
 }
 
-/* Header */
-.po-header { display:flex; flex-direction:column; gap:4px; }
-.po-number { color:#16213E; font-weight:700; }
-.po-meta { color:#6b7280; font-size:0.95rem; }
-
-/* Actions (right) */
-.actions-right { display:flex; justify-content:flex-end; align-items:center; }
-
-/* Section containing filters */
-.po-section {
-    background: transparent;
-    border-left: 4px solid rgba(27,110,194,0.06);
-    padding: 0.75rem;
-    border-radius: 8px;
+/* Appbar / header styling */
+.po-appbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    margin-bottom: 12px;
+    gap: 12px;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
-/* Compact filter control styling */
-.filter-control { width:100%; }
-.po-section .mud-form-field .mud-input-label,
-.po-section .mud-input-label {
-    font-size:0.75rem !important;
-    font-weight:600;
-    color:#6b7280;
+    .po-appbar .title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+        flex: 1 1 0%;
+    }
+
+        .po-appbar .title > div {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
-/* Specific: DateRangePicker label — slightly smaller */
-.po-section .mud-date-range-picker .mud-input-label {
-    font-size:0.72rem !important;
-    font-weight:600 !important;
-    color: #6b7280 !important;
+    .filter-actions .mud-button-root,
+    .filter-actions .mud-icon-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+.filters-grid .filter-control {
+    width: 100%;
+    box-sizing: border-box;
 }
 
-/* Inputs: value and placeholder sizing */
-.po-section .mud-input-root input,
-.po-section .mud-text-field .mud-input-slot input,
-.po-section .mud-numeric-field input,
-.po-section .mud-date-range-picker .mud-input-slot input {
-    font-size:0.95rem !important;
-    color:#111827;
+.filters-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
-.po-section input::placeholder,
-.po-section textarea::placeholder {
-    font-size:0.82rem !important;
-    opacity:0.75;
+.filter-wrap {
+    min-width: 120px;
+    flex: 1 1 160px;
 }
 
-/* Table styling */
-.po-table { width:100%; border-radius:8px; overflow:visible; }
-
-/* Header background and sticky behavior */
-.po-table thead {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    background: linear-gradient(90deg, rgba(27,110,194,0.04), rgba(255,255,255,0.98));
-    backdrop-filter: blur(2px);
-    box-shadow: 0 1px 0 rgba(15,23,42,0.04);
+.date-range-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: var(--mud-palette-surface);
+    min-height: 40px;
 }
 
-.po-table thead th {
-    padding:0.5rem 0.75rem; /* slightly reduced header padding */
-    border-bottom:1px solid rgba(15,23,42,0.06);
-    font-weight:600;
-    color:#0f172a;
-    text-align:left;
+    .date-range-picker .date-icon {
+        color: var(--mud-palette-primary);
+        font-size: 20px;
+    }
+
+    .date-range-picker .mud-input-root {
+        width: 100%;
+        margin: 0;
+    }
+
+Use :deep to pierce MudBlazor child components so header cells are matched
+:deep(.po-table thead th) {
+    background: linear-gradient(90deg, rgba(100,149,237,0.95), rgba(65,105,225,0.95)) !important;
+    color: blue !important;*/
 }
 
-/* Row & cell: reduced vertical padding and line-height to make rows tighter */
-.po-table td, .po-table th { font-size:0.9rem; vertical-align:middle; padding-top:0.35rem; padding-bottom:0.35rem; line-height:1.05rem; }
-.po-table tbody tr { transition: background .12s ease, transform .06s ease; }
-.po-table tbody tr:hover { background: rgba(27,110,194,0.03); transform: translateY(-1px); }
+optionally target MudBlazor's internal selector if needed
+:deep(.mud-table thead th) {
+    background: linear-gradient(90deg, rgba(100,149,237,0.95), rgba(65,105,225,0.95)) !important;
+    color: blue !important;
+}
 
-/* Alternating rows */
-.po-table tbody tr:nth-child(even) { background: rgba(15,23,42,0.015); }
+force header cells to pick up gradient even when rendered inside MudBlazor components
+:deep(.po-header-cell) {
+    background: linear-gradient(90deg, rgba(100,149,237,0.95), rgba(65,105,225,0.95)) !important;
+    color: #fff !important;
+    border-bottom: 1px solid rgba(0,0,0,0.06) !important;
+}
 
-/* Link styling in cells */
-.cell-link { font-weight:500; font-size:0.92rem; }
-
-/* Emphasis columns */
-.total-col { font-weight:600; color:rebeccapurple; }
-
-/* Child row card */
 .child-row-paper {
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,255,0.98));
-    border-radius:8px;
-    padding:0.75rem;
-    border:1px solid rgba(15,23,42,0.03);
+    background: #fafbfd;
 }
 
-/* Child stats */
-.child-stat { padding:0.5rem; border-radius:6px; text-align:center; background:rgba(255,255,255,0.9); box-shadow: inset 0 0 0 1px rgba(15,23,42,0.02); }
-.stat-value { font-weight:700; color:rebeccapurple; font-size:0.95rem; }
-.stat-label-small { font-size:0.78rem; color:#6b7280; margin-top:0.25rem; }
+/* Responsive: stack nicely on small screens */
+@media (max-width:900px) {
+    .filters-row {
+        gap: 8px;
+    }
 
-/* Child actions */
-.child-actions .actions-wrap { display:flex; gap:0.5rem; justify-content:flex-end; align-items:center; }
-
-/* Responsive tweaks */
-@media (max-width: 720px) {
-    .po-paper { padding:0.75rem; }
-    .po-section { padding:0.5rem; }
-    .actions-right { margin-top:0.5rem; justify-content:flex-start; }
-    .po-table thead th { font-size:0.92rem; padding:0.4rem; }
-    .child-actions .actions-wrap { justify-content:flex-start; }
-}
-
-/* Ensure both action buttons have identical size/visual alignment.
-   Use strong specificity and !important to override MudBlazor internal sizing. */
-.po-action-btn,
-.po-action-btn.mud-button-root,
-.po-action-btn a,
-.po-action-btn.mud-button-root > .mud-button-root {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.5rem !important;
-    box-sizing: border-box !important;
-
-    /* enforced identical size */
-    min-width: 160px !important;
-    width: 160px !important;
-    max-width: 160px !important;
-    height: 36px !important; /* matches MudBlazor Size.Small */
-    padding: 0 12px !important;
-    white-space: nowrap !important;
-}
-
-/* If an outline variant applies extra inner padding, normalize the inner element too */
-.po-action-btn .mud-button-root,
-.po-action-btn .mud-button {
-    width: 100% !important;
-    height: 100% !important;
-    padding: 0 !important;
-}
-
-/* Slight spacing tweak when "ms-2" (bootstrap margin-start) applied */
-.po-action-btn.ms-2 {
-    margin-left: 8px !important;
-}
-
-/* Small screens: let buttons size naturally so they wrap and don't overflow */
-@media (max-width: 600px) {
-    .po-action-btn,
-    .po-action-btn.mud-button-root,
-    .po-action-btn a {
-        min-width: 0 !important;
-        width: auto !important;
-        max-width: none !important;
-        height: auto !important;
-        padding: 6px 10px !important;
+    .filter-wrap {
+        flex: 1 1 45%;
     }
 }
 
+/* At smaller widths hide button text and keep icon-only to avoid wrapping */
+@media (max-width:720px) {
+    .po-appbar {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .filter-actions .mud-button-root .mud-button-label,
+    .filter-actions .mud-button-root .mud-button-start-icon + .mud-button-label {
+        display: none !important;
+    }
+
+    .filter-actions .mud-button-root,
+    .filter-actions .mud-icon-button {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+        min-width: 40px !important;
+    }
+
+    .po-appbar .title {
+        gap: 8px;
+    }
+}
+
+@media (max-width:520px) {
+    .filter-wrap {
+        flex: 1 1 100%;
+    }
+}
+
+.child-row-actions {
+    margin-bottom: 12px;
+}
+
+    .child-row-actions .po-meta {
+        min-width: 280px;
+    }
+
+.small-card {
+    padding: 10px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ffffff, #fbfdff);
+    box-shadow: 0 1px 3px rgba(16,24,40,0.06);
+    height: 100%;
+}
+
+    .small-card .label {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .small-card .value {
+        font-weight: 600;
+        font-size: 1rem;
+        margin-top: 4px;
+    }
+
+.child-row-grid {
+    gap: 12px;
+}
+
+.kpi-cards {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.kpi-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 120px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ffffff, #fbfdff);
+    box-shadow: 0 1px 4px rgba(16,24,40,0.06);
+    flex: 0 0 auto;
+}
+
+.kpi-cards::-webkit-scrollbar {
+    height: 6px;
+}
+
+.kpi-cards::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.12);
+    border-radius: 10px;
+}
+
+@media (min-width: 992px) {
+    .child-row-grid {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: stretch;
+    }
+
+        .child-row-grid > * {
+            box-sizing: border-box;
+            flex: 0 0 calc(25% - 12px) !important;
+            max-width: calc(25% - 12px) !important;
+        }
+}
