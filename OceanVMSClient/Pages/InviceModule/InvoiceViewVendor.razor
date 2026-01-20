@@ -1,7 +1,7 @@
 ﻿@page "/invoiceviewvendor/{InvoiceId:Guid?}"
 
 @using MudBlazor
-
+<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
 <PageHeader Title="Invoice" Class="mb-2" />
 
 <div class="d-flex justify-end mb-2">
@@ -38,4 +38,11 @@ else
     </div>
 }
 
-
+@code{
+    private List<BreadcrumbItem> _items = new()
+    {
+        new BreadcrumbItem("Home", href: "/", disabled: false),
+        new BreadcrumbItem("Invoices", href: "/invoices", disabled: false),
+        new BreadcrumbItem("Invoice Details", href: null, disabled: true)
+    };
+}

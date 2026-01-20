@@ -134,6 +134,9 @@ namespace OceanVMSClient.HttpRepo.VendorRegistration
                     queryParams.Add(add("ESIRegNo", vendorRegistrationFormParameters.ESIRegNo));
                 if (!string.IsNullOrWhiteSpace(vendorRegistrationFormParameters.OrderBy))
                     queryParams.Add(add("OrderBy", vendorRegistrationFormParameters.OrderBy));
+                queryParams.Add(add("PageNumber", vendorRegistrationFormParameters.PageNumber.ToString()));
+                queryParams.Add(add("PageSize", vendorRegistrationFormParameters.PageSize.ToString()));
+
             }
 
             var qs = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : string.Empty;

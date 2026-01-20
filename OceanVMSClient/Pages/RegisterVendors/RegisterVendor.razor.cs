@@ -85,6 +85,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private string _approvalStatus = "Pending";
         private string _formEditMode = "Create";
         private bool _submitDisabled = false;
+        private bool _isResponderEmailLocked = false;
+
 
         // Dynamic requirement flags
         private bool _isAadharRequired;
@@ -164,7 +166,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
         private bool _isOrganizationSectionValid = true;
         private bool _isAddressSectionValid = true;
         private bool _isContactSectionValid = true;
-
+        private bool _responderEmailAcknowledged = false;
         public RegisterVendor()
         {
             // DO NOT initialize EditContext here. Initializing in ctor causes InvokeAsync/StateHasChanged
@@ -232,6 +234,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
                                 _editContext?.NotifyFieldChanged(new FieldIdentifier(_vendorReg, prop.Name));
                             }
                             _formEditMode = "Edit";
+
+                            _isResponderEmailLocked = true;
                             // Re-evaluate section validity after copying values
                             UpdateOrganizationSectionValidity();
                             UpdateAddresSectionValidity();
@@ -399,9 +403,9 @@ namespace OceanVMSClient.Pages.RegisterVendors
                     // If reviewer explicitly rejected -> approver must not act
                     if (string.Equals(reviewerStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
                     {
-                        _isApproverLocked = true;
-                        _isReviewLocked = false; // reviewer section remains visible but not editable by approver
-                        _isReadOnly = true;      // approver cannot edit core fields
+                        _isApproverLocked = false;
+                        _isReviewLocked = true; // reviewer section remains visible but not editable by approver
+                        _isReadOnly = false;      // approver cannot edit core fields
                         return;
                     }
 
@@ -1396,6 +1400,42 @@ namespace OceanVMSClient.Pages.RegisterVendors
             return Task.CompletedTask;
         }
 
+        private async Task OnResponderEmailBlurHandler()
+        {
+            if (_editContext == null || _vendorReg == null)
+                return;
+
+            var fieldName = nameof(VendorRegistrationFormDto.ResponderEmailId);
+            var fieldId = new FieldIdentifier(_vendorReg, fieldName);
+
+            // 1) Run existing validation first (format + uniqueness). This will populate the message store.
+            await ValidateResponderEmailOnBlur();
+
+            // 2) If validation produced messages for this field, do not show the acknowledgement dialog.
+            var hasMessages = _editContext.GetValidationMessages(fieldId).Any();
+            if (hasMessages)
+                return;
+
+            // 3) If already acknowledged previously during this session, skip the dialog.
+            if (_responderEmailAcknowledged)
+                return;
+
+            // 4) Finally, when creating a new registration, show the informational confirmation.
+            if (string.Equals(_formEditMode, "Create", StringComparison.OrdinalIgnoreCase))
+            {
+                var confirmed = await DialogService.ShowMessageBox(
+                    "Responder Email — Important",
+                    "Note: Once this registration is submitted the Responder Email cannot be changed. Click OK to acknowledge.",
+                    yesText: "OK",
+                    noText: "Cancel");
+
+                if (confirmed != true)
+                    return;
+
+                // remember user acknowledged so we don't repeatedly prompt on further blurs
+                _responderEmailAcknowledged = true;
+            }
+        }
         private async Task ValidateResponderEmailOnBlur()
         {
             if (_editContext == null || _vendorReg == null) return;
@@ -2519,7 +2559,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             // Allow users with approver role to edit approval fields until they explicitly submit.
             // Approver may act only when reviewer has approved the form.
-            _isApproverLocked = !(_isApprover && string.Equals(reviewerStatus, "Approved", StringComparison.OrdinalIgnoreCase));
+            _isApproverLocked = !(_isApprover && !string.Equals(reviewerStatus, "Pending", StringComparison.OrdinalIgnoreCase));
 
             // Approver should not change reviewer fields
             _isReviewLocked = true;
@@ -2547,6 +2587,24 @@ namespace OceanVMSClient.Pages.RegisterVendors
         {
             var dto = new VendorRegistrationFormCreateDto();
             ApplyCommonProperties(dto);
+
+            // determine LastUpdatedBy based on current user context
+            string lastUpdatedBy = "UNKNOWN";
+            if (!string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase))
+            {
+                lastUpdatedBy = "VENDOR";
+            }
+            else if (_isReviewer || (!string.IsNullOrWhiteSpace(_userRole) && _userRole.IndexOf("Vendor Validator", StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                lastUpdatedBy = "VALIDATOR";
+            }
+            else if (_isApprover || (!string.IsNullOrWhiteSpace(_userRole) && _userRole.IndexOf("Vendor Approver", StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                lastUpdatedBy = "APPROVER";
+            }
+            dto.LastUpdatedBy = lastUpdatedBy;
+            dto.LastUpdatedOn = DateTime.UtcNow;
+
             return dto;
         }
 
@@ -2558,7 +2616,23 @@ namespace OceanVMSClient.Pages.RegisterVendors
             dto.RegistrationDate = _vendorReg.RegistrationDate;
             dto.D365VendorId = _vendorReg.D365VendorId.ToString();
             dto.SAPVendorCode = _vendorReg.SAPVendorCode;
+            // determine LastUpdatedBy based on current user context
 
+            string lastUpdatedBy = "UNKNOWN";
+            if (!string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase))
+            {
+                lastUpdatedBy = "VENDOR";
+            }
+            else if (_isReviewer || (!string.IsNullOrWhiteSpace(_userRole) && _userRole.IndexOf("Vendor Validator", StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                lastUpdatedBy = "VALIDATOR";
+            }
+            else if (_isApprover || (!string.IsNullOrWhiteSpace(_userRole) && _userRole.IndexOf("Vendor Approver", StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                lastUpdatedBy = "APPROVER";
+            }
+            dto.LastUpdatedBy = lastUpdatedBy;
+            dto.LastUpdatedOn = DateTime.UtcNow;
             // Preserve existing reviewer fields so an approver's non-review edits do not reset review status.
             // We copy the values from the loaded model (_vendorReg) rather than any UI inputs to avoid
             // accidentally overwriting review data.
@@ -2704,19 +2778,27 @@ namespace OceanVMSClient.Pages.RegisterVendors
                 {
                     Snackbar.Add("Vendor registration updated.", Severity.Success);
 
-                    // Show a pleasant dialog informing the user their registration was submitted/updated
-                    var parameters = new DialogParameters
-                    {
-                        ["VendorName"] = _vendorReg.OrganizationName,
-                        ["RegistrationId"] = updatedVendorReg.Id,
-                        ["ResponderEmail"] = _vendorReg.ResponderEmailId
-                    };
-                    var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
-                    var dialogRef = DialogService.Show<RegistrationSubmittedDialog>("Registration updated", parameters, options);
+                    //// Show a pleasant dialog informing the user their registration was submitted/updated
+                    //var parameters = new DialogParameters
+                    //{
+                    //    ["VendorName"] = _vendorReg.OrganizationName,
+                    //    ["RegistrationId"] = updatedVendorReg.Id,
+                    //    ["ResponderEmail"] = _vendorReg.ResponderEmailId
+                    //};
+                    //var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+                    //var dialogRef = DialogService.Show<RegistrationSubmittedDialog>("Registration updated", parameters, options);
 
-                    var result = await dialogRef.Result;
-                    var idToNavigate = result.Data is Guid gid ? gid : updatedVendorReg.Id;
-                    NavigationManager.NavigateTo($"/vendor-registrations/{idToNavigate}");
+                    //var result = await dialogRef.Result;
+                    //var idToNavigate = result.Data is Guid gid ? gid : updatedVendorReg.Id;
+                    if (!string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase))
+                    {
+                        NavigationManager.NavigateTo($"/");
+                    }
+                    else
+                    {
+                        NavigationManager.NavigateTo($"/register-vendor/{_vendorReg.Id}");
+                    }
+                        
                 }
                 else
                 {

@@ -8,7 +8,10 @@
 else
 {
     <PageHeader Title="Edit Vendor Registration" Class="mb-0" />
-}
+    <MudText Typo="Typo.caption"  Color="Color.Secondary" class="me-2">Review Status: @_vendorReg.ReviewerStatus</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary" class="me-2">Approval Status: @_vendorReg.ApproverStatus</MudText>
+
+ }
 
 <MudCard>
     <MudCardContent>
@@ -344,10 +347,10 @@ else
                                                       Typo="@_inputTypo"
                                                       Margin="@_inputMargin"
                                                       Variant="@_inputVariant"
-                                                      ReadOnly="@_isReadOnly"
+                                                      ReadOnly="@(_isReadOnly || _isResponderEmailLocked)"
                                                       Required="@ValidationExtensions.HasRequiredAttribute(() => _vendorReg.ResponderEmailId)"
                                                       For="@(() => _vendorReg.ResponderEmailId)"
-                                                      OnBlur="@(() => ValidateResponderEmailOnBlur())" />
+                                                      OnBlur="@(() => OnResponderEmailBlurHandler())" />
                                     </MudItem>
                                 </MudGrid>
                             </MudPaper>

@@ -47,10 +47,36 @@ namespace OceanVMSClient.Pages.Authentication
             }
             catch (Exception ex)
             {
-                StatusMessage = string.IsNullOrWhiteSpace(ex.Message)
-                    ? "Unable to send reset link. Please try again."
-                    : ex.Message;
+                // Robustly detect "account locked due to vendor rejection" or similar API responses.
+                // AuthService may throw different exception types; check message content as a fallback.
+                var apiMessage = ex?.Message ?? string.Empty;
+                var lower = apiMessage.ToLowerInvariant();
+
+                if (lower.Contains("vendor") && lower.Contains("reject"))
+                {
+                    StatusMessage = "Your account has been locked due to vendor registration rejection. Please contact the vendor administrator or support to resolve this.";
+                }
+                else if (lower.Contains("account locked") || lower.Contains("locked"))
+                {
+                    StatusMessage = "Your account is currently locked. Please contact support or your vendor to unlock the account.";
+                }
+                else if (lower.Contains("not registered") || lower.Contains("not found") || lower.Contains("does not exist"))
+                {
+                    // Keep message vague if the account doesn't exist to avoid user enumeration,
+                    // but surface a helpful generic response.
+                    StatusMessage = "If that user id is registered, password reset instructions have been sent.";
+                    IsSuccess = true; // keep flow consistent with "silent" success for unknown users
+                }
+                else
+                {
+                    // Default: show API message when available, otherwise generic fallback
+                    StatusMessage = !string.IsNullOrWhiteSpace(apiMessage)
+                        ? apiMessage
+                        : "Unable to send reset link. Please try again.";
+                }
+
                 IsSuccess = false;
+                // Show user-friendly snackbar message (error severity for locked/failed cases).
                 Snackbar.Add(StatusMessage, Severity.Error);
             }
             finally

@@ -59,8 +59,11 @@ namespace OceanVMSClient.Pages.Authentication
                 StatusMessage = "Your password has been changed successfully.";
                 Snackbar.Add(StatusMessage, Severity.Success);
 
-                await Task.Delay(1000);
-                NavigationManager.NavigateTo("/");
+                // Clear client auth state and require user to re-login.
+                await AuthService.Logout();
+
+                // Navigate to login with a flag so Login page can show a clear message to the user.
+                NavigationManager.NavigateTo("/login?passwordChanged=true", forceLoad: true);
             }
             catch (Exception ex)
             {

@@ -46,6 +46,21 @@ namespace OceanVMSClient.Pages.POModule
         private Guid? _vendorId;
         private Guid? _vendorContactId;
         private Guid? _employeeId;
+
+        private MudTable<InvoiceDto>? _table;
+        private MudDateRangePicker? _dateRange_picker;
+        private DateRange? _invoice_date_range;
+
+        // filter fields
+        private string? invoiceRefNo;
+        private string? sapPoNo;
+        private decimal? minInvoiceTotal;
+        private decimal? maxInvoiceTotal;
+        private string? vendorName;
+        private string? ProjectCode;
+
+        private readonly int[] _pageSize_option = { 15, 25, 50 };
+        private bool _filtersOpen = true;
         private void ToggleRow(Guid id)
         {
             if (!_expandedRows.Add(id))
@@ -193,7 +208,33 @@ namespace OceanVMSClient.Pages.POModule
                 await _date_range_picker.CloseAsync();
             await OnSearch();
         }
+        private static string FormatDate(DateTime? date) => date.HasValue ? date.Value.ToString("dd-MMM-yy") : string.Empty;
 
+        private string GetDateRangeTooltip()
+        {
+            if (_invoice_date_range == null || (_invoice_date_range.Start == null && _invoice_date_range.End == null))
+                return "No date range selected";
+
+            var start = _invoice_date_range.Start?.ToString("dd-MMM-yy") ?? "—";
+            var end = _invoice_date_range.End?.ToString("dd-MMM-yy") ?? "—";
+            return $"{start} To {end}";
+        }
+        private async Task DownloadInvoiceAsync(string? fileUrl)
+        {
+            if (string.IsNullOrWhiteSpace(fileUrl))
+                return;
+
+            await JS.InvokeVoidAsync("open", fileUrl, "_blank");
+        }
+
+        private async Task OpenInvoice(Guid invoiceId)
+        {
+            if (string.IsNullOrWhiteSpace(invoiceViewPage))
+                return;
+            var url = $"{invoiceViewPage}/{invoiceId}";
+            NavigationManager.NavigateTo(url);
+            await Task.CompletedTask;
+        }
         // map invoice status to chip color
         private Color GetInvoiceChipColor(string? status)
         {

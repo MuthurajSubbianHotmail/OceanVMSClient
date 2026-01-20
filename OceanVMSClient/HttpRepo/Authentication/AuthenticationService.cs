@@ -161,7 +161,7 @@ namespace OceanVMSClient.HttpRepo.Authentication
 
                 // Force a full page reload so any components reading localStorage directly (or cached UI) update
                 // Navigate to login and force a full reload of the app from the server.
-                _nav.NavigateTo("/login", forceLoad: true);
+                //_nav.NavigateTo("/login", forceLoad: true);
 
                 _snackbar.Add("You have been logged out.", Severity.Success);
             }

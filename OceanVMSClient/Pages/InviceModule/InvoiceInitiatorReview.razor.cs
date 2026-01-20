@@ -29,6 +29,7 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] private IInvoiceRepository InvoiceRepository { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
         [Inject] private ILogger<InvoiceInitiatorReview> Logger { get; set; } = default!;
+        [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
         // Logged-in user context (supplied by parent)
         [Parameter] public Guid _LoggedInEmployeeID { get; set; } = Guid.Empty;
@@ -717,6 +718,8 @@ namespace OceanVMSClient.Pages.InviceModule
             {
                 // allow retry only when save failed; when success _initiatorSaved is true and button will be disabled
                 _isSubmitting = false;
+                NavigationManager.NavigateTo("/invoices", true);
+
             }
         }
 

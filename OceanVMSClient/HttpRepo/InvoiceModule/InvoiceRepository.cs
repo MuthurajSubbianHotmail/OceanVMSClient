@@ -219,7 +219,7 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             if (string.IsNullOrWhiteSpace(postContent))
                 return postContent;
 
-            // If server returned JSON string or object, try to extract URL
+            // Trim and attempt to extract URL from JSON string/object responses
             string candidate = postContent.Trim();
             try
             {
@@ -239,22 +239,52 @@ namespace OceanVMSClient.HttpRepo.InvoiceModule
             }
             catch
             {
-                // not JSON — use raw string
+                // Not JSON — leave candidate as-is
             }
 
-            // If the returned value is already absolute, return it
-            if (Uri.IsWellFormedUriString(candidate, UriKind.Absolute))
-                return candidate;
+            candidate = candidate.Trim();
 
-            // Otherwise, combine with HttpClient base address if available
+            // If the server returned a value that starts with a scheme, treat it as absolute
+            // even if it contains spaces or other characters that make IsWellFormedUriString false.
+            if (candidate.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                candidate.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                // Ensure unsafe characters (spaces, etc.) are percent-encoded instead of trying to combine with base address.
+                // Prefer returning the original if already well-formed.
+                if (Uri.IsWellFormedUriString(candidate, UriKind.Absolute))
+                    return candidate;
+
+                // Escape URI (encodes spaces and other characters)
+                try
+                {
+                    return Uri.EscapeUriString(candidate);
+                }
+                catch
+                {
+                    // Fallback to a conservative encode for spaces
+                    return candidate.Replace(" ", "%20");
+                }
+            }
+
+            // Not absolute: combine with base address if available.
             var baseAddr = _httpClient.BaseAddress?.ToString().TrimEnd('/');
             if (!string.IsNullOrEmpty(baseAddr))
             {
-                var combined = $"{baseAddr}/{candidate.TrimStart('/')}";
-                return combined;
+                // Ensure candidate starts with a slash for correct Uri combination
+                if (!candidate.StartsWith("/"))
+                    candidate = "/" + candidate;
+
+                if (Uri.TryCreate(baseAddr, UriKind.Absolute, out var baseUri))
+                {
+                    // Use Uri to correctly combine and normalize paths
+                    var combined = new Uri(baseUri, candidate).ToString();
+                    return combined;
+                }
+
+                return $"{baseAddr}/{candidate.TrimStart('/')}";
             }
 
-            // fallback: return raw candidate
+            // Fallback: return raw candidate
             return candidate;
         }
 

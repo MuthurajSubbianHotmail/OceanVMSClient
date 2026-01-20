@@ -73,12 +73,30 @@ namespace OceanVMSClient.Components
             isPanelOpen = false;
             NavigationManager.NavigateTo("change-password");
         }
-        private void NavigateToLogout()
+        //private void NavigateToLogout()
+        //{
+        //    isPanelOpen = false;
+        //    NavigationManager.NavigateTo("/logout");
+        //}
+
+        private async Task NavigateToLogout()
         {
             isPanelOpen = false;
-            NavigationManager.NavigateTo("/logout");
-        }
 
+            try
+            {
+                // Optional: log to browser console to verify the click reached this handler.
+                await JSRuntime.InvokeVoidAsync("console.log", "AuthLinkDiv.NavigateToLogout invoked");
+
+                // Use forceLoad to ensure the Logout page runs and the auth service can clear local storage / auth state.
+                NavigationManager.NavigateTo("/logout", forceLoad: true);
+            }
+            catch
+            {
+                // swallow - logging above is diagnostic only
+                NavigationManager.NavigateTo("/logout", forceLoad: true);
+            }
+        }
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             // If panel opened and not registered yet, register the outside-click handler.

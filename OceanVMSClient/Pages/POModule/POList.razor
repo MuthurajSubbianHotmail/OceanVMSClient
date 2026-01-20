@@ -129,6 +129,7 @@
                 </div>
 
                 <div class="filter-wrap" style="min-width:230px; max-width:320px;">
+                    <MudTooltip Text="@GetDateRangeTooltip()" Placement="Placement.Bottom">
                     <div class="date-range-picker">
                         <MudIcon Class="date-icon" Icon="@Icons.Material.Filled.DateRange" />
                         <MudDateRangePicker @ref="_dateRangePicker"
@@ -147,6 +148,7 @@
                             Clear
                         </MudButton>
                     </div>
+                    </MudTooltip>
                 </div>
             </div>
         </div>
@@ -348,4 +350,14 @@
     private bool CanCreateInvoice { get; set; } = true;
     private bool isDetailsLoading { get; set; } = false;
     private bool isActionInProgress { get; set; } = false;
+
+    private string GetDateRangeTooltip()
+    {
+        if (_poDateRange == null || (_poDateRange.Start == null && _poDateRange.End == null))
+            return "No date range selected";
+
+        var start = _poDateRange.Start?.ToString("dd-MMM-yy") ?? "—";
+        var end = _poDateRange.End?.ToString("dd-MMM-yy") ?? "—";
+        return $"{start} To {end}";
+    }
 }

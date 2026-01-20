@@ -26,6 +26,7 @@ namespace OceanVMSClient.Pages.InviceModule
         [Inject] private IInvoiceRepository InvoiceRepository { get; set; } = default!;
         [Inject] private ISnackbar Snackbar { get; set; } = default!;
         [Inject] private ILogger<InvoiceApproverReview> Logger { get; set; } = default!;
+        [Inject] private NavigationManager NavigationManager { get; set; } = default!;
 
         // Cascading parameters (UI theme / user context)
         //[CascadingParameter] public Margin _margin { get; set; } = Margin.Dense;
@@ -622,6 +623,7 @@ namespace OceanVMSClient.Pages.InviceModule
                     await handlers.SaveAsync();
 
                 StateHasChanged();
+                NavigationManager.NavigateTo("/invoices", true);
             }
             catch (Exception ex)
             {

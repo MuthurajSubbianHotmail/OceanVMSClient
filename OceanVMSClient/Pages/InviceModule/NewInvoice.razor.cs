@@ -342,24 +342,31 @@ namespace OceanVMSClient.Pages.InviceModule
                     {
                         Logger.LogError(ex, "Failed to upload invoice file before creating invoice");
                         _fileValidationMessage = "Failed to upload file. You can try again or create invoice without file.";
-                        // abort to let user decide
+                        // show user a message and abort so they can decide
+                        await DialogService.ShowMessageBox("File Upload Failed", "Failed to upload invoice file. You can retry or proceed without a file.", "OK");
                         return;
                     }
                 }
 
                 var createdInvoice = await InvoiceRepository.CreateInvoice(_invoiceForCreationDto);
+
+                // Some servers return 201 Created with no body. Treat a non-exceptional call as success.
                 if (createdInvoice != null)
                 {
-                    NavigationManager.NavigateTo($"/invoices");
+                    await DialogService.ShowMessageBox("Invoice Created", "Invoice was created successfully.", "OK");
+                    NavigationManager.NavigateTo("/invoices");
+                    return;
                 }
-                else
-                {
-                    Logger.LogError("Failed to create invoice. PORepository returned null.");
-                }
+
+                // Repository returned null but no exception was thrown — still treat as success but inform user.
+                await DialogService.ShowMessageBox("Invoice Created", "Invoice was created (server returned no body). Navigating to invoice list.", "OK");
+                NavigationManager.NavigateTo("/invoices");
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error creating new invoice");
+                var message = string.IsNullOrWhiteSpace(ex.Message) ? "Unknown error creating invoice." : ex.Message;
+                await DialogService.ShowMessageBox("Error creating invoice", message, "OK");
             }
         }
 
