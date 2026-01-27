@@ -38,6 +38,14 @@ namespace OceanVMSClient.Components
         // single-file handler - uses this.DocType provided by parent
         private async Task UploadOrgRegDocImage(InputFileChangeEventArgs e)
         {
+            // Prevent uploads when component is read-only
+            if (IsReadOnly)
+            {
+                UploadError = "Upload disabled in read-only mode.";
+                StateHasChanged();
+                return;
+            }
+
             UploadError = string.Empty;
             SelectedFileName = string.Empty;
 

@@ -179,6 +179,8 @@ namespace OceanVMSClient.Pages.RegisterVendors
             _isLoading = true;
             try
             {
+                
+
                 InitializeEditContext(_vendorReg);
 
                 await LoadUserContextAsync();
@@ -249,11 +251,33 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
                             await InvokeAsync(StateHasChanged);
                         }
+                       
                     }
                     catch (Exception ex)
                     {
                         Logger.LogError(ex, "Failed to load vendor registration during initialization");
                     }
+                }
+                else
+                {
+                    //If creating a new registration(empty guid) ask user to confirm before opening the form.
+                    //if (VendorRegistrationFormId == Guid.Empty)
+                    //{
+                    var confirmed = await DialogService.ShowMessageBox(
+                        "Important",
+                        "Please note that vendor registration is enabled only for Indian Vendors. Do you want to proceed?",
+                        yesText: "Proceed",
+                        noText: "Cancel");
+
+                    if (confirmed != true)
+                    {
+                        // User cancelled — stop initialization and navigate away.
+                        _isLoading = false;
+                        await InvokeAsync(StateHasChanged);
+                        NavigationManager.NavigateTo("/vendor-registrations");
+                        return;
+                    }
+                    // }
                 }
             }
             catch (Exception ex)
@@ -2581,7 +2605,10 @@ namespace OceanVMSClient.Pages.RegisterVendors
         }
         // Cancel navigation
         private void OnCancel() => NavigationManager.NavigateTo($"/vendor-registrations/{_vendorReg.Id}");
-
+        private bool IsVendorUser()
+        {
+            return !string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase);
+        }
         // DTO builders
         private VendorRegistrationFormCreateDto BuildCreateDto()
         {
@@ -2590,7 +2617,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
 
             // determine LastUpdatedBy based on current user context
             string lastUpdatedBy = "UNKNOWN";
-            if (!string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase))
+            if (IsVendorUser())
             {
                 lastUpdatedBy = "VENDOR";
             }
@@ -2619,7 +2646,7 @@ namespace OceanVMSClient.Pages.RegisterVendors
             // determine LastUpdatedBy based on current user context
 
             string lastUpdatedBy = "UNKNOWN";
-            if (!string.IsNullOrWhiteSpace(_userType) && string.Equals(_userType.Trim(), "VENDOR", StringComparison.OrdinalIgnoreCase))
+            if (IsVendorUser())
             {
                 lastUpdatedBy = "VENDOR";
             }

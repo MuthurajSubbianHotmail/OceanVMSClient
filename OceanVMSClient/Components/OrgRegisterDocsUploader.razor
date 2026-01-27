@@ -17,18 +17,29 @@
             <MudText Typo="Typo.caption"
                      Color="@labelColor"
                      Style="margin:0; display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center;">
-
                 @uploadText
-                 </MudText>
+            </MudText>
         }
     </div>
 
-    <InputFile id="@_inputId" OnChange="UploadOrgRegDocImage" style="display:none" />
-    <label for="@_inputId" style="margin:0; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-        <span style="border:1px solid var(--mud-palette-lines-default); border-radius:4px; width:36px; height:18px; display:flex; align-items:center; justify-content:center;">
-            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Color="Color.Primary" Size="Size.Small" />
-        </span>
-    </label>
+    <InputFile id="@_inputId" OnChange="UploadOrgRegDocImage" style="display:none" disabled="@IsReadOnly" />
+
+    @if (!IsReadOnly)
+    {
+        <label for="@_inputId" style="margin:0; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <span style="border:1px solid var(--mud-palette-lines-default); border-radius:4px; width:36px; height:18px; display:flex; align-items:center; justify-content:center;">
+                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Color="Color.Primary" Size="Size.Small" />
+            </span>
+        </label>
+    }
+    else
+    {
+        <label style="margin:0; cursor:not-allowed; display:flex; align-items:center; justify-content:center;" title="Read-only - uploads disabled" aria-disabled="true">
+            <span style="border:1px solid var(--mud-palette-lines-default); border-radius:4px; width:36px; height:18px; display:flex; align-items:center; justify-content:center; opacity:0.45;">
+                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Color="Color.Default" Size="Size.Small" />
+            </span>
+        </label>
+    }
 </div>
 
 <!-- Error (if any) -->

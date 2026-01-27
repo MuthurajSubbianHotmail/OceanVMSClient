@@ -63,8 +63,8 @@ namespace OceanVMSClient.Pages.InviceModule
 
         #region Display helpers (computed properties)
         private string FormatCurrency(decimal? value) => value?.ToString("C") ?? "-";
-        private string PoValueText => _PODto != null ? _PODto.ItemValue.ToString("N2") : "0.00";
-        private string PoTaxText => _PODto != null ? _PODto.GSTTotal.ToString("N2") : "0.00";
+        private string PoValueText => _PODto != null && _PODto.ItemValue.HasValue ? _PODto.ItemValue.Value.ToString("N2") : "0.00";
+        private string PoTaxText => _PODto != null && _PODto.GSTTotal.HasValue ? _PODto.GSTTotal.Value.ToString("N2") : "0.00";
         private string PoTotalText => _PODto != null ? _PODto.TotalValue.ToString("N2") : "0.00";
         private string PrevInvoiceCountText => _PODto?.PreviousInvoiceCount?.ToString() ?? "0";
         private string PrevInvoiceValueText => _PODto != null && _PODto.PreviousInvoiceValue.HasValue

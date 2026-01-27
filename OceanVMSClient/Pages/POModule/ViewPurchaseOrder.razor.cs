@@ -175,9 +175,9 @@ namespace OceanVMSClient.Pages.POModule
         private string VendorText => PurchaseOrderDetails?.VendorName ?? "—";
         private string ProjectText => PurchaseOrderDetails?.ProjectName ?? "—";
 
-        private string ItemValueText => PurchaseOrderDetails != null ? PurchaseOrderDetails.ItemValue.ToString("N2") : "0.00";
-        private string SpecialDiscountText => PurchaseOrderDetails != null ? PurchaseOrderDetails.SpecialDiscount.ToString("N2") : "0.00";
-        private string GSTTotalText => PurchaseOrderDetails != null ? PurchaseOrderDetails.GSTTotal.ToString("N2") : "0.00";
+        private string ItemValueText => PurchaseOrderDetails != null && PurchaseOrderDetails.ItemValue.HasValue ? PurchaseOrderDetails.ItemValue.Value.ToString("N2") : "0.00";
+        private string SpecialDiscountText => PurchaseOrderDetails != null && PurchaseOrderDetails.SpecialDiscount.HasValue ? PurchaseOrderDetails.SpecialDiscount.Value.ToString("N2") : "0.00";
+        private string GSTTotalText => PurchaseOrderDetails != null && PurchaseOrderDetails.GSTTotal.HasValue ? PurchaseOrderDetails.GSTTotal.Value.ToString("N2") : "0.00";
         private string TotalValueText => PurchaseOrderDetails != null ? PurchaseOrderDetails.TotalValue.ToString("N2") : "0.00";
 
         private string InvoiceStatusText => PurchaseOrderDetails?.InvoiceStatus ?? "Unknown";
@@ -193,7 +193,7 @@ namespace OceanVMSClient.Pages.POModule
             ? PurchaseOrderDetails.InvoiceBalanceValue.Value.ToString("N2")
             : "0.00";
 
-        private string PaidValueText => PurchaseOrderDetails != null ? PurchaseOrderDetails.PaidValue.ToString("N2") : "0.00";
+        private string PaidValueText => PurchaseOrderDetails != null && PurchaseOrderDetails.PaidValue.HasValue ? PurchaseOrderDetails.PaidValue.Value.ToString("N2") : "0.00";
         public bool allowUploadByInitiator => PurchaseOrderDetails != null && PurchaseOrderDetails.AllowInvUploadByInitiator == true;
 
         // Returns a MudBlazor Color based on the current invoice status

@@ -25,7 +25,8 @@ namespace OceanVMSClient.Pages.InviceModule
         private InvoiceDto _invoiceDto = new InvoiceDto();
         private InvoiceForCreationDto _invoiceForCreationDto = new InvoiceForCreationDto();
         [Inject] public NavigationManager NavigationManager { get; set; }
-        [Inject] public ILocalStorageService LocalStorage { get; set; } = default!
+        [Inject]
+        public ILocalStorageService LocalStorage { get; set; } = default!
 ;
         [Inject] public ILogger<NewInvoice> Logger { get; set; }
         [Inject] public IInvoiceRepository InvoiceRepository { get; set; }
@@ -99,12 +100,12 @@ namespace OceanVMSClient.Pages.InviceModule
             $"₹{value.ToString("N2", CultureInfo.InvariantCulture)}";
 
         private string PoValueText => PurchaseOrderDetails != null
-            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.ItemValue)
+            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.ItemValue ?? 0)
             : "₹0.00";
 
-        private string PoTaxText => PurchaseOrderDetails != null
-            ? FormatCurrencyWithSymbol(PurchaseOrderDetails.GSTTotal)
-            : "₹0.00";
+        private string PoTaxText => PurchaseOrderDetails != null && PurchaseOrderDetails.GSTTotal.HasValue
+     ? FormatCurrencyWithSymbol(PurchaseOrderDetails.GSTTotal.Value)
+     : "₹0.00";
 
         private string PoTotalText => PurchaseOrderDetails != null
             ? FormatCurrencyWithSymbol(PurchaseOrderDetails.TotalValue)
@@ -382,7 +383,7 @@ namespace OceanVMSClient.Pages.InviceModule
         {
             _invoiceForCreationDto.InvoiceValue = value ?? 0m;
 
-           
+
 
             RecalculateInvoiceTotal();
 

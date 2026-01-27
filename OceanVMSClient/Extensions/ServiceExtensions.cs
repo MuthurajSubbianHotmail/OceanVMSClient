@@ -22,7 +22,8 @@ namespace OceanVMSClient.Extensions
         {
             services.AddHttpClient("OceanAzureAPI", (sp, cl) =>
             {
-                cl.BaseAddress = new Uri("https://myoceanapp.azurewebsites.net/api/");
+                //cl.BaseAddress = new Uri("https://myoceanapp.azurewebsites.net/api/");
+                cl.BaseAddress = new Uri("https://api.olipl.org/api/");
             });
 
             services.AddScoped(
@@ -33,7 +34,7 @@ namespace OceanVMSClient.Extensions
         {
             services.AddScoped(sp => new HttpClient
             {
-                BaseAddress = new Uri("https://myoceanapp.azurewebsites.net/api/"),
+                BaseAddress = new Uri("https://api.olipl.org/api/"),
             }.EnableIntercept(sp));
             return services;
         }

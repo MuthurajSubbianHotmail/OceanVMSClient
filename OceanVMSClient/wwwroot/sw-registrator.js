@@ -5,28 +5,38 @@ window.updateAvailable = new Promise((resolve, reject) => {
     return;
   }
 
-  navigator.serviceWorker.register('/service-worker.js')
-    .then(reg => {
-      console.info(`SW registered (scope: ${reg.scope})`);
-      // If a waiting worker already exists, treat as update available
-      if (reg.waiting) {
-        resolve(true);
-        return;
-      }
-      reg.onupdatefound = () => {
-        const installing = reg.installing;
-        installing.onstatechange = () => {
-          if (installing.state === 'installed') {
-            // If page is already controlled, this is an update
-            resolve(!!navigator.serviceWorker.controller);
-          }
+  // Prefer published SW if its manifest exists
+  const publishedSW = '/service-worker.published.js';
+  const liteSW = '/service-worker.js';
+  const checkManifest = fetch('/service-worker-assets.js', { method: 'HEAD', cache: 'no-store' })
+    .then(r => r.ok)
+    .catch(() => false);
+
+  checkManifest.then(hasManifest => {
+    const swToRegister = hasManifest ? publishedSW : liteSW;
+    navigator.serviceWorker.register(swToRegister)
+      .then(reg => {
+        console.info(`SW registered (scope: ${reg.scope}, script: ${swToRegister})`);
+        // If a waiting worker already exists, treat as update available
+        if (reg.waiting) {
+          resolve(true);
+          return;
+        }
+        reg.onupdatefound = () => {
+          const installing = reg.installing;
+          installing.onstatechange = () => {
+            if (installing.state === 'installed') {
+              // If page is already controlled, this is an update
+              resolve(!!navigator.serviceWorker.controller);
+            }
+          };
         };
-      };
-    })
-    .catch(err => {
-      console.error('SW registration failed', err);
-      reject(err);
-    });
+      })
+      .catch(err => {
+        console.error('SW registration failed', err);
+        reject(err);
+      });
+  });
 });
 
 window.registerForUpdateAvailableNotification = (dotNetObjRef, methodName) => {

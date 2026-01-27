@@ -1,0 +1,116 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+
+    <!-- MIME types required for Blazor WebAssembly -->
+    <staticContent>
+      <remove fileExtension=".dll" />
+      <mimeMap fileExtension=".dll" mimeType="application/octet-stream" />
+
+      <remove fileExtension=".wasm" />
+      <mimeMap fileExtension=".wasm" mimeType="application/wasm" />
+
+      <remove fileExtension=".woff" />
+      <mimeMap fileExtension=".woff" mimeType="font/woff" />
+
+      <remove fileExtension=".woff2" />
+      <mimeMap fileExtension=".woff2" mimeType="font/woff2" />
+
+      <!-- Default long cache for static hashed assets -->
+      <clientCache cacheControlMode="UseMaxAge" cacheControlMaxAge="365.00:00:00" />
+    </staticContent>
+
+    <!-- Enable compression for faster load (requires IIS compression features) -->
+    <urlCompression doStaticCompression="true" doDynamicCompression="true" />
+
+    <!-- Fallback routing for Blazor; keep API routes excluded -->
+    <rewrite>
+      <rules>
+        <rule name="BlazorFallback" stopProcessing="true">
+          <match url=".*" />
+          <conditions logicalGrouping="MatchAll">
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+            <add input="{REQUEST_URI}" pattern="^/api" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="/index.html" />
+        </rule>
+      </rules>
+
+      <!-- Outbound rule: force no-cache headers for critical non-hashed files -->
+      <outboundRules>
+        <preConditions>
+          <preCondition name="Always">
+            <add input="{RESPONSE_Content-Type}" pattern=".*" />
+          </preCondition>
+        </preConditions>
+
+        <rule name="NoCacheForBootAndSW" preCondition="Always">
+          <match serverVariable="RESPONSE_Cache-Control" pattern=".*" />
+          <conditions>
+            <add input="{REQUEST_URI}" pattern="(index\.html|service-worker\.js|service-worker\.published\.js|service-worker-assets\.js|blazor\.boot\.json|_framework/blazor\.boot\.json|version\.json|manifest\.webmanifest)$" ignoreCase="true" />
+          </conditions>
+          <action type="Rewrite" value="no-cache, no-store, must-revalidate" />
+        </rule>
+      </outboundRules>
+    </rewrite>
+
+  </system.webServer>
+
+  <!-- Disable caching for files that must be revalidated after deploy -->
+  <location path="index.html">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="DisableCache" />
+      </staticContent>
+    </system.webServer>
+  </location>
+
+  <location path="service-worker.js">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="DisableCache" />
+      </staticContent>
+    </system.webServer>
+  </location>
+
+  <location path="service-worker.published.js">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="DisableCache" />
+      </staticContent>
+    </system.webServer>
+  </location>
+
+  <location path="service-worker-assets.js">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="DisableCache" />
+      </staticContent>
+    </system.webServer>
+  </location>
+
+  <location path="version.json">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="DisableCache" />
+      </staticContent>
+    </system.webServer>
+  </location>
+
+  <location path="manifest.webmanifest">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="DisableCache" />
+      </staticContent>
+    </system.webServer>
+  </location>
+
+  <location path="_framework/blazor.boot.json">
+    <system.webServer>
+      <staticContent>
+        <clientCache cacheControlMode="DisableCache" />
+      </staticContent>
+    </system.webServer>
+  </location>
+</configuration>

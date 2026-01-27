@@ -35,4 +35,12 @@
     <ProjectReference Include="..\..\..\OceanAPI\Shared\Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="D:\temp\WebDeploy\olipl.org - Web Deploy.pubxml" Link="olipl.org - Web Deploy.pubxml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\PublishProfiles\" />
+  </ItemGroup>
+
 </Project>

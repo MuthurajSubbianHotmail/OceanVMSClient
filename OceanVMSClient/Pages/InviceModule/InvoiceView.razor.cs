@@ -72,9 +72,13 @@ namespace OceanVMSClient.Pages.InviceModule
 
         private string ProjectNameText => PurchaseOrderDetails?.ProjectName ?? "—";
 
-        private string PoValueText => PurchaseOrderDetails != null ? PurchaseOrderDetails.ItemValue.ToString("N2") : "0.00";
+        private string PoValueText => PurchaseOrderDetails?.ItemValue.HasValue == true
+            ? PurchaseOrderDetails.ItemValue.Value.ToString("N2")
+            : "0.00";
 
-        private string PoTaxText => PurchaseOrderDetails != null ? PurchaseOrderDetails.GSTTotal.ToString("N2") : "0.00";
+        private string PoTaxText => PurchaseOrderDetails != null && PurchaseOrderDetails.GSTTotal.HasValue
+            ? PurchaseOrderDetails.GSTTotal.Value.ToString("N2")
+            : "0.00";
 
         private string PoTotalText => PurchaseOrderDetails != null ? PurchaseOrderDetails.TotalValue.ToString("N2") : "0.00";
 

@@ -1,17 +1,45 @@
 ﻿@page "/register-vendor/{VendorRegistrationFormId:guid}"
 @using OceanVMSClient.Extensions
-<MudBreadcrumbs Items="_items" Separator="/" Class="mb-0" />
-@if (VendorRegistrationFormId == Guid.Empty)
-{
-    <PageHeader Title="New Vendor Registration" Class="mb-0" />
-}
-else
-{
-    <PageHeader Title="Edit Vendor Registration" Class="mb-0" />
-    <MudText Typo="Typo.caption"  Color="Color.Secondary" class="me-2">Review Status: @_vendorReg.ReviewerStatus</MudText>
-    <MudText Typo="Typo.caption" Color="Color.Secondary" class="me-2">Approval Status: @_vendorReg.ApproverStatus</MudText>
+<PageNavigation Items="_items" />
+<MudGrid Spacing="0">
+    <MudItem xs="6" sm="6" md="6" Class="d-flex align-top">
+        @if (VendorRegistrationFormId == Guid.Empty)
+        {
+            <PageHeader Title="New Vendor Registration" Class="mb-0" />
+        }
+        else
+        {
+            <PageHeader Title="Edit Vendor Registration" Class="mb-0" />
+            
 
- }
+        }
+    </MudItem>
+    <MudItem xs="6" sm="6" md="6" Class="d-flex justify-end align-items-center">
+        @if (!string.IsNullOrWhiteSpace(_vendorReg.OrganizationName))
+        {
+            <div class="w-100 text-end">
+                <MudText Typo="Typo.h6" Color="Color.Info" Class="mb-0">@_vendorReg.OrganizationName</MudText>
+
+                <!-- single-line status row, right-aligned -->
+                <div class="d-inline-block">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="me-3 d-inline">
+                        Review: 
+                        <MudChip T="string" Size="Size.Small" Color="@GetReviewStatusColor(_vendorReg.ReviewerStatus)" Variant="Variant.Filled">
+                            @_vendorReg.ReviewerStatus
+                        </MudChip>
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-inline">
+                        Approval:
+                        <MudChip T="string" Size="Size.Small" Color="@GetReviewStatusColor(_vendorReg.ApproverStatus)" Variant="Variant.Filled">
+                            @_vendorReg.ApproverStatus
+                        </MudChip>
+                    </MudText>
+                </div>
+            </div>
+        }
+    </MudItem>
+</MudGrid>
+
 
 <MudCard>
     <MudCardContent>
@@ -22,7 +50,7 @@ else
             </div>
         }
 
-        <EditForm EditContext="_editContext" OnSubmit="HandleSubmit">
+        <EditForm  EditContext="_editContext" OnSubmit="HandleSubmit">
             <DataAnnotationsValidator />
             <MudTabs @ref="_tabs">
                 <MudTabPanel Text="Organization Info" @ref="_panelOrgInfo" Icon="@Icons.Material.Rounded.Apartment">
@@ -412,6 +440,7 @@ else
                                         <OrgRegisterDocsUploader DocType="PAN"
                                                                  OnChange="OnPANUploaded"
                                                                  ImgUrl="@_vendorReg.PANCardURL"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  IsRequired="@_isPANRequired" />
                                     </MudItem>
 
@@ -432,6 +461,7 @@ else
                                         <OrgRegisterDocsUploader DocType="TAN"
                                                                  OnChange="OnTANUploaded"
                                                                  ImgUrl="@_vendorReg.TANCertURL"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  IsRequired="@_isTANRequired" />
                                     </MudItem>
 
@@ -452,6 +482,7 @@ else
                                         <OrgRegisterDocsUploader DocType="GST"
                                                                  OnChange="OnGSTUploaded"
                                                                  ImgUrl="@_vendorReg.GSTRegistrationCertURL"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  IsRequired="@_isGSTRequired" />
                                     </MudItem>
 
@@ -472,6 +503,7 @@ else
                                         <OrgRegisterDocsUploader DocType="CIN"
                                                                  OnChange="OnCINUploaded"
                                                                  ImgUrl="@_vendorReg.CINCertURL"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  IsRequired="@_isCINRequired" />
                                     </MudItem>
                                 </MudGrid>
@@ -513,6 +545,7 @@ else
                                         <OrgRegisterDocsUploader DocType="AADHAR"
                                                                  OnChange="OnAADHARUploaded"
                                                                  ImgUrl="@_vendorReg.AadharDocURL"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  IsRequired="@_isAadharRequired" />
                                     </MudItem>
 
@@ -534,6 +567,7 @@ else
                                         <OrgRegisterDocsUploader DocType="UDYAM"
                                                                  OnChange="OnUDYAMUploaded"
                                                                  ImgUrl="@_vendorReg.UDYAMRegCertURL"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  IsRequired="@_isUDYAMRequired" />
                                     </MudItem>
 
@@ -554,6 +588,7 @@ else
                                         <OrgRegisterDocsUploader DocType="PF"
                                                                  OnChange="OnPFUploaded"
                                                                  ImgUrl="@_vendorReg.PFRegCertURL"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  IsRequired="@_isPFRequired" />
                                     </MudItem>
 
@@ -574,6 +609,7 @@ else
                                         <OrgRegisterDocsUploader DocType="ESI"
                                                                  OnChange="OnESIUploaded"
                                                                  ImgUrl="@_vendorReg.ESIRegCertURL"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  IsRequired="@_isESIRequired" />
                                     </MudItem>
                                 </MudGrid>
@@ -663,6 +699,7 @@ else
                                         <MudText Typo="Typo.caption" Color="Color.Secondary" Style="flex:1;" hidden="@_isReadOnly">Upload a Cancelled Cheque/Bank Statement* </MudText>
                                         <OrgRegisterDocsUploader DocType="CANCELCHEQ"
                                                                  OnChange="OnCancelChequeUploaded"
+                                                                 IsReadOnly="@_isReadOnly"
                                                                  ImgUrl="@_vendorReg.CancelledChequeURL" />
                                     </MudItem>
 
@@ -948,4 +985,17 @@ else
             return Task.CompletedTask;
         return _tabs.ActivatePanelAsync(panel);
     }
+
+    private Color GetReviewStatusColor(string reviewStatus)
+    {
+        return reviewStatus switch
+        {
+            "Pending" => Color.Warning,
+            "Reviewed" => Color.Info,
+            "Rejected" => Color.Error,
+            "Approved" => Color.Success,
+            _ => Color.Default
+        };
+    }
+
 }
